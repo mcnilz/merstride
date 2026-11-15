@@ -1,0 +1,5 @@
+**/bin/
+**/obj/
+artifacts/
+.merstride/
+.scratch/research.ps1

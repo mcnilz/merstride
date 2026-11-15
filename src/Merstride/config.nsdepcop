@@ -1,0 +1,30 @@
+<NsDepCopConfig IsEnabled="true" CheckAssemblyDependencies="true">
+  <Allowed From="Merstride.Domain.*" To="Merstride.Domain.*" />
+  <Allowed From="Merstride.Domain.*" To="System.*" />
+  <Allowed From="Merstride.Application.*" To="Merstride.Domain.*" />
+  <Allowed From="Merstride.Application.*" To="Merstride.Application.*" />
+  <Allowed From="Merstride.Application.*" To="System.*" />
+  <Allowed From="Merstride.Compilation.*" To="Merstride.Domain.*" />
+  <Allowed From="Merstride.Compilation.*" To="Merstride.Compilation.*" />
+  <Allowed From="Merstride.Compilation.*" To="System.*" />
+  <Allowed From="Merstride.Compilation.*" To="YamlDotNet.*" />
+  <Allowed From="Merstride.Infrastructure.*" To="Merstride.Domain.*" />
+  <Allowed From="Merstride.Infrastructure.*" To="Merstride.Application.*" />
+  <Allowed From="Merstride.Infrastructure.*" To="Merstride.Infrastructure.*" />
+  <Allowed From="Merstride.Infrastructure.*" To="System.*" />
+  <Allowed From="Merstride.Cli.*" To="Merstride.*" />
+  <Allowed From="Merstride.Cli.*" To="System.*" />
+  <!-- Engine networking is outside the accepted product scope. -->
+  <Disallowed From="Merstride.*" To="System.Net.*" />
+  <AllowedAssembly From="*" To="System.*" />
+  <!-- SDK reference-pack assemblies; namespace rules still constrain actual usage. -->
+  <AllowedAssembly From="*" To="Microsoft.CSharp" />
+  <AllowedAssembly From="*" To="Microsoft.VisualBasic.*" />
+  <AllowedAssembly From="*" To="Microsoft.Win32.*" />
+  <AllowedAssembly From="*" To="mscorlib" />
+  <AllowedAssembly From="*" To="netstandard" />
+  <AllowedAssembly From="*" To="WindowsBase" />
+  <AllowedAssembly From="*" To="YamlDotNet" />
+  <AllowedAssembly From="*" To="merstride" />
+  <AllowedAssembly From="*" To="ArchitectureFixture" />
+</NsDepCopConfig>

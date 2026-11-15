@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src/Merstride/Merstride.csproj" />
+  <Project Path="tests/Merstride.Acceptance/Merstride.Acceptance.csproj" />
+</Solution>

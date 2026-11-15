@@ -1,0 +1,53 @@
+param([Parameter(Mandatory)][string]$Binary)
+$ErrorActionPreference = 'Stop'
+$binaryPath = (Resolve-Path -LiteralPath $Binary).Path
+$repo = (Resolve-Path "$PSScriptRoot/..").Path
+$temp = Join-Path ([IO.Path]::GetTempPath()) ("merstride-benchmark-" + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory $temp | Out-Null
+function Invoke-Cli([string[]]$Arguments) {
+    $start = [Diagnostics.ProcessStartInfo]::new($binaryPath)
+    $start.UseShellExecute = $false
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    foreach ($arg in ($Arguments + @('--state-dir', (Join-Path $temp 'state'), '--json'))) { $start.ArgumentList.Add($arg) }
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    $process = [Diagnostics.Process]::Start($start)
+    $stdout = $process.StandardOutput.ReadToEndAsync()
+    $stderr = $process.StandardError.ReadToEndAsync()
+    if (!$process.WaitForExit(15000)) { $process.Kill($true); throw 'Benchmark watchdog expired.' }
+    $watch.Stop()
+    if ($process.ExitCode -ne 0) { throw "Benchmark CLI failed ($($start.ArgumentList -join ' ')): $($stderr.Result) $($stdout.Result)" }
+    $result = @{ milliseconds = $watch.Elapsed.TotalMilliseconds; response = ($stdout.Result | ConvertFrom-Json) }
+    $process.Dispose()
+    return $result
+}
+try {
+    # Setup launches the product; this first status is not claimed to be cold-cache latency.
+    $initial = Invoke-Cli -Arguments @('start', "$repo/examples/single-end.md", '--workspace', $temp)
+    $run = $initial.response
+    $first = Invoke-Cli -Arguments @('status', $run.runId)
+    $samples = @(1..30 | ForEach-Object { (Invoke-Cli -Arguments @('status', $run.runId)).milliseconds })
+    $sorted = @($samples | Sort-Object)
+    $bytes = (Get-Item -LiteralPath $binaryPath).Length
+    $cpu = if ($IsWindows) { (Get-CimInstance Win32_Processor | Select-Object -First 1).Name } else { 'not recorded' }
+    $defender = if ($IsWindows) { try { (Get-MpComputerStatus -ErrorAction Stop).RealTimeProtectionEnabled } catch { 'unavailable' } } else { 'not applicable' }
+    $report = [ordered]@{
+        measuredOn = '2026-11-15'; binary = $binaryPath; sha256 = (Get-FileHash $binaryPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        version = '0.1.0'; rid = 'win-x64'; bytes = $bytes; mib = $bytes / 1MB
+        sizeTarget15MiB = $bytes -le 15MB; sizeGate25MiB = $bytes -le 25MB
+        firstStartMilliseconds = $initial.milliseconds; firstStatusMilliseconds = $first.milliseconds; warmStatusMilliseconds = $samples
+        p95Milliseconds = $sorted[[Math]::Ceiling(0.95 * $samples.Count) - 1]; latencyGate150ms = $sorted[28] -lt 150
+        os = [Runtime.InteropServices.RuntimeInformation]::OSDescription; cpu = $cpu
+        sdk = (& dotnet --version); defenderRealTimeProtection = $defender
+        methodology = '30 sequential fresh status processes; Stopwatch includes process creation, JSON stdout/stderr drain and exit. First status reported separately after start; not a cold boot or clean-runtime test. No antivirus exclusion applied.'
+    }
+    New-Item -ItemType Directory -Force "$repo/artifacts" | Out-Null
+    $report | ConvertTo-Json -Depth 6 | Set-Content "$repo/artifacts/benchmark.json"
+    $report | ConvertTo-Json -Depth 6
+    if (!$report.sizeGate25MiB -or !$report.latencyGate150ms) { throw 'Initial native budget exceeded; review measurements.' }
+} finally {
+    $resolved = [IO.Path]::GetFullPath($temp)
+    if ($resolved.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()), [StringComparison]::OrdinalIgnoreCase) -and (Split-Path $resolved -Leaf) -like 'merstride-benchmark-*') {
+        Remove-Item -LiteralPath $resolved -Recurse -Force
+    }
+}

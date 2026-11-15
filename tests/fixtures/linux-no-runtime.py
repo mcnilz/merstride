@@ -83,7 +83,7 @@ work -->|exit_0| done
     assert (root / "workspace/effects.txt").read_text() == "native\n"
     files = sorted(str(p.relative_to(root)) for p in root.rglob("*") if p.is_file())
     assert not any("dotnet" in p.lower() or "coreclr" in p.lower() for p in files)
-    report = dict(schemaVersion=1, result="passed", scope="isolated chroot native smoke only; full 82-scenario clean-target runtime qualification unavailable",
+    report = dict(schemaVersion=1, result="passed", scope="isolated chroot native smoke only; full inventoried clean-target runtime qualification unavailable",
                   installedDotnet=False, productVersion=version, commands=["guide", "version", "start", "status", "advance"],
                   binarySha256=hashlib.sha256((root / "app/merstride").read_bytes()).hexdigest(), files=files,
                   environment=subprocess.check_output(["uname", "-a"], text=True).strip())

@@ -40,3 +40,8 @@ P01 implements the positive and negative build fixtures under A21. P07 verifies 
 - [NsDepCop diagnostic reference](https://github.com/realvizu/NsDepCop/blob/master/doc/Diagnostics.md)
 - [GNU FAQ on output of GPL tools](https://www.gnu.org/licenses/gpl-faq.en.html#GPLOutput)
 - [NuGet asset controls](https://learn.microsoft.com/en-us/nuget/consume-packages/package-references-in-project-files)
+
+P08 uses System.CommandLine 3.0.0 only in Cli. Explicit disallows from Domain,
+Application, Compilation and Infrastructure override their System.* BCL allowance.
+The architecture gate requires all four; five actual compiler fixtures prove CLI
+acceptance and rejection in each non-Cli module as NSDEPCOP01 errors.

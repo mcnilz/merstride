@@ -126,6 +126,16 @@ Every command supports `--json`: exactly one JSON object on stdout; incidental d
 | `guide` | Offline compact agent usage guide, no run required; JSON has a guide string. |
 | `version` | Tool and protocol version. |
 
+P08 adds `-h` / `--help` at the root and for every command. Help exits 0 without
+workflow/state access: English text by default, or one protocol object with a
+`guide` string under `--json`. Root `--version` shares the `version` JSON response.
+Global options work before/after the command, before `--`; the delimiter makes
+remaining positionals literal. Quote paths with spaces; use `--option=value` for
+dash-prefixed option values. Duplicate options (including flags/help aliases),
+unknown/missing/extra/conflicting arguments return usage exit 2 and a help hint.
+Response files, directives, abbreviations and option bundles are disabled.
+See [CLI usage](CLI.md) for examples and exact discovery semantics.
+
 Global `--state-dir <absolute-path>` selects storage. Default is `.merstride/runs` beneath the calling cwd. Start returns the absolute state root; later calls MUST reuse it. Opaque run IDs cannot be used as arbitrary filesystem paths. No delete/publish command in the MVP.
 
 CLI exit codes: 0 successful operation (including ready/waiting/completed); 2 usage; 3 document validation; 4 state/lock/completion conflict; 5 advance ending failed/interrupted or resolve --fail; 6 I/O/corrupt storage/internal error; 130 user interruption. Read-only status succeeds with 0 even when the run failed. Child exit codes are not CLI exit codes. Advance on terminal runs returns their existing result without executing anything; failed returns 5. Guide, version, validate, status, and logs never launch child processes.

@@ -1,6 +1,6 @@
 # Implementation status
 
-Historical P07 implementation notes. This revision retains the product,
+Historical P08 implementation notes. This revision retains the product,
 tests and reproducible build scripts; raw local environment and execution
 logs are not versioned. Historical measurements are not release qualification.
 

@@ -17,11 +17,11 @@ function Assert-ReleaseTag([string]$GitDirectory, [string]$Tag, [string]$Commit)
     if ($LASTEXITCODE -ne 0) { throw 'Release tag must be on origin/main.' }
 }
 function Get-ArchiveName([string]$Version, [string]$Rid) { "merstride-$Version-$Rid" + $(if ($Rid -eq 'win-x64') { '.zip' } else { '.tar.gz' }) }
-function Get-NoticeNames { @('LICENSE','dotnet-LICENSE.txt','dotnet-THIRD-PARTY-NOTICES.txt','YamlDotNet-LICENSE.txt','shipped-dependencies.json') }
+function Get-NoticeNames { @('LICENSE','dotnet-LICENSE.txt','dotnet-THIRD-PARTY-NOTICES.txt','YamlDotNet-LICENSE.txt','System.CommandLine-LICENSE.txt','shipped-dependencies.json') }
 function Get-ReleaseAssetNames([string]$Version) { @((Get-ArchiveName $Version 'win-x64'),(Get-ArchiveName $Version 'linux-x64')) + @(Get-NoticeNames) + @('RELEASE-NOTES.md','qualification.json','manifest.json','SHA256SUMS') }
 function Copy-ReleaseNotices([string]$Destination) {
     Copy-Item -LiteralPath "$PSScriptRoot/../LICENSE" -Destination $Destination
-    foreach ($file in @('dotnet-LICENSE.txt','dotnet-THIRD-PARTY-NOTICES.txt','YamlDotNet-LICENSE.txt')) { Copy-Item -LiteralPath "$PSScriptRoot/../docs/licenses/$file" -Destination $Destination }
+    foreach ($file in @('dotnet-LICENSE.txt','dotnet-THIRD-PARTY-NOTICES.txt','YamlDotNet-LICENSE.txt','System.CommandLine-LICENSE.txt')) { Copy-Item -LiteralPath "$PSScriptRoot/../docs/licenses/$file" -Destination $Destination }
     Copy-Item -LiteralPath "$PSScriptRoot/../docs/shipped-dependencies.json" -Destination $Destination
 }
 function Assert-PlatformArchive([string]$Archive, [string]$Rid, [string]$Version, [string]$Commit, [string]$RunId) {

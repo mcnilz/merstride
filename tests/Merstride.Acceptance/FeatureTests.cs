@@ -64,7 +64,7 @@ public class FeatureTests
         }
     }
 
-    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07");
+    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08");
 
     public static IEnumerable<TestCaseData> RequiredCases() => Cases().Where(c => c.Implemented)
         .Select(c => new TestCaseData(c).SetName(c.ToString()).SetProperty("Requirements", string.Join(' ', c.Tags))
@@ -93,6 +93,12 @@ public class FeatureTests
 
     private static void Execute(FeatureCase scenario)
     {
+        if (scenario.Tags.Contains("@P08"))
+        {
+            using var usability = new UsabilityWorld();
+            foreach (var step in scenario.Steps) usability.Execute(step);
+            return;
+        }
         if (scenario.Tags.Contains("@P07") && !scenario.Tags.Contains("@P01"))
         {
             using var release = new ReleaseWorld();
@@ -154,12 +160,18 @@ internal sealed class CliWorld : IDisposable
 
     public CliWorld() => Directory.CreateDirectory(DirectoryPath);
 
-    internal void Call(params string[] args)
+    internal void Call(params string[] args) => Invoke(args.Concat(["--state-dir", State, "--json"]).ToArray(), true);
+
+    internal void Raw(params string[] args) => Invoke(args, false);
+
+    private void Invoke(string[] args, bool requireProtocol)
     {
         var binary = Environment.GetEnvironmentVariable("MERSTRIDE_BINARY")
             ?? Path.Combine(FeatureTests.Root, "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
         var start = new ProcessStartInfo(binary) { WorkingDirectory = WorkingDirectory ?? DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var arg in args.Concat(["--state-dir", State, "--json"])) start.ArgumentList.Add(arg);
+        foreach (var arg in args) start.ArgumentList.Add(arg);
+        start.Environment["DOTNET_CLI_UI_LANGUAGE"] = "de-DE";
+        start.Environment["LANG"] = "de_DE.UTF-8";
         var processCount = ProcessObserver.TotalProcesses();
         using var process = Process.Start(start) ?? throw new InvalidOperationException("CLI did not start.");
         var stdout = process.StandardOutput.ReadToEndAsync();
@@ -169,8 +181,11 @@ internal sealed class CliWorld : IDisposable
         if (processCount.HasValue) Assert.That(ProcessObserver.TotalProcesses() - processCount, Is.EqualTo(1 + ExpectedChildren), "Observed CLI and declared child process count.");
         Stdout = stdout.Result; Stderr = stderr.Result;
         TestContext.Out.WriteLine($"CLI {string.Join(' ', args)} -> {ExitCode}: {stdout.Result} {stderr.Result}");
-        Response = JsonDocument.Parse(stdout.Result).RootElement.Clone();
-        Assert.That(Response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+        if (requireProtocol)
+        {
+            Response = JsonDocument.Parse(stdout.Result).RootElement.Clone();
+            Assert.That(Response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+        }
     }
 
     internal void Execute(string step)

@@ -30,6 +30,21 @@ internal sealed class BuildWorld : IDisposable
             """);
     }
 
+    internal void ParserFixture(string area)
+    {
+        Fixture(false);
+        var project = Path.Combine(directory, "ArchitectureFixture.csproj");
+        File.WriteAllText(project, File.ReadAllText(project).Replace("<ItemGroup>", "<ItemGroup><PackageReference Include=\"System.CommandLine\" Version=\"3.0.0\" />"));
+        File.WriteAllText(Path.Combine(directory, "Fixture.cs"), $"namespace Merstride.{area}; public sealed class Model {{ public System.CommandLine.Option Value {{ get; }} = new System.CommandLine.Option<bool>(\"--flag\"); }}");
+    }
+
+    internal void AssertParserBoundary(bool allowed)
+    {
+        Run("dotnet", "build", directory, "--nologo", "--no-incremental");
+        Assert.That(exitCode == 0, Is.EqualTo(allowed), output);
+        if (!allowed) Assert.That(output, Does.Contain("error NSDEPCOP01"));
+    }
+
     internal void Run(string executable, params string[] args)
     {
         var info = new ProcessStartInfo(executable) { WorkingDirectory = FeatureTests.Root, RedirectStandardError = true, RedirectStandardOutput = true };

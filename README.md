@@ -1,6 +1,7 @@
 # Merstride
 
-P07 adds Windows/Linux native verification, complete runtime notices, input/content
+P08 adds English command help and predictable argument parsing while preserving
+the JSON agent protocol; see [CLI usage](docs/CLI.md). P07 adds Windows/Linux native verification, complete runtime notices, input/content
 audits, and fail-closed release scripts. Local implementation remains distinct
 from external release qualification; see [release verification](docs/RELEASING.md).
 
@@ -60,7 +61,9 @@ boundaries and P06 qualifies recovery on local Windows x64. See the [recovery ex
 The unreleased
 P02 state shape requires new runs; P01 saved runs are not migrated.
 
-All current CLI output is protocol JSON, with or without `--json`. Unsupported commands
+P08 adds English top-level and per-command `-h` / `--help`; see [CLI usage](docs/CLI.md).
+Help is text by default, or one JSON object with a `guide` string under `--json`.
+Operational output and version remain protocol JSON, with or without `--json`. Unsupported commands
 return usage errors; unsupported workflow syntax returns document diagnostics.
 The complete review workflow example below belongs to later slices.
 

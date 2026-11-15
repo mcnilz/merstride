@@ -1,7 +1,7 @@
 # Acceptance testing with Gherkin
 
 Revision 0.5. The `.feature` files are the reviewable behavioral contract. The NUnit
-runner executes P01-P07 local cases from these files against the published
+runner executes P01-P08 local cases from these files against the published
 native executable. The two clean-platform orchestration cases remain mandatory
 separate release qualification and fail explicitly without actual evidence. See STATUS.md
 for current evidence and limitations.
@@ -134,3 +134,11 @@ M01 preserves all 61 P01–P04 feature cases and adds three public MSBuild prope
 checks for effective SDK 11.0.100, net11.0, stable C# 15 and no memory-safety opt-in
 across product, test harness and native helper. See STATUS.md for the 165-test gate
 and migration evidence. The global language skill is not part of the test inputs.
+
+P08 binds every expanded case in 09-cli-usability.feature to raw native CLI calls.
+German locale settings qualify English help/errors; JSON parsing rejects extra
+stdout content. Discovery checks unchanged directory entries and external process
+counts; native start/status qualifies literal delimited paths and equals-form
+input options. Five public compilation fixtures confine the parser to Cli.
+Release inventory and clean-target expected identities include the added cases.
+The p07.trx filename stays stable for release freshness checks.

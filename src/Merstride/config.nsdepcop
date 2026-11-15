@@ -16,6 +16,11 @@
   <Allowed From="Merstride.Cli.*" To="System.*" />
   <!-- Engine networking is outside the accepted product scope. -->
   <Disallowed From="Merstride.*" To="System.Net.*" />
+  <!-- System.* is allowed for BCL usage; command-line parsing belongs only to Cli. -->
+  <Disallowed From="Merstride.Domain.*" To="System.CommandLine.*" />
+  <Disallowed From="Merstride.Application.*" To="System.CommandLine.*" />
+  <Disallowed From="Merstride.Compilation.*" To="System.CommandLine.*" />
+  <Disallowed From="Merstride.Infrastructure.*" To="System.CommandLine.*" />
   <AllowedAssembly From="*" To="System.*" />
   <!-- SDK reference-pack assemblies; namespace rules still constrain actual usage. -->
   <AllowedAssembly From="*" To="Microsoft.CSharp" />

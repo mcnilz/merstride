@@ -350,5 +350,18 @@
     "downloadedNupkgSha512": "cedfd9abd38c82bc9a7058aaeec5db52fef5946ed377f329603894a1ad411d481abaa58c384bb0c4a8e69fd97128cc6c52450fb6903fec8e2961e2769b06d9d0",
     "dependencies": {},
     "aotEvidence": "P07 Linux Native AOT qualification; package MIT metadata and source commit inspected. Actual evidence is recorded separately."
+  },
+  "System.CommandLine/3.0.0": {
+    "upstream": "https://github.com/dotnet/command-line-api",
+    "license": "MIT",
+    "purpose": "Established command parsing and generated help, confined to Merstride.Cli.",
+    "classification": "runtime",
+    "maintenanceEvidence": "Microsoft maintained; used by the .NET CLI. NuGet stable 3.0.0 and exact downloaded nuspec reviewed 2026-11-15; repository release page may lag the NuGet/VMR release.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/system.commandline/3.0.0/system.commandline.nuspec",
+    "sourceCommit": "297acf930fb0f5c07fd4e51d78e521b4ad2e5d1f",
+    "contentHash": "swNpSTl0iYJeBuvYYfaY+VxzZ5YC8wklwkqDCNOq2aTQqJzjauJfh/O3Zw93nwxspWrxvZTjT45f8VPR0ParEA==",
+    "dependencies": {},
+    "aotEvidence": "P08 actual native publish and public CLI scenarios; see docs/STATUS.md for final Windows/Linux results. net10.0 asset selected by net11.0; no transitive runtime packages. netstandard2.0-only System.Memory is not selected."
   }
 }

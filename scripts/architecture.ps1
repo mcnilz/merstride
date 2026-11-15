@@ -10,6 +10,9 @@ try {
     foreach ($rule in $rules.NsDepCopConfig.Allowed) {
         if ($rule.From -eq '*' -or $rule.To -eq '*') { throw 'Broad allow-all namespace rule.' }
     }
+    foreach ($area in @('Domain','Application','Compilation','Infrastructure')) {
+        if (!($rules.NsDepCopConfig.Disallowed | Where-Object { $_.From -ceq "Merstride.$area.*" -and $_.To -ceq 'System.CommandLine.*' })) { throw "CLI parser boundary missing for $area." }
+    }
     if ($env:DisableNsDepCop -in @('1','true','True')) { throw 'DisableNsDepCop environment variable disables analysis.' }
     $projectFile = Get-ChildItem -LiteralPath $projectDir -Filter *.csproj | Select-Object -First 1
     [xml]$projectXml = Get-Content -Raw -LiteralPath $projectFile.FullName

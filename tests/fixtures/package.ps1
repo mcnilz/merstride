@@ -15,7 +15,7 @@ try {
         New-Item -ItemType Directory -Force (Join-Path $temp $directory) | Out-Null
     }
     foreach ($file in @('scripts/release.ps1','scripts/release-functions.ps1','LICENSE','docs/shipped-dependencies.json',
-        'docs/licenses/dotnet-LICENSE.txt','docs/licenses/dotnet-THIRD-PARTY-NOTICES.txt','docs/licenses/YamlDotNet-LICENSE.txt')) {
+        'docs/licenses/dotnet-LICENSE.txt','docs/licenses/dotnet-THIRD-PARTY-NOTICES.txt','docs/licenses/YamlDotNet-LICENSE.txt','docs/licenses/System.CommandLine-LICENSE.txt')) {
         Copy-Item -LiteralPath (Join-Path $source $file) -Destination (Join-Path $temp $file)
     }
     '/artifacts/' | Set-Content "$temp/.gitignore"
@@ -79,8 +79,8 @@ try {
         }
         $entries = @((Get-ChildItem -LiteralPath $extracted -File).Name | Sort-Object)
         $expected = @($binaryName,'platform.json','README.txt','LICENSE','dotnet-LICENSE.txt',
-            'dotnet-THIRD-PARTY-NOTICES.txt','YamlDotNet-LICENSE.txt','shipped-dependencies.json') | Sort-Object
-        if ($entries.Count -ne 8 -or (Compare-Object $entries $expected)) { throw 'Public Package archive has an unexpected file set.' }
+            'dotnet-THIRD-PARTY-NOTICES.txt','YamlDotNet-LICENSE.txt','System.CommandLine-LICENSE.txt','shipped-dependencies.json') | Sort-Object
+        if ($entries.Count -ne $expected.Count -or (Compare-Object $entries $expected)) { throw 'Public Package archive has an unexpected file set.' }
         if ([Convert]::ToBase64String([IO.File]::ReadAllBytes((Join-Path $extracted $binaryName))) -cne [Convert]::ToBase64String($candidateBytes)) { throw 'Packaged candidate bytes differ.' }
         $packaged = Get-Content -Raw "$extracted/platform.json" | ConvertFrom-Json -AsHashtable
         foreach ($field in $gate.Keys) { if ($packaged[$field] -cne $gate[$field]) { throw "Packaged gate field differs: $field" } }

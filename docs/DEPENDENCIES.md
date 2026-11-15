@@ -16,7 +16,7 @@ Record package ID, exact version, upstream, purpose, maintenance evidence/date, 
 | Gherkin syntax | Official Cucumber Gherkin parser | Preferred established parser candidate; development-only |
 | Gherkin execution | NUnit-backed bindings or an established compatible binding framework | Decide in P01; no unknown runner and no hand-written replacement Gherkin parser |
 | Architecture | NsDepCop | Explicitly selected build-only analyzer |
-| CLI | Small repository-owned argument handling over BCL | No dependency by default |
+| CLI | System.CommandLine 3.0.0 | P08: generated help and parsing in Cli only; exact review in dependency-inventory.json |
 | Mermaid subset | Repository-owned parser for the documented small subset | No renderer or unknown Mermaid-engine package |
 
 The Gherkin parser alone is not a runner. If NUnit-backed bindings are chosen, keep the adapter small and explicit, execute actual feature files, and reject unknown/ambiguous steps. Do not create a general BDD framework. If that becomes substantial, assess an established framework rather than expanding custom infrastructure.

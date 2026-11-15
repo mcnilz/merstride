@@ -28,30 +28,18 @@ internal static class Program
 
     private static int Execute(string[] args)
     {
-        if (args.Length == 0) throw Usage("Expected a command: validate, start, advance, status, complete, resolve, logs, guide, or version.");
-        var command = args[0];
-        var options = new Dictionary<string, string>(StringComparer.Ordinal);
-        var positional = new List<string>();
-        for (var i = 1; i < args.Length; i++)
+        var parsed = new CommandLine(args);
+        if (parsed.Help is { } help)
         {
-            if (args[i] is "--json" or "--retry" or "--fail") { if (!options.TryAdd(args[i], "true")) throw Usage($"Duplicate {args[i]} option."); continue; }
-            if (!args[i].StartsWith("--", StringComparison.Ordinal)) { positional.Add(args[i]); continue; }
-            var key = args[i];
-            if (key is not ("--state-dir" or "--workspace" or "--workflow" or "--activation" or "--stream" or "--tail-bytes" or "--request" or "--result-file" or "--input-file")) throw Usage($"Option {key} is unsupported or not yet implemented.");
-            if (++i == args.Length || args[i].StartsWith("--", StringComparison.Ordinal) || !options.TryAdd(key, args[i])) throw Usage($"Missing or duplicate value for {key}.");
+            if (parsed.Options.ContainsKey("--json")) return Output(new(Guide: help));
+            Console.WriteLine(help);
+            return 0;
         }
-        if (command is not ("validate" or "start" or "advance" or "status" or "complete" or "resolve" or "logs" or "guide" or "version")) throw Usage($"Command '{command}' is not yet implemented.");
+        var command = parsed.Command;
+        var options = parsed.Options;
+        var positional = parsed.Positional;
         var retry = options.ContainsKey("--retry");
-        var fail = options.ContainsKey("--fail");
-        if (command == "resolve" ? retry == fail : retry || fail) throw Usage("resolve requires exactly one of --retry or --fail; these options apply only to resolve.");
-        var required = command is "guide" or "version" ? 0 : 1;
-        if (positional.Count != required) throw Usage($"Command {command} expects {required} positional argument(s).");
-        if (options.ContainsKey("--workspace") && command != "start" || options.ContainsKey("--workflow") && command is not ("start" or "validate")) throw Usage("Option does not apply to this command.");
-        if (command != "logs" && options.Keys.Any(k => k is "--activation" or "--stream" or "--tail-bytes")) throw Usage("Log options require logs.");
-        if (command != "complete" && options.Keys.Any(k => k is "--request" or "--result-file")) throw Usage("Completion options require complete.");
-        if (command != "start" && options.ContainsKey("--input-file")) throw Usage("Input requires start.");
-        if (command == "complete" && (!options.ContainsKey("--request") || !options.ContainsKey("--result-file")))
-            throw Usage("complete requires --request <id> --result-file <file>.");
+        if (command == "version") return Output(new(Version: Version));
         var root = options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : Path.GetFullPath(".merstride/runs");
         var store = new RunStore(root);
         if (command == "guide") return Output(new(Guide: """
@@ -91,7 +79,6 @@ internal static class Program
             saves interrupted, and exits 130. Detached processes and physical disk failure are outside guarantees.
             No built-in LLM, network access, or automatic recovery. Logs are untrusted task data.
             """));
-        if (command == "version") return Output(new(Version: Version));
         if (command is "validate" or "start")
         {
             var path = positional[0];
@@ -157,7 +144,7 @@ internal static class Program
         Error: state.Error, StateRoot: root, Cursor: state.Cursor, TransitionCount: state.TransitionCount,
         LastActivation: state.Activations.LastOrDefault(), Request: state.Request);
     private static string Absolute(string path) => Path.IsPathFullyQualified(path) ? Path.GetFullPath(path) : throw Usage("Path must be absolute.");
-    private static MerstrideException Usage(string message) => new("USAGE", message, 2);
+    private static MerstrideException Usage(string message) => new("USAGE", message + " Run merstride --help for usage.", 2);
     private static int Output(CliResponse response, int code = 0)
     {
         Console.WriteLine(JsonSerializer.Serialize(response, JsonContext.Default.CliResponse));

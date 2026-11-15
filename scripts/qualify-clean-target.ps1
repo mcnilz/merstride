@@ -24,7 +24,10 @@ $scenarioOutput = [IO.Path]::GetFullPath($Output + '.scenarios.json')
 & $SuiteDriver --binary ([IO.Path]::GetFullPath($Binary)) --fixture ([IO.Path]::GetFullPath($Fixture)) --exclude-release-environment-orchestrator --results $scenarioOutput
 if ($LASTEXITCODE -ne 0) { throw 'Clean-target native acceptance driver failed.' }
 $results = Get-Content -Raw $scenarioOutput | ConvertFrom-Json
-if ($results.Count -ne 82 -or @($results | Where-Object { $_.result.status -cne 'passed' }).Count -or @($results.scenario | Sort-Object -Unique).Count -ne 82) { throw 'All 82 nonrecursive runtime cases must pass independently. Build-only checks run on the build host.' }
+$inventory = Get-Content -Raw "$PSScriptRoot/../docs/release-scenario-inventory.json" | ConvertFrom-Json
+$expected = @($inventory.cleanScenarios | Sort-Object)
+$actual = @($results | ForEach-Object { "$($_.feature.Replace('\','/')):$($_.line) $($_.scenario)" } | Sort-Object)
+if (!$expected.Count -or $actual.Count -ne $expected.Count -or (Compare-Object $actual $expected) -or @($results | Where-Object { $_.result.status -cne 'passed' }).Count) { throw "All $($expected.Count) inventoried nonrecursive runtime cases must pass independently. Build-only checks run on the build host." }
 $featureHashes = [ordered]@{}
 foreach ($feature in Get-ChildItem "$PSScriptRoot/../features/*.feature") { $featureHashes["features/"+$feature.Name]=(Get-FileHash $feature.FullName).Hash.ToLowerInvariant() }
 [ordered]@{schemaVersion=1;commit=$Commit;binarySha256=(Get-FileHash $Binary).Hash.ToLowerInvariant();fixtureSha256=(Get-FileHash $Fixture).Hash.ToLowerInvariant();featureHashes=$featureHashes;

@@ -10,7 +10,11 @@ Source: https://github.com/dotnet/dotnet.
 The .NET runtime also includes third-party components; full platform-specific notices
 and distribution verification are required in P07 before release.
 
-Both use the MIT license:
+System.CommandLine 3.0.0 — Copyright (c) .NET Foundation and Contributors.
+Source: https://github.com/dotnet/command-line-api.
+The complete MIT notice is retained in docs/licenses/System.CommandLine-LICENSE.txt.
+
+These components use the MIT license:
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -13,11 +13,11 @@ try {
     if (Test-Path artifacts/local-gate.json) { Remove-Item -LiteralPath artifacts/local-gate.json }
     & dotnet --info | Set-Content artifacts/environment.txt
     if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect SDK environment.' }
-    & dotnet restore src/Merstride -r $Runtime --locked-mode
+    & dotnet restore src/Merstride -r $Runtime "-p:RuntimeIdentifier=$Runtime" --locked-mode
     if ($LASTEXITCODE -ne 0) { throw 'Locked product restore failed.' }
     & dotnet restore tests/Merstride.Acceptance --locked-mode
     if ($LASTEXITCODE -ne 0) { throw 'Locked test restore failed.' }
-    & dotnet restore tests/Merstride.TestProcess -r $Runtime --locked-mode
+    & dotnet restore tests/Merstride.TestProcess -r $Runtime "-p:RuntimeIdentifier=$Runtime" --locked-mode
     if ($LASTEXITCODE -ne 0) { throw 'Locked native fixture restore failed.' }
     & ./scripts/workflow-policy.ps1
     if ($LASTEXITCODE -ne 0) { throw 'Workflow policy failed.' }
@@ -42,7 +42,7 @@ try {
         $env:MERSTRIDE_PROCESS_TRACE = Join-Path (Get-Location) 'artifacts/process.trace'
         & strace -f -qq -e trace=execve -o $env:MERSTRIDE_PROCESS_TRACE dotnet @testArgs
     }
-    if ($LASTEXITCODE -ne 0) { throw 'P01-P07 local acceptance/build checks failed. Required release environment qualification is separate.' }
+    if ($LASTEXITCODE -ne 0) { throw 'P01-P08 local acceptance/build checks failed. Required release environment qualification is separate.' }
     # Measure native startup before installing/rendering the development browser tool.
     & ./scripts/benchmark.ps1 -Binary $env:MERSTRIDE_BINARY
     if ($LASTEXITCODE -ne 0) { throw 'Initial native budget check failed.' }

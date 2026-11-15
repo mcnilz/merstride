@@ -20,6 +20,12 @@
         "resolved": "3.3.0",
         "contentHash": "y+6b1rK9fHm60A5twITBuFTtVWufXymP9oBZDizyFDeuZizLa8w/dxJQ4PObOMugAEHBrCbOMGfG5LYLWtB7pw=="
       },
+      "System.CommandLine": {
+        "type": "Direct",
+        "requested": "[3.0.0, )",
+        "resolved": "3.0.0",
+        "contentHash": "swNpSTl0iYJeBuvYYfaY+VxzZ5YC8wklwkqDCNOq2aTQqJzjauJfh/O3Zw93nwxspWrxvZTjT45f8VPR0ParEA=="
+      },
       "YamlDotNet": {
         "type": "Direct",
         "requested": "[18.1.0, )",

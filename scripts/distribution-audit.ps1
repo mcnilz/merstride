@@ -44,7 +44,7 @@ try {
         $text = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($file.FullName))
         foreach ($id in $forbidden) { if ($text -match [regex]::Escape($id)) { throw "Analyzer identity in native content: $($file.Name)" } }
     }
-    foreach ($file in @('LICENSE','docs/licenses/dotnet-LICENSE.txt','docs/licenses/dotnet-THIRD-PARTY-NOTICES.txt','docs/licenses/YamlDotNet-LICENSE.txt','docs/shipped-dependencies.json')) {
+    foreach ($file in @('LICENSE','docs/licenses/dotnet-LICENSE.txt','docs/licenses/dotnet-THIRD-PARTY-NOTICES.txt','docs/licenses/YamlDotNet-LICENSE.txt','docs/licenses/System.CommandLine-LICENSE.txt','docs/shipped-dependencies.json')) {
         if (!(Test-Path "$PSScriptRoot/../$file")) { throw "Missing distribution license/inventory: $file" }
     }
     $runtimeKeys = @($graph.libraries.Keys | Where-Object { $_ -match '^runtime\.(win|linux)-x64\.Microsoft\.DotNet\.ILCompiler/11\.0\.0$' })

@@ -1,0 +1,13 @@
+# Repository start prompt
+
+Make the relevant [Matt Pocock skills](https://github.com/mattpocock/skills) available in the chosen coding agent. This package installs nothing. Use this prompt after extracting the package into the repository:
+
+> Read README.md, docs/SPEC.md, docs/CONTRACT.md, docs/AUTHORING.md, docs/AGENT-GUIDE.md, docs/TESTING.md, docs/IMPLEMENTATION.md, docs/GITHUB.md, docs/DEPENDENCIES.md, docs/NAMING.md, and features/*.feature. Build the specified small native Mermaid execution engine using coding agents. Write all development artifacts in English. Mermaid owns edges; constrained YAML owns node behavior. The runtime is deterministic and hands agent tasks to the existing agent; it has no LLM integration.
+>
+> Read the installed Matt Pocock skills and repository rules. If setup is missing, use setup-matt-pocock-skills with a local issue tracker. Do not publish issues, push, or deploy. Treat revision 0.5 as a concrete draft. Clarify only the four outstanding decision groups in IMPLEMENTATION.md in one concise pass, including the public CLI test seam and local commit rules. .NET 10 Native AOT is the proposed first language; Rust or Go are alternatives only after a justified decision. No FluentAssertions. The project is MIT-licensed; use NsDepCop as a build-only C# analyzer following docs/ARCHITECTURE.md. Keep it out of runtime references and release artifacts. MIT licensing and this analyzer choice are already decided.
+>
+> Reconcile the spec with to-spec and prepare vertical local tickets with to-tickets. Preserve CONTRACT.md and the English Gherkin features as normative references. Map each ticket to scenario tags. After approval of the slices, use implement, tdd, and code-review for P01 only. Execute scenarios from feature files; undefined steps must fail, not pass. Do not pretend the supplied scenarios already have bindings or passing results.
+>
+> Show the native end-to-end result, test evidence, binary size, and startup measurements. Identify checks that could not run on the current machine. Wait for acceptance before the next package. Do not introduce a web UI, LLM SDK, general workflow platform, or parallel execution.
+
+> Implement GitHub build/release workflows at their assigned slices using only allowed official Actions. Resolve current stable releases to verified full commit SHAs when writing the workflow. Use established dependencies only, with recorded provenance and licenses. Merstride is the accepted project name. Use `merstride` for the executable, repository name, metadata fence and marker, `.merstride` for state storage, and `Merstride` as the C# namespace root. The name is not reserved on any external service.

@@ -49,7 +49,7 @@ The project MUST be a public GitHub project with official-only build/release Act
 
 ### Language and architecture
 
-Start with C#/.NET 10 Native AOT, subject to an early native feasibility slice covering YAML, JSON, locks, persistence, and process execution. Choose one implementation language. Consider Rust or Go only if measured constraints remain unmet after removing unnecessary dependencies.
+Use C# 15/.NET 11 Native AOT following the accepted post-P04 technology change (ADR 0004); preserve native feasibility checks covering YAML, JSON, locks, persistence, and process execution. Choose one implementation language. Consider Rust or Go only if measured constraints remain unmet after removing unnecessary dependencies.
 
 Use proportional separation of compilation, execution/state, and CLI. No general plugin platform, framework-heavy DI, embedded scripting language, or repository abstraction for every file. Snapshot the compiled definition at start; do not claim scripts or the workspace are frozen.
 

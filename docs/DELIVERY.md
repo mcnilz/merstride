@@ -18,7 +18,8 @@ into a successful release qualification.
 | P01 | Accepted by user | P01 implementation; docs/STATUS.md historical evidence |
 | P02 | Accepted and committed by coordinator | P02 implementation; independent full gate: 40 passed, 21 feature cases |
 | P03 | Accepted and committed by coordinator | P03 implementation; independent full gate: 78 passed, 31 feature cases; 4.855 MiB; status P95 25.550 ms |
-| P04 | Accepted by coordinator; committing | Independent full gate: 162 passed, 61 feature cases; 4.902 MiB; status P95 27.951 ms; renderer probes passed |
-| P05 | Not started | Blocked by P04 acceptance |
+| P04 | Accepted and committed by coordinator | P04 implementation; independent full gate: 162 passed, 61 feature cases; 4.902 MiB; status P95 27.951 ms; renderer probes passed |
+| M01 | Accepted by coordinator; committing | .NET 11 / C# 15; independent full gate: 165 passed, 61 feature cases; 4.972 MiB; status P95 34.580 ms |
+| P05 | Not started | Blocked by M01 acceptance |
 | P06 | Not started | Blocked by P05 acceptance |
 | P07 | Not started | Blocked by P06 acceptance; release qualification requires actual target evidence |

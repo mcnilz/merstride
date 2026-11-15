@@ -10,7 +10,7 @@ separate raw-byte logs, offline guide/version, and initial architecture/build po
 checks, multi-workflow selection, and supported authoring validation.
 See [current status](docs/STATUS.md) for verified results and limitations.
 
-Build on Windows x64 with .NET SDK 10.0.404, PowerShell 7, and the Native AOT C++ toolchain:
+Build on Windows x64 with .NET SDK 11.0.100, PowerShell 7, and the Native AOT C++ toolchain:
 
 ```powershell
 pwsh -NoProfile -File scripts/build.ps1
@@ -74,7 +74,7 @@ All project specifications, source identifiers, comments, tests, scenarios, tick
 
 Revision 0.2 replaced the draft JSON metadata fence with YAML, added author and agent guides, and turned acceptance requirements into Gherkin scenarios with an automation plan. The metadata schema and CLI protocol remain draft version 1; this is not a migration for a released product.
 
-Development follows the installed [Matt Pocock skills](https://github.com/mattpocock/skills). No skills are bundled or installed by this package. .NET 10 Native AOT is the proposed implementation; Rust or Go remain alternatives if measured constraints require a change.
+Development follows the installed [Matt Pocock skills](https://github.com/mattpocock/skills). No skills are bundled or installed by this package. .NET 11 Native AOT with stable C# 15 is the accepted implementation; see docs/adr/0004-m01-dotnet11.md.
 
 Revision 0.3 fixes MIT as the project license and selects NsDepCop for build-time architecture enforcement. See [Architecture and licensing](docs/ARCHITECTURE.md). Additional Gherkin scenarios verify forbidden dependencies and separation of the analyzer from release artifacts.
 

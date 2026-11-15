@@ -255,7 +255,7 @@ public static partial class WorkflowCompiler
     private static (Edge[] Edges, Diagnostic[] Warnings) ValidateDiagram(Block diagram, string id, string entry, List<Node> definitions)
     {
         bool header = false, marker = false;
-        var declared = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> declared = [with(StringComparer.Ordinal)];
         var edges = new List<Edge>();
         var edgeLocations = new List<SourceLocation>();
         var nodeLocations = new Dictionary<string, SourceLocation>(StringComparer.Ordinal);

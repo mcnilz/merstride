@@ -21,6 +21,16 @@
   <AllowedAssembly From="*" To="Microsoft.CSharp" />
   <AllowedAssembly From="*" To="Microsoft.VisualBasic.*" />
   <AllowedAssembly From="*" To="Microsoft.Win32.*" />
+  <!-- .NET 11 base reference-pack additions; Microsoft.Extensions namespaces remain forbidden. -->
+  <AllowedAssembly From="*" To="Microsoft.Extensions.Caching.Abstractions" />
+  <AllowedAssembly From="*" To="Microsoft.Extensions.Configuration.Abstractions" />
+  <AllowedAssembly From="*" To="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  <AllowedAssembly From="*" To="Microsoft.Extensions.Diagnostics.Abstractions" />
+  <AllowedAssembly From="*" To="Microsoft.Extensions.FileProviders.Abstractions" />
+  <AllowedAssembly From="*" To="Microsoft.Extensions.Hosting.Abstractions" />
+  <AllowedAssembly From="*" To="Microsoft.Extensions.Logging.Abstractions" />
+  <AllowedAssembly From="*" To="Microsoft.Extensions.Options" />
+  <AllowedAssembly From="*" To="Microsoft.Extensions.Primitives" />
   <AllowedAssembly From="*" To="mscorlib" />
   <AllowedAssembly From="*" To="netstandard" />
   <AllowedAssembly From="*" To="WindowsBase" />

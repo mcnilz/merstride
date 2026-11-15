@@ -4,7 +4,7 @@ Revision 0.5. All development artifacts and communication recorded in the reposi
 
 ## Technology decision
 
-.NET 10 Native AOT is proposed because it fits the maintainer's C# experience. Prove native publish, constrained YAML parsing, source-generated System.Text.Json, locks, process invocation, size, and startup cost early. Avoid reflection-dependent production libraries, dynamic code generation, renderer dependencies, and framework-heavy CLI plumbing. Use NUnit 4 without FluentAssertions. Lock dependencies and review transitive licenses.
+.NET 11 Native AOT with stable C# 15 is accepted by the post-P04 human technology decision (ADR 0004). It fits the maintainer's C# experience. Prove native publish, constrained YAML parsing, source-generated System.Text.Json, locks, process invocation, size, and startup cost early. Avoid reflection-dependent production libraries, dynamic code generation, renderer dependencies, and framework-heavy CLI plumbing. Use NUnit 4 without FluentAssertions. Lock dependencies and review transitive licenses.
 
 Rust and Go remain alternatives, not parallel implementations. If .NET misses a measured constraint, first remove avoidable dependencies; then document a single alternative decision.
 
@@ -19,7 +19,7 @@ Skill names were checked in the official repository at commit `5863806dd4e15c631
 5. `implement`: implement one approved ticket, using `tdd` and `code-review` under their current instructions.
 6. Demonstrate each completed slice with its native binary, scenario results, known limitations, and next proposed slice; obtain acceptance before proceeding to the next package.
 
-The referenced tdd workflow calls for agreement on testing seams; the proposed CLI seam still needs confirmation. The ticket slices are a draft, not already approved tickets. Establish branch/local-commit rules once during setup. Do not push, publish issues, or deploy solely because a skill suggests a local commit.
+The baseline, P01–P07 tickets and public native CLI/build-policy test seams are accepted. The coordinating chat accepts and commits completed slices under user delegation; implementation chats stop uncommitted at their assigned slice. M01 adds the explicitly requested .NET 11 migration before P05. Do not push, publish issues, or deploy solely because a skill suggests a local commit.
 
 ## Vertical slices
 
@@ -29,7 +29,8 @@ The referenced tdd workflow calls for agreement on testing seams; the proposed C
 | P02 | A deterministic process chain runs without model calls | P01 | 02-processes; process feasibility measurements; literal args and real logs |
 | P03 | Existing agent receives, completes, and resumes tasks | P02 | 03-agents; agent guide matches actual protocol |
 | P04 | Full supported embedding and graph validation are unambiguous | P03 | 01-authoring; complete YAML restrictions; development-only Mermaid compatibility check |
-| P05 | Loops, time, output, and context stay bounded | P04 | 04-limits including exact boundaries |
+| M01 | Migrate the toolchain to .NET 11 / C# 15 without product changes | P04 | Existing CLI/build regression gates; ADR 0004 |
+| P05 | Loops, time, output, and context stay bounded | M01 | 04-limits including exact boundaries |
 | P06 | Crashes and concurrent access cannot silently replay effects | P05 | 05-recovery; OS-specific interruption and process-tree evidence |
 | P07 | Native release is portable and its benefit measured | P06 | 06-interface plus all applicable features; Windows/Linux; A22 distribution checks; license and benchmark reports; release workflow and A25 |
 
@@ -46,7 +47,7 @@ Feature-level tags identify the main owning slice; individual tags may identify 
 - Update active state with completed slice, test evidence, limitations, and next slice.
 - No unrelated functionality, remote publication, or deployment.
 
-## Decisions to confirm before implementation
+## Original setup decisions (accepted; retained for context)
 
 1. .NET AOT first, and the stated size/startup budgets.
 2. CLI-only MVP and sequential execution; MCP/parallelism later.

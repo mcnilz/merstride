@@ -71,7 +71,7 @@ internal sealed class BuildWorld : IDisposable
                 var src = Path.Combine(directory, "src", "proposed");
                 Directory.CreateDirectory(src);
                 File.WriteAllText(Path.Combine(src, "packages.lock.json"), """
-                    {"version":1,"dependencies":{"net10.0":{"Unreviewed.Package":{"type":"Transitive","resolved":"1.0.0","contentHash":"unreviewed"}}}}
+                    {"version":1,"dependencies":{"net11.0":{"Unreviewed.Package":{"type":"Transitive","resolved":"1.0.0","contentHash":"unreviewed"}}}}
                     """);
                 Directory.CreateDirectory(Path.Combine(directory, "tests")); break;
             case "I run the dependency review gate":
@@ -92,7 +92,7 @@ internal sealed class BuildWorld : IDisposable
                 Fixture(false);
                 if (step.EndsWith("configuration", StringComparison.Ordinal)) File.Delete(Path.Combine(directory, "config.nsdepcop"));
                 else if (step.EndsWith("disabled", StringComparison.Ordinal))
-                    File.WriteAllText(Path.Combine(directory, "Directory.Build.props"), "<Project><PropertyGroup><TargetFramework>net10.0</TargetFramework><RunAnalyzers>false</RunAnalyzers></PropertyGroup></Project>");
+                    File.WriteAllText(Path.Combine(directory, "Directory.Build.props"), "<Project><PropertyGroup><TargetFramework>net11.0</TargetFramework><RunAnalyzers>false</RunAnalyzers></PropertyGroup></Project>");
                 else File.WriteAllText(Path.Combine(directory, ".editorconfig"), "root = true\n[*.cs]\ndotnet_diagnostic.NSDEPCOP01.severity = none\n");
                 break;
             case "I execute the architecture build gate":

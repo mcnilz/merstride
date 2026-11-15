@@ -2,7 +2,7 @@
 
 Reviewed 2026-11-15. The exact direct/transitive NuGet graph, hashes, provenance,
 purposes, licenses, and classifications are in dependency-inventory.json and the
-two versioned packages.lock.json files. The dependency gate requires evidence for
+three versioned packages.lock.json files. The dependency gate requires evidence for
 every locked version. All package license expressions were inspected from their
 official NuGet packages; all are MIT except the explicitly approved NsDepCop tool.
 
@@ -48,3 +48,21 @@ credential persistence, and an always-running aggregate gate. It has no publicat
 job. P07 adds the release workflow; download-artifact is not yet needed. Dependabot
 checks Actions and NuGet weekly; it does not automerge. A local policy check is not
 proof of actual hosted fork execution or repository branch protection.
+
+## M01 toolchain migration
+
+SDK 11.0.100 selects runtime/compiler/linker 11.0.0 and stable C# 15 for all
+net11.0 projects. Official NuGet metadata records MIT and source commit
+297acf930fb0f5c07fd4e51d78e521b4ad2e5d1f for the three updated compiler/linker
+packages. Their direct/platform graph and restored content hashes are reviewed in
+dependency-inventory.json; historical 10.0.15 records are retained. The sole
+third-party runtime package remains YamlDotNet 18.1.0 (its net10.0 asset is compatible
+with net11.0). NUnit 4 and all test dependency versions remain unchanged.
+
+ADR 0004 explains the nine exact new SDK reference-pack assembly exceptions.
+Microsoft.Extensions namespaces remain forbidden. The positive and negative
+architecture fixtures compile under net11.0 and prove enforcement remains active.
+Current native size/startup and analyzer-input inspection evidence is in STATUS.md.
+The global C# language skill remains external. CI setup-dotnet consumes the same
+global.json; existing verified official Action SHAs are unchanged. Hosted execution
+remains unclaimed.

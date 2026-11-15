@@ -295,5 +295,46 @@
       "Microsoft.TestPlatform.ObjectModel": "18.12.0"
     },
     "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.DotNet.ILCompiler/11.0.0": {
+    "upstream": "https://github.com/dotnet/dotnet",
+    "license": "MIT",
+    "purpose": "Official .NET Native AOT compiler/linker and platform toolchain selected by the pinned SDK.",
+    "classification": "build-only",
+    "maintenanceEvidence": "Microsoft stable .NET 11.0.0 released 2026-11-10, SDK 11.0.100; official release metadata and restored NuGet MIT license/repository commit inspected 2026-11-15.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.dotnet.ilcompiler/11.0.0/microsoft.dotnet.ilcompiler.nuspec",
+    "sourceCommit": "297acf930fb0f5c07fd4e51d78e521b4ad2e5d1f",
+    "contentHash": "lw6gUL92db6XPwYsQwaGwrJxgRM0X0qQKl0QkwuZIACMtgH0eFu6jmq6W+/L8qTxQZwggfV/dGjICyMqVHdehg==",
+    "dependencies": {
+      "runtime.win-x64.Microsoft.DotNet.ILCompiler": "11.0.0"
+    },
+    "aotEvidence": "M01 win-x64 Native AOT publish and 165 public CLI/build tests passed on SDK 11.0.100. Official compiler/linker tooling is build-only; .NET runtime support is part of native output. Analyzer implementation is excluded from compiler and native inputs. Full release/platform/license audit remains P07."
+  },
+  "Microsoft.NET.ILLink.Tasks/11.0.0": {
+    "upstream": "https://github.com/dotnet/dotnet",
+    "license": "MIT",
+    "purpose": "Official .NET Native AOT compiler/linker and platform toolchain selected by the pinned SDK.",
+    "classification": "build-only",
+    "maintenanceEvidence": "Microsoft stable .NET 11.0.0 released 2026-11-10, SDK 11.0.100; official release metadata and restored NuGet MIT license/repository commit inspected 2026-11-15.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.net.illink.tasks/11.0.0/microsoft.net.illink.tasks.nuspec",
+    "sourceCommit": "297acf930fb0f5c07fd4e51d78e521b4ad2e5d1f",
+    "contentHash": "gK2aq4XvChj5kvozpPHrkfKkr7zc5Z4xoTrJb4GPZzDEPMlCk0TX632bwY3LsWcX2UVcVRQBBGzsBGC2lq6YhA==",
+    "dependencies": {},
+    "aotEvidence": "M01 win-x64 Native AOT publish and 165 public CLI/build tests passed on SDK 11.0.100. Official compiler/linker tooling is build-only; .NET runtime support is part of native output. Analyzer implementation is excluded from compiler and native inputs. Full release/platform/license audit remains P07."
+  },
+  "runtime.win-x64.Microsoft.DotNet.ILCompiler/11.0.0": {
+    "upstream": "https://github.com/dotnet/dotnet",
+    "license": "MIT",
+    "purpose": "Official .NET Native AOT compiler/linker and platform toolchain selected by the pinned SDK.",
+    "classification": "build-only",
+    "maintenanceEvidence": "Microsoft stable .NET 11.0.0 released 2026-11-10, SDK 11.0.100; official release metadata and restored NuGet MIT license/repository commit inspected 2026-11-15.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/runtime.win-x64.microsoft.dotnet.ilcompiler/11.0.0/runtime.win-x64.microsoft.dotnet.ilcompiler.nuspec",
+    "sourceCommit": "297acf930fb0f5c07fd4e51d78e521b4ad2e5d1f",
+    "contentHash": "GhYzDaU4IbNnTgyFgxT2URnUogx+xuphFHscUx8v1H8ZRKiIlYa/8Lkpd0SXJZ+pEWHJFJXLvEPpWLEcwyNkmQ==",
+    "dependencies": {},
+    "aotEvidence": "M01 win-x64 Native AOT publish and 165 public CLI/build tests passed on SDK 11.0.100. Official compiler/linker tooling is build-only; .NET runtime support is part of native output. Analyzer implementation is excluded from compiler and native inputs. Full release/platform/license audit remains P07."
   }
 }

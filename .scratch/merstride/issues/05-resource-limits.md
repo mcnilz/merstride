@@ -2,7 +2,7 @@
 
 **What to build:** Bound loops, process time/output, structured data, and agent context at exact limits.
 
-**Blocked by:** P04.
+**Blocked by:** M01 (.NET 11 migration), after accepted P04.
 
 **Status:** ready-for-agent
 

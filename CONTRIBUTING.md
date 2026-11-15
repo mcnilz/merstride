@@ -1,6 +1,6 @@
 # Contributing
 
-Install .NET SDK 10.0.404, PowerShell 7, and Visual Studio 2022 or newer Build Tools
+Install .NET SDK 11.0.100, PowerShell 7, and Visual Studio 2022 or newer Build Tools
 with Desktop development with C++ and a Windows SDK for win-x64 Native AOT.
 P04 development checks also require Node >=22.12.0, npm, and an installed Chromium
 browser (Edge by default; override MERSTRIDE_BROWSER). These never ship with the CLI.

@@ -28,7 +28,7 @@ Windows Job accounting asserts exact CLI plus declared child counts per call; st
 status, guide, validate, and logs still require no children.
 
 Run `pwsh -NoProfile -File scripts/build.ps1` for the complete local gate. Results are
-`artifacts/tests/p04.trx`, `artifacts/tests/scenarios.json`, and
+`artifacts/tests/m01.trx`, `artifacts/tests/scenarios.json`, and
 `artifacts/benchmark.json`. Supplemental safety regressions do not mark later
 feature scenarios implemented. Native helper/toolchain packages reuse the existing
 reviewed dependency inventory and are never published into the product directory.
@@ -83,3 +83,8 @@ A check of feature syntax is not a behavioral pass. A native publish on one OS d
 A21 maps to 07-architecture: positive/negative compilation fixtures and effective enforcement, owned by P01. A22 maps to the same feature: MIT release and build-only analyzer separation, owned by P07. These `@build` checks use the public compiler/build/publish boundary and are separate from the runtime CLI suite. The clean-runtime platform suite excludes build-only checks; the overall release gate requires both suites.
 
 A23: official Actions, SHA pins, and PR isolation (P01). A24: established dependency review (P01). A25: tested-tag release integrity and publication gates (P07). These are in 08-delivery.feature. Policy checks combine automated allowlist/lock/reference checks with a version-controlled reviewed dependency inventory; maintenance maturity cannot be inferred automatically from a package name.
+
+M01 preserves all 61 P01–P04 feature cases and adds three public MSBuild property
+checks for effective SDK 11.0.100, net11.0, stable C# 15 and no memory-safety opt-in
+across product, test harness and native helper. See STATUS.md for the 165-test gate
+and migration evidence. The global language skill is not part of the test inputs.

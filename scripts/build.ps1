@@ -26,7 +26,7 @@ try {
     & dotnet publish tests/Merstride.TestProcess -c Release -r $Runtime --no-restore -o artifacts/fixture
     if ($LASTEXITCODE -ne 0) { throw 'Native test fixture publish failed.' }
     $env:MERSTRIDE_BINARY = Join-Path (Get-Location) 'artifacts/native/merstride.exe'
-    & dotnet test tests/Merstride.Acceptance -c Release --no-restore --logger 'trx;LogFileName=p04.trx' --results-directory artifacts/tests
+    & dotnet test tests/Merstride.Acceptance -c Release --no-restore --logger 'trx;LogFileName=m01.trx' --results-directory artifacts/tests
     if ($LASTEXITCODE -ne 0) { throw 'P01/P02/P03/P04 acceptance/build checks failed.' }
     # Measure native startup before installing/rendering the development browser tool.
     & ./scripts/benchmark.ps1 -Binary $env:MERSTRIDE_BINARY

@@ -7,6 +7,11 @@ public interface IRunPersistence
     void Write(RunState state);
 }
 
+public interface IContextLogs
+{
+    string ReadLog(RunState run, string activationId, string stream, int tailBytes, out bool truncated);
+}
+
 public interface IProcessRunner
 {
     Activation Execute(Node node, string workspace, Activation activation);
@@ -14,7 +19,7 @@ public interface IProcessRunner
 
 public static class WorkflowEngine
 {
-    public static RunState Advance(RunState run, IRunPersistence store, IProcessRunner processes)
+    public static RunState Advance(RunState run, IRunPersistence store, IProcessRunner processes, IContextLogs logs)
     {
         if (run.Status == "executing")
         {
@@ -31,6 +36,21 @@ public static class WorkflowEngine
             }
             else if (run.TransitionCount >= run.Definition.MaxTransitions)
                 run = run with { Status = "failed", Error = new("TRANSITION_LIMIT", "Transition budget exhausted.") };
+            else if (node.Agent is not null)
+            {
+                var context = AgentContext.Select(run, node.Agent.Context, logs);
+                if (!AgentContext.Fits(node.Agent.Prompt, context))
+                {
+                    run = run with { Status = "failed", Error = new("CONTEXT_LIMIT", "Prompt plus selected context exceeds 32768 UTF-8 bytes.") };
+                    store.Write(run);
+                    return run;
+                }
+                var activation = new Activation("a_" + Guid.NewGuid().ToString("N"), node.Id, DateTimeOffset.UtcNow,
+                    null, null, null, "", "");
+                run = run with { Status = "waiting_agent", Activations = [.. run.Activations, activation],
+                    Request = new("q_" + Guid.NewGuid().ToString("N"), activation.Id, node.Id, node.Agent.Prompt,
+                        run.Definition.Edges.Where(e => e.Source == node.Id).Select(e => e.Outcome!).Order(StringComparer.Ordinal).ToArray(), context) };
+            }
             else
             {
                 var id = "a_" + Guid.NewGuid().ToString("N");

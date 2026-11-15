@@ -4,6 +4,12 @@ Console.OutputEncoding = new System.Text.UTF8Encoding(false);
 
 switch (args[0])
 {
+    case "context_output":
+        Console.Write(string.Concat(Enumerable.Repeat("loglog", 2000)));
+        Console.Error.Write("SECRET unselected error"); break;
+    case "check":
+        File.AppendAllText("checks.txt", "check\n");
+        return File.Exists("repaired.txt") ? 0 : 1;
     case "effect": File.AppendAllText("effects.txt", args[1] + "\n"); break;
     case "exit": return int.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
     case "arguments":

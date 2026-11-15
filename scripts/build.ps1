@@ -26,8 +26,8 @@ try {
     & dotnet publish tests/Merstride.TestProcess -c Release -r $Runtime --no-restore -o artifacts/fixture
     if ($LASTEXITCODE -ne 0) { throw 'Native test fixture publish failed.' }
     $env:MERSTRIDE_BINARY = Join-Path (Get-Location) 'artifacts/native/merstride.exe'
-    & dotnet test tests/Merstride.Acceptance -c Release --no-restore --logger 'trx;LogFileName=p02.trx' --results-directory artifacts/tests
-    if ($LASTEXITCODE -ne 0) { throw 'P01/P02 acceptance/build checks failed.' }
+    & dotnet test tests/Merstride.Acceptance -c Release --no-restore --logger 'trx;LogFileName=p03.trx' --results-directory artifacts/tests
+    if ($LASTEXITCODE -ne 0) { throw 'P01/P02/P03 acceptance/build checks failed.' }
     & ./scripts/benchmark.ps1 -Binary $env:MERSTRIDE_BINARY
     if ($LASTEXITCODE -ne 0) { throw 'Initial native budget check failed.' }
 } finally { Pop-Location }

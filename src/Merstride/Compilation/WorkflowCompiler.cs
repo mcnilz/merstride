@@ -62,7 +62,7 @@ public static partial class WorkflowCompiler
         foreach (var (nodeId, node) in nodes.Fields)
         {
             if (!Id().IsMatch(nodeId)) throw Invalid("Invalid node identifier.", node.Location);
-            var n = Map(node, "kind", "result", "command", "args", "timeoutSeconds");
+            var n = Map(node, "kind", "result", "command", "args", "timeoutSeconds", "prompt", "context");
             var kind = String(Required(n, "kind", node.Location));
             if (kind == "end")
             {
@@ -85,7 +85,33 @@ public static partial class WorkflowCompiler
                     throw Invalid("timeoutSeconds must be an integer from 1 to 3600.", timeout.Location);
                 definitions.Add(new(nodeId, kind, null, command, args, seconds));
             }
-            else throw Invalid("Only process and end nodes are implemented.", node.Location);
+            else if (kind == "agent")
+            {
+                Map(node, "kind", "prompt", "context");
+                var prompt = String(Required(n, "prompt", node.Location));
+                if (string.IsNullOrWhiteSpace(prompt) || Encoding.UTF8.GetByteCount(prompt) > 16384)
+                    throw Invalid("Agent prompt must be nonempty and at most 16384 UTF-8 bytes.", node.Location);
+                string[] selectors = [];
+                if (n.TryGetValue("context", out var context))
+                {
+                    if (context.Items is null) throw Invalid("context must be an array of selectors.", context.Location);
+                    selectors = context.Items.Select(String).ToArray();
+                    if (selectors.Distinct(StringComparer.Ordinal).Count() != selectors.Length)
+                        throw Invalid("Context selectors must be unique.", context.Location);
+                }
+                definitions.Add(new(nodeId, kind, null, null, [], 0, new(prompt, selectors)));
+            }
+            else throw Invalid("Unknown node kind.", node.Location);
+        }
+        foreach (var node in definitions.Where(n => n.Agent is not null))
+        foreach (var selector in node.Agent!.Context)
+        {
+            if (selector == "input") continue;
+            var parts = selector.Split('.');
+            var sourceNode = parts.Length == 3 && parts[0] == "nodes" ? definitions.SingleOrDefault(n => n.Id == parts[1]) : null;
+            if (sourceNode is null || !(sourceNode.Kind == "agent" && parts[2] == "data" ||
+                sourceNode.Kind == "process" && parts[2] is "exitCode" or "stdoutTail" or "stderrTail"))
+                throw Invalid($"Invalid context selector '{selector}'.", nodes.Location);
         }
         var edges = ValidateDiagram(diagrams[0], id, entry, definitions);
         var warnings = edges.Where(e => e.Outcome is null).Select(e => new Diagnostic("warning", "IGNORES_PROCESS_FAILURE",
@@ -217,6 +243,8 @@ public static partial class WorkflowCompiler
         {
             var outgoing = edges.Where(e => e.Source == node.Id).ToArray();
             if (node.Kind == "end" && outgoing.Length != 0) throw Invalid("End nodes cannot have outgoing edges.", loc);
+            if (node.Kind == "agent" && outgoing.Any(e => e.Outcome is null or "default"))
+                throw Invalid("Agent edges require labeled outcomes without default.", loc);
             if (outgoing.Select(e => e.Outcome).Distinct(StringComparer.Ordinal).Count() != outgoing.Length ||
                 outgoing.Length > 1 && outgoing.Any(e => e.Outcome is null)) throw Invalid("Process edges must be distinct labels or one unlabeled edge.", loc);
         }

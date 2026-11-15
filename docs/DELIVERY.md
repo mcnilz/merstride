@@ -16,8 +16,8 @@ into a successful release qualification.
 | Slice | State | Commit / acceptance evidence |
 | --- | --- | --- |
 | P01 | Accepted by user | P01 implementation; docs/STATUS.md historical evidence |
-| P02 | Accepted by coordinator; committing | Independent full gate: 40 passed, 21 feature cases; 4.557 MiB; status P95 26.590 ms |
-| P03 | Not started | Blocked by P02 acceptance |
+| P02 | Accepted and committed by coordinator | P02 implementation; independent full gate: 40 passed, 21 feature cases |
+| P03 | Accepted by coordinator; committing | Independent full gate: 78 passed, 31 feature cases; 4.855 MiB; status P95 25.550 ms |
 | P04 | Not started | Blocked by P03 acceptance |
 | P05 | Not started | Blocked by P04 acceptance |
 | P06 | Not started | Blocked by P05 acceptance |

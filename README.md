@@ -4,10 +4,10 @@ Revision 0.5 — specification draft — 2026-11-15.
 
 Project name: **Merstride**, accepted on 2026-11-15. CLI: `merstride`. See [naming decision](docs/NAMING.md). A small native CLI executes workflows embedded in Markdown. Mermaid defines control flow; YAML defines node behavior. An existing coding agent handles explicit agent tasks.
 
-P01 and P02 implement native sequential process/end workflows, persistent
-start/status/advance, separate raw-byte logs, offline guide/version, and initial
-architecture/build policy checks. Agent nodes and later slices are
-not yet implemented. See [current status](docs/STATUS.md) for verified results and limitations.
+P01–P03 implement native sequential process/agent/end workflows, persistent
+start/status/advance/complete, selected context, idempotent completion receipts,
+separate raw-byte logs, offline guide/version, and initial architecture/build policy
+checks. See [current status](docs/STATUS.md) for verified results and limitations.
 
 Build on Windows x64 with .NET SDK 10.0.404, PowerShell 7, and the Native AOT C++ toolchain:
 
@@ -28,6 +28,23 @@ $run = & $binary start examples/process-chain.md --workspace (Get-Location).Path
 $result = & $binary advance $run.runId --state-dir $state --json | ConvertFrom-Json
 & $binary logs $run.runId --activation $result.lastActivation.id --stream stdout --state-dir $state --json
 ```
+
+For an existing-agent task, start [the task example](examples/agent-task.md) and
+advance to `waiting_agent`. Read the returned literal prompt, selected context, and
+sorted allowed outcomes. After performing the task, write a UTF-8 JSON result such
+as `{"outcome":"approved","data":{"summary":"Review completed"}}`, then run:
+
+```powershell
+& $binary complete $run.runId --request $current.request.id --result-file result.json --state-dir $state --json
+& $binary advance $run.runId --state-dir $state --json
+```
+
+Here `$run` is the task's start response and `$current` its advance response.
+Complete saves a receipt and moves only the cursor; the next advance executes it.
+Repeated status/advance while waiting returns the same request. Retry a lost
+completion response with the same request ID and equivalent payload; historical
+receipts never complete a newer request. Optional start `--input-file` supplies a
+frozen JSON object. Input and completion data are limited to 16 KiB and depth 16.
 
 Process arguments are literal strings; PowerShell requires an explicit `pwsh`
 command. Exact outcome edges precede `default`; unmatched outcomes fail the run.

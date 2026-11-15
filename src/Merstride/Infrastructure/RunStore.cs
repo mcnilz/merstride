@@ -5,7 +5,7 @@ using Merstride.Application;
 
 namespace Merstride.Infrastructure;
 
-public sealed partial class RunStore(string root) : IRunPersistence
+public sealed partial class RunStore(string root) : IRunPersistence, IContextLogs
 {
     public string Root { get; } = root;
 
@@ -29,8 +29,8 @@ public sealed partial class RunStore(string root) : IRunPersistence
         {
             var state = JsonSerializer.Deserialize(File.ReadAllBytes(Path.Combine(RunDirectory(id), "state.json")), JsonContext.Default.RunState);
             if (state is null || state.RunId != id || state.Definition is null || state.Workspace is null ||
-                state.SourceHash is null || state.ToolVersion is null || state.Input != "{}" || state.TransitionCount < 0 ||
-                state.Status is not ("ready" or "executing" or "interrupted" or "completed" or "failed") ||
+                state.SourceHash is null || state.ToolVersion is null || state.Input is null || state.TransitionCount < 0 ||
+                state.Status is not ("ready" or "executing" or "interrupted" or "completed" or "failed" or "waiting_agent") ||
                 state.Definition.Nodes is null || state.Definition.Edges is null || state.Activations is null ||
                 !Identifier().IsMatch(state.Cursor ?? "") || !state.Definition.Nodes.Any(n => n.Id == state.Cursor))
                 throw new JsonException("Invalid state.");

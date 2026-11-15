@@ -1,6 +1,8 @@
 # Agent guide
 
-This guide describes the planned CLI. It becomes usable when the corresponding commands are implemented. `merstride guide` MUST ship a concise offline version of this protocol.
+P01–P03 implement the operating loop below, including selected context and completion
+receipts. Recovery commands remain planned for P06. `merstride guide` ships a concise
+offline description of the implemented protocol and identifies planned recovery.
 
 ## Operating loop
 
@@ -13,6 +15,30 @@ This guide describes the planned CLI. It becomes usable when the corresponding c
 7. Call `advance` again until completed, failed, or interrupted. Report the actual terminal result.
 
 Use `status` to resume after losing conversation context. Repeated status/advance while waiting returns the same request. Do not start a new run merely because a completion response was lost: resend the same completion for the same ID. A conflicting result requires investigation, not a fresh request invented by the agent.
+
+The current request contains `id`, `activationId`, `nodeId`, literal `prompt`, ordinally
+sorted `allowedOutcomes`, and `context`. Each context item contains `selector`,
+`available`, `value`, and `sourceActivationId` (null for input or unavailable values).
+Stream items also contain `truncated` and `observedBytes`; values are UTF-8 tails of
+at most 4096 bytes. A selector reads the latest completed activation, including a
+previous loop iteration; it never reads the unfinished current activation.
+
+`complete` returns `receipt` with `requestId`, `activationId`, `outcome`, `data`, and
+`acceptedAt`, alongside current status. It returns `ready` on first acceptance even
+when the next cursor is an end. Repeating equivalent parsed payloads returns that
+original receipt and the current status. Object key order is irrelevant, array order
+matters, strings compare ordinally, and numbers compare as finite binary64 values.
+Integers outside ±9007199254740991 are rejected. Missing data equals `{}`. Rejected
+completions do not alter saved state; accepted historical IDs cannot fulfill a new
+request. Unknown IDs/outcomes return `INVALID_REQUEST`/`INVALID_OUTCOME`; differing
+accepted payloads return `COMPLETION_CONFLICT` (CLI exit 4).
+
+Input and result data must be JSON objects, at most 16384 compact UTF-8 bytes and
+depth 16 (root object counts as 1). Duplicate keys, invalid UTF-8, unknown completion
+fields, and non-finite numbers are rejected. Oversize data returns `DATA_LIMIT`;
+other malformed completion payloads return `INVALID_PAYLOAD`. Input uses
+`INPUT_LIMIT` for size errors. Prompt plus serialized selected context is capped
+at 32768 UTF-8 bytes; excess fails advance with `CONTEXT_LIMIT` before requesting work.
 
 ## State handling
 

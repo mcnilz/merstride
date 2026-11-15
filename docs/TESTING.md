@@ -1,7 +1,7 @@
 # Acceptance testing with Gherkin
 
 Revision 0.5. The `.feature` files are the reviewable behavioral contract. The NUnit
-runner executes all P01/P02-tagged cases from these files against the published
+runner executes all P01/P02/P03-tagged cases from these files against the published
 native executable. Later cases are inventoried as not yet implemented. See STATUS.md
 for current evidence and limitations.
 
@@ -28,10 +28,16 @@ Windows Job accounting asserts exact CLI plus declared child counts per call; st
 status, guide, validate, and logs still require no children.
 
 Run `pwsh -NoProfile -File scripts/build.ps1` for the complete local gate. Results are
-`artifacts/tests/p02.trx`, `artifacts/tests/scenarios.json`, and
+`artifacts/tests/p03.trx`, `artifacts/tests/scenarios.json`, and
 `artifacts/benchmark.json`. Supplemental safety regressions do not mark later
 feature scenarios implemented. Native helper/toolchain packages reuse the existing
 reviewed dependency inventory and are never published into the product directory.
+
+P03 adds actual agent-feature bindings and helper modes for a repairable check and
+large context output. Supplemental CLI cases check strict JSON/UTF-8, binary64
+receipt equivalence, frozen input, selected bounded tails, and basic context/data
+limits. Full exact boundary qualification remains P05. Completion rejection tests
+also compare authoritative state bytes, as required by the no-mutation contract.
 
 Named Given steps construct complete minimal Markdown/YAML/Mermaid fixtures. Distinct end nodes in routing scenarios are observed through returned cursor/activation identity. Fixtures MUST not use production parser code to derive their expected answers. The test runner records child invocations externally; “no child process” assertions must not rely solely on an absent application log.
 

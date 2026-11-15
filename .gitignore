@@ -1,5 +1,6 @@
 **/bin/
 **/obj/
 artifacts/
+node_modules/
 .merstride/
 .scratch/research.ps1

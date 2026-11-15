@@ -2,6 +2,8 @@
 
 Install .NET SDK 10.0.404, PowerShell 7, and Visual Studio 2022 or newer Build Tools
 with Desktop development with C++ and a Windows SDK for win-x64 Native AOT.
+P04 development checks also require Node >=22.12.0, npm, and an installed Chromium
+browser (Edge by default; override MERSTRIDE_BROWSER). These never ship with the CLI.
 Run `pwsh -NoProfile -File scripts/build.ps1` from the repository.
 Tests invoke the published executable. Results are under artifacts/tests; benchmarks
 and SDK information are under artifacts. Build-time fixtures require the SDK.

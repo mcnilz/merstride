@@ -1,0 +1,9 @@
+{
+  "name": "merstride-mermaid-compatibility",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Development-only official Mermaid compatibility check; never shipped.",
+  "devDependencies": {
+    "mermaid": "12.3.0"
+  }
+}

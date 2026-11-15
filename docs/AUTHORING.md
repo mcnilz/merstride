@@ -43,6 +43,20 @@ Context selectors expose the latest completed node activation, which may be from
 
 ## Validate before execution
 
+P04 supports multiple marked pairs: select one with `--workflow <id>`, or omit the
+option when exactly one pair exists. Block order is irrelevant. Only column-one
+backtick fences execute; enclosing longer/tilde fences hide examples. Keep the
+node declaration token contiguous as `id["Label"]`; indentation and whitespace
+between header/edge tokens are allowed. Official Mermaid reserves the lowercase
+node IDs `end`, `subgraph`, `style`, `class`, `flowchart`, `graph`, and `interpolate`; choose an
+alternative such as `finish` or `work`. This compatibility interpretation and its
+actual renderer evidence are recorded in ADR 0003 and MERMAID-VALIDATION.md.
+
+Validation enforces 1 MiB of UTF-8 Markdown, 100 nodes and 250 edges. It does not
+launch commands or probe whether an executable is installed. Start freezes the
+selected compiled definition and the source hash; later source edits do not change
+that run. Workspace scripts themselves remain live.
+
 Run `merstride validate workflow.md --json`. Unknown YAML keys, unsupported Mermaid syntax, missing IDs, or invalid routes fail before execution. A successful validation does not establish that commands are safe, installed, or semantically correct.
 
 Use workflow-specific Gherkin scenarios when authoring important workflows: successful path, expected failure, repair loop, and blocked outcome. Product-engine acceptance features in this package test engine semantics; they do not prove every future workflow's business behavior.

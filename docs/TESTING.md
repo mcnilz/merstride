@@ -1,7 +1,7 @@
 # Acceptance testing with Gherkin
 
 Revision 0.5. The `.feature` files are the reviewable behavioral contract. The NUnit
-runner executes all P01/P02/P03-tagged cases from these files against the published
+runner executes all P01/P02/P03/P04-tagged cases from these files against the published
 native executable. Later cases are inventoried as not yet implemented. See STATUS.md
 for current evidence and limitations.
 
@@ -28,7 +28,7 @@ Windows Job accounting asserts exact CLI plus declared child counts per call; st
 status, guide, validate, and logs still require no children.
 
 Run `pwsh -NoProfile -File scripts/build.ps1` for the complete local gate. Results are
-`artifacts/tests/p03.trx`, `artifacts/tests/scenarios.json`, and
+`artifacts/tests/p04.trx`, `artifacts/tests/scenarios.json`, and
 `artifacts/benchmark.json`. Supplemental safety regressions do not mark later
 feature scenarios implemented. Native helper/toolchain packages reuse the existing
 reviewed dependency inventory and are never published into the product directory.

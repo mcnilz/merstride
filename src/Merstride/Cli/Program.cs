@@ -50,9 +50,11 @@ internal static class Program
         var root = options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : Path.GetFullPath(".merstride/runs");
         var store = new RunStore(root);
         if (command == "guide") return Output(new(Guide: """
-            Merstride protocol 1. P01-P03 support process chains, agent handoffs, and end nodes.
+            Merstride protocol 1. P01-P04 support process chains, agent handoffs, and end nodes.
             Implemented commands: validate, start, advance, status, complete, logs, guide, version.
-            Validate a marked Markdown workflow. Use start <file> --workspace <absolute-path>
+            Validate a marked Markdown workflow; use --workflow <id> when a document contains multiple pairs.
+            Executable fences use column-one backticks; YAML metadata and a marked Mermaid diagram pair by ID.
+            Documents are limited to 1 MiB, graphs to 100 nodes and 250 edges. Use start <file> --workspace <absolute-path>
             --state-dir <absolute-path> to persist ready without executing. Retain runId and stateRoot.
             Optional --input-file <file> supplies a JSON object (default {}). Input is frozen at start.
             Use status <run-id> to inspect; advance <run-id> executes the declared chain to an end.

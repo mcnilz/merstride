@@ -4,10 +4,11 @@ Revision 0.5 — specification draft — 2026-11-15.
 
 Project name: **Merstride**, accepted on 2026-11-15. CLI: `merstride`. See [naming decision](docs/NAMING.md). A small native CLI executes workflows embedded in Markdown. Mermaid defines control flow; YAML defines node behavior. An existing coding agent handles explicit agent tasks.
 
-P01–P03 implement native sequential process/agent/end workflows, persistent
+P01–P04 implement native sequential process/agent/end workflows, persistent
 start/status/advance/complete, selected context, idempotent completion receipts,
 separate raw-byte logs, offline guide/version, and initial architecture/build policy
-checks. See [current status](docs/STATUS.md) for verified results and limitations.
+checks, multi-workflow selection, and supported authoring validation.
+See [current status](docs/STATUS.md) for verified results and limitations.
 
 Build on Windows x64 with .NET SDK 10.0.404, PowerShell 7, and the Native AOT C++ toolchain:
 

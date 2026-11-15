@@ -8,7 +8,7 @@ internal sealed class ProcessWorld : IDisposable
     private readonly CliWorld cli = new();
     private string runId = "";
     private int children = 1;
-    private string Helper => Path.Combine(FeatureTests.Root, "artifacts/fixture/test-process.exe");
+    private string Helper => TestPaths.Helper;
 
     private void Chain()
     {

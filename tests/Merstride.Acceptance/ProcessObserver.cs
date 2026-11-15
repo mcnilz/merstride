@@ -12,6 +12,15 @@ internal static class ProcessObserver
 
     internal static uint? TotalProcesses()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            var trace = Environment.GetEnvironmentVariable("MERSTRIDE_PROCESS_TRACE")
+                ?? throw new InvalidOperationException("Linux acceptance requires external strace execve observation.");
+            // strace writes completed successful execve calls; failed PATH probes do not count.
+            return checked((uint)File.ReadLines(trace).Count(l =>
+                (l.Contains("execve(", StringComparison.Ordinal) || l.Contains("<... execve resumed>", StringComparison.Ordinal)) &&
+                l.EndsWith("= 0", StringComparison.Ordinal)));
+        }
         if (Job is null) return null;
         if (!QueryInformationJobObject(Job, 1, out var info, Marshal.SizeOf<Accounting>(), IntPtr.Zero))
             throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -20,6 +29,27 @@ internal static class ProcessObserver
 
     internal static int[] ActiveProcessIds()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            var parents = new Dictionary<int, int>();
+            foreach (var path in Directory.GetDirectories("/proc"))
+            {
+                if (!int.TryParse(Path.GetFileName(path), out var pid)) continue;
+                try
+                {
+                    var stat = File.ReadAllText(Path.Combine(path, "stat"));
+                    parents[pid] = int.Parse(stat[(stat.LastIndexOf(')') + 2)..].Split(' ')[1], System.Globalization.CultureInfo.InvariantCulture);
+                }
+                catch (IOException) { }
+            }
+            var ids = new HashSet<int> { Environment.ProcessId };
+            while (true)
+            {
+                var next = parents.Where(p => ids.Contains(p.Value) && !ids.Contains(p.Key)).Select(p => p.Key).ToArray();
+                if (next.Length == 0) return ids.ToArray();
+                ids.UnionWith(next);
+            }
+        }
         if (Job is null) return [];
         const int size = 65536;
         var buffer = Marshal.AllocHGlobal(size);

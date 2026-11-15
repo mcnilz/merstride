@@ -11,7 +11,9 @@ internal static class WindowsInterrupt
 {
     internal static Process Start(string helper, string binary, string runId, string state, string workspace)
     {
-        if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("P06 signal qualification requires Windows.");
+        if (!OperatingSystem.IsWindows())
+            return Process.Start(new ProcessStartInfo(helper) { WorkingDirectory = workspace,
+                ArgumentList = { "signal_host", binary, runId, state }, UseShellExecute = false })!;
         var startup = new Startup { Size = Marshal.SizeOf<Startup>(), Flags = 1, ShowWindow = 0 };
         var command = new StringBuilder($"\"{helper}\" signal_host \"{binary}\" {runId} \"{state}\"");
         if (!CreateProcessW(helper, command, IntPtr.Zero, IntPtr.Zero, false, 0x10, IntPtr.Zero, workspace, ref startup, out var info))

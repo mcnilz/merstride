@@ -3,7 +3,9 @@
 **What to build:** Make Merstride discoverable and predictable for human CLI users,
 while preserving the public JSON agent protocol and Native AOT distribution.
 
-**Blocked by:** P07 implementation and coordinator review. The user explicitly
+**Blocked by:** P07 local implementation and coordinator review (now satisfied).
+P07's unfinished external release qualification still blocks publication, not this
+approved CLI improvement. The user explicitly
 approved this additional implementation slice directly after P07.
 
 **Status:** ready-for-agent — approved for implementation after P07.

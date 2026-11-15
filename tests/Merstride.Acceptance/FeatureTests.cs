@@ -64,10 +64,12 @@ public class FeatureTests
         }
     }
 
-    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06");
+    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07");
 
     public static IEnumerable<TestCaseData> RequiredCases() => Cases().Where(c => c.Implemented)
-        .Select(c => new TestCaseData(c).SetName(c.ToString()).SetProperty("Requirements", string.Join(' ', c.Tags)));
+        .Select(c => new TestCaseData(c).SetName(c.ToString()).SetProperty("Requirements", string.Join(' ', c.Tags))
+            .SetCategory(c.Steps.Any(s => s.StartsWith("the published native binary on a clean", StringComparison.Ordinal))
+                ? "ReleaseEnvironment" : "LocalGate"));
 
     [TestCaseSource(nameof(RequiredCases))]
     public void ExecuteFeature(FeatureCase scenario)
@@ -83,7 +85,7 @@ public class FeatureTests
             feature = Path.GetRelativePath(Root, c.File), scenario = c.Name, line = c.Line, tags = c.Tags,
             platform = System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier,
             evidenceScope = c.Name == "Accept a contribution without publication privileges" ? "local workflow policy; hosted execution unavailable" : "local execution",
-            result = results.GetValueOrDefault(c.ToString(), new { status = c.Implemented ? "not run" : "not yet implemented" })
+            result = results.GetValueOrDefault(c.ToString(), new { status = c.Implemented ? "required; not run (qualification incomplete)" : "not yet implemented" })
         });
         Directory.CreateDirectory(Path.Combine(Root, "artifacts/tests"));
         File.WriteAllText(Path.Combine(Root, "artifacts/tests/scenarios.json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
@@ -91,6 +93,12 @@ public class FeatureTests
 
     private static void Execute(FeatureCase scenario)
     {
+        if (scenario.Tags.Contains("@P07") && !scenario.Tags.Contains("@P01"))
+        {
+            using var release = new ReleaseWorld();
+            foreach (var step in scenario.Steps) release.Execute(step);
+            return;
+        }
         if (scenario.Tags.Contains("@P06"))
         {
             using var recovery = new RecoveryWorld();
@@ -137,6 +145,7 @@ internal sealed class CliWorld : IDisposable
     internal readonly string DirectoryPath = Path.Combine(Path.GetTempPath(), "merstride-tests-" + Guid.NewGuid().ToString("N"));
     internal string State => Path.Combine(DirectoryPath, "state");
     internal string FilePath => Path.Combine(DirectoryPath, "workflow.md");
+    internal string? WorkingDirectory;
     private string runId = "";
     internal JsonElement Response;
     internal int ExitCode;
@@ -149,7 +158,7 @@ internal sealed class CliWorld : IDisposable
     {
         var binary = Environment.GetEnvironmentVariable("MERSTRIDE_BINARY")
             ?? Path.Combine(FeatureTests.Root, "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
-        var start = new ProcessStartInfo(binary) { WorkingDirectory = DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
+        var start = new ProcessStartInfo(binary) { WorkingDirectory = WorkingDirectory ?? DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var arg in args.Concat(["--state-dir", State, "--json"])) start.ArgumentList.Add(arg);
         var processCount = ProcessObserver.TotalProcesses();
         using var process = Process.Start(start) ?? throw new InvalidOperationException("CLI did not start.");

@@ -1,0 +1,17 @@
+<Project>
+  <!-- Evidence captures actual SDK item sets; the analyzer is intentionally inventoried separately. -->
+  <Target Name="RecordCompilerInputs" BeforeTargets="CoreCompile" Condition="'$(ReleaseAuditDirectory)' != ''">
+    <MakeDir Directories="$(ReleaseAuditDirectory)" />
+    <WriteLinesToFile File="$(ReleaseAuditDirectory)/compiler.txt" Lines="@(ReferencePath->'%(FullPath)');@(Compile->'%(FullPath)');@(ReferenceCopyLocalPaths->'%(FullPath)')" Overwrite="true" />
+    <WriteLinesToFile File="$(ReleaseAuditDirectory)/analyzers.txt" Lines="@(Analyzer->'%(FullPath)')" Overwrite="true" />
+  </Target>
+  <Target Name="RecordIlcInputs" AfterTargets="ComputeIlcCompileInputs" Condition="'$(ReleaseAuditDirectory)' != ''">
+    <WriteLinesToFile File="$(ReleaseAuditDirectory)/ilc.txt" Lines="@(IlcReference);@(IlcCompileInput);@(IlcSatelliteAssembly);@(RdXmlFile)" Overwrite="true" />
+  </Target>
+  <Target Name="RecordLinkInputs" AfterTargets="LinkNative" Condition="'$(ReleaseAuditDirectory)' != ''">
+    <WriteLinesToFile File="$(ReleaseAuditDirectory)/link.txt" Lines="@(NativeLibrary);@(SdkNativeLibrary);@(LinkerArg);@(CustomLinkerArg);@(CustomLibArg)" Overwrite="true" />
+  </Target>
+  <Target Name="RecordPublishInputs" AfterTargets="Publish" Condition="'$(ReleaseAuditDirectory)' != ''">
+    <WriteLinesToFile File="$(ReleaseAuditDirectory)/publish.txt" Lines="@(ResolvedFileToPublish->'%(FullPath)')" Overwrite="true" />
+  </Target>
+</Project>

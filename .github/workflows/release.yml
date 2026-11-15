@@ -1,0 +1,139 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - id: tag
+        shell: pwsh
+        run: ./scripts/release.ps1 -Mode Tag
+  windows:
+    needs: [tag]
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - shell: pwsh
+        run: ./scripts/build.ps1 -Version $env:RELEASE_VERSION
+      - shell: pwsh
+        run: ./scripts/release.ps1 -Mode Package -Runtime win-x64
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-windows
+          path: artifacts/
+          if-no-files-found: error
+  linux:
+    needs: [tag]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: '1'
+      MERSTRIDE_BROWSER: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - shell: pwsh
+        run: ./scripts/build.ps1 -Version $env:RELEASE_VERSION
+      - shell: pwsh
+        run: ./scripts/release.ps1 -Mode Package -Runtime linux-x64
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-linux
+          path: artifacts/
+          if-no-files-found: error
+  gate:
+    if: always()
+    needs: [tag, windows, linux]
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - shell: pwsh
+        env:
+          TAG_RESULT: ${{ needs.tag.result }}
+          BUILD_RESULT: ${{ needs.windows.result }}
+          LINUX_RESULT: ${{ needs.linux.result }}
+        run: |
+          if ($env:TAG_RESULT -ne 'success') { throw 'Required tag validation did not succeed.' }
+          if ($env:BUILD_RESULT -ne 'success') { throw 'Required build did not succeed.' }
+          if ($env:LINUX_RESULT -ne 'success') { throw 'Required Linux build did not succeed.' }
+  verify:
+    needs: [gate]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-windows
+          path: artifacts/download/windows
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-linux
+          path: artifacts/download/linux
+      - shell: pwsh
+        env:
+          WINDOWS_QUALIFICATION_JSON: ${{ vars.MERSTRIDE_WINDOWS_QUALIFICATION }}
+          LINUX_QUALIFICATION_JSON: ${{ vars.MERSTRIDE_LINUX_QUALIFICATION }}
+          TOKEN_EXPERIMENT_JSON: ${{ vars.MERSTRIDE_TOKEN_EXPERIMENT }}
+        run: |
+          New-Item -ItemType Directory -Force artifacts/release | Out-Null
+          Copy-Item artifacts/download/windows/release/*.zip artifacts/release/
+          Copy-Item artifacts/download/linux/release/*.tar.gz artifacts/release/
+          ./scripts/collect-qualification.ps1
+          ./scripts/release.ps1 -Mode Assemble -Qualification artifacts/qualification/input.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verified-release
+          path: artifacts/release/*
+          if-no-files-found: error
+  publish:
+    needs: [gate, verify]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: verified-release
+          path: artifacts/release
+      - shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/release.ps1 -Mode Publish

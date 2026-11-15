@@ -19,7 +19,7 @@ internal sealed class AuthoringWorld : IDisposable
         nodes:
           work:
             kind: process
-            command: {{JsonSerializer.Serialize(Path.Combine(FeatureTests.Root, "artifacts/fixture/test-process.exe"))}}
+            command: {{JsonSerializer.Serialize(TestPaths.Helper)}}
             args: [arguments, "123", "true", "null"]
             timeoutSeconds: 5
           review:

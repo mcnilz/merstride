@@ -5,6 +5,7 @@
     <RootNamespace>Merstride</RootNamespace>
     <Version>0.1.0</Version>
     <PublishAot>true</PublishAot>
+    <NuGetLockFilePath Condition="'$(RuntimeIdentifier)' == 'linux-x64'">packages.linux-x64.lock.json</NuGetLockFilePath>
     <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <WarningsAsErrors>$(WarningsAsErrors);NSDEPCOP01;NSDEPCOP07</WarningsAsErrors>
   </PropertyGroup>

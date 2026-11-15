@@ -9,7 +9,9 @@ namespace Merstride.Cli;
 
 internal static class Program
 {
-    private const string Version = "0.1.0";
+    private static readonly string Version = System.Reflection.CustomAttributeExtensions
+        .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(Program).Assembly)!
+        .InformationalVersion.Split('+')[0];
     public static int Main(string[] args)
     {
         try { return Execute(args); }

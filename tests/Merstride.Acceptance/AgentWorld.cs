@@ -13,7 +13,7 @@ internal sealed class AgentWorld : IDisposable
     private byte[] snapshot = [];
     private string sourceActivation = "";
     private string StateFile => Path.Combine(cli.State, runId, "state.json");
-    private static string Helper => Path.Combine(FeatureTests.Root, "artifacts/fixture/test-process.exe");
+    private static string Helper => TestPaths.Helper;
 
     private void RepairWorkflow()
     {

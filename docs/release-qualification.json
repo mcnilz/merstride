@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "commit": null,
+  "platforms": {},
+  "tokenExperiment": { "result": "unavailable", "evidence": null },
+  "releaseReady": false,
+  "reason": "No clean Windows 11/Linux no-runtime suite or same-agent five-run-per-variant token experiment has been qualified for a release commit. Local implementation evidence is not release qualification."
+}

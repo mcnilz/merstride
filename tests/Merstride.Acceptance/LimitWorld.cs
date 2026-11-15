@@ -10,7 +10,7 @@ internal sealed class LimitWorld : IDisposable
     private readonly CliWorld cli = new();
     private string runId = "";
     private readonly List<Process> descendants = [];
-    private static string Helper => Path.Combine(FeatureTests.Root, "artifacts", "fixture", "test-process.exe");
+    private static string Helper => TestPaths.Helper;
     private readonly Stopwatch elapsed = new();
     private bool timeoutTree;
     private string data = "";

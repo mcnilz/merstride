@@ -2,7 +2,7 @@ param([string]$Repository = "$PSScriptRoot/..", [string]$Inventory = "$PSScriptR
 $ErrorActionPreference = 'Stop'
 try {
     $reviews = Get-Content -Raw -LiteralPath $Inventory | ConvertFrom-Json -AsHashtable
-    $locks = @(Get-ChildItem "$Repository/src","$Repository/tests" -Recurse -Filter packages.lock.json -ErrorAction SilentlyContinue)
+    $locks = @(Get-ChildItem "$Repository/src","$Repository/tests" -Recurse -Filter 'packages*.lock.json' -ErrorAction SilentlyContinue)
     if (!$locks.Count) { throw 'No dependency lock files found.' }
     foreach ($lock in $locks) {
         $graph = (Get-Content -Raw -LiteralPath $lock.FullName | ConvertFrom-Json -AsHashtable).dependencies
@@ -25,4 +25,4 @@ try {
         }
     }
     Write-Output 'DEPENDENCIES: all locked direct and transitive packages have reviewed provenance and licenses.'
-} catch { Write-Error "DEPENDENCIES: $($_.Exception.Message)"; exit 1 }
+} catch { [Console]::Error.WriteLine("DEPENDENCIES: $($_.Exception.Message)"); exit 1 }

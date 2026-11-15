@@ -1,4 +1,4 @@
-param([Parameter(Mandatory)][string]$Binary)
+param([Parameter(Mandatory)][string]$Binary, [string]$Output = "$PSScriptRoot/../artifacts/benchmark.json")
 $ErrorActionPreference = 'Stop'
 $binaryPath = (Resolve-Path -LiteralPath $Binary).Path
 $repo = (Resolve-Path "$PSScriptRoot/..").Path
@@ -28,7 +28,8 @@ try {
     $first = Invoke-Cli -Arguments @('status', $run.runId)
     $samples = @(1..30 | ForEach-Object { (Invoke-Cli -Arguments @('status', $run.runId)).milliseconds })
     $sorted = @($samples | Sort-Object)
-    $helper = Join-Path $repo 'artifacts/fixture/test-process.exe'
+    $helper = $env:MERSTRIDE_FIXTURE
+    if (!$helper) { $helper = Join-Path $repo $(if ($IsWindows) { 'artifacts/fixture/test-process.exe' } else { 'artifacts/fixture/test-process' }) }
     if (!(Test-Path -LiteralPath $helper)) { throw 'Native process fixture is required for process feasibility measurement.' }
     $processWorkflow = (Get-Content -Raw "$repo/examples/process-chain.md").Replace('command: git', "command: $($helper | ConvertTo-Json -Compress)").Replace('args: [status, --short]', 'args: [effect, first]').Replace('args: [diff, --stat]', 'args: [effect, second]')
     $processFile = Join-Path $temp 'process.md'
@@ -43,11 +44,11 @@ try {
     if ([IO.File]::ReadAllText((Join-Path $temp 'effects.txt')) -cne $expectedEffects) { throw 'Process effects did not occur once in graph order.' }
     $processSorted = @($processSamples | Sort-Object)
     $bytes = (Get-Item -LiteralPath $binaryPath).Length
-    $cpu = if ($IsWindows) { (Get-CimInstance Win32_Processor | Select-Object -First 1).Name } else { 'not recorded' }
+    $cpu = if ($IsWindows) { (Get-CimInstance Win32_Processor | Select-Object -First 1).Name } else { (& uname -m) + '; ' + ((Get-Content /proc/cpuinfo | Select-String '^model name' | Select-Object -First 1).Line) }
     $defender = if ($IsWindows) { try { (Get-MpComputerStatus -ErrorAction Stop).RealTimeProtectionEnabled } catch { 'unavailable' } } else { 'not applicable' }
     $report = [ordered]@{
         measuredOn = '2026-11-15'; binary = $binaryPath; sha256 = (Get-FileHash $binaryPath -Algorithm SHA256).Hash.ToLowerInvariant()
-        version = '0.1.0'; rid = 'win-x64'; bytes = $bytes; mib = $bytes / 1MB
+        version = (Invoke-Cli -Arguments @('version')).response.version; rid = $(if ($IsWindows) { 'win-x64' } else { 'linux-x64' }); bytes = $bytes; mib = $bytes / 1MB
         sizeTarget15MiB = $bytes -le 15MB; sizeGate25MiB = $bytes -le 25MB
         firstStartMilliseconds = $initial.milliseconds; firstStatusMilliseconds = $first.milliseconds; warmStatusMilliseconds = $samples
         p95Milliseconds = $sorted[[Math]::Ceiling(0.95 * $samples.Count) - 1]; latencyGate150ms = $sorted[28] -lt 150
@@ -64,7 +65,7 @@ try {
         }
     }
     New-Item -ItemType Directory -Force "$repo/artifacts" | Out-Null
-    $report | ConvertTo-Json -Depth 6 | Set-Content "$repo/artifacts/benchmark.json"
+    $report | ConvertTo-Json -Depth 6 | Set-Content $Output
     $report | ConvertTo-Json -Depth 6
     if (!$report.sizeGate25MiB -or !$report.latencyGate150ms) { throw 'Initial native budget exceeded; review measurements.' }
 } finally {

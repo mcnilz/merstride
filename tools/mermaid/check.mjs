@@ -67,7 +67,7 @@ const browser = process.env.MERSTRIDE_BROWSER ?? 'C:/Program Files (x86)/Microso
 const profile = resolve(output, 'browser-' + randomUUID());
 const child = spawn(browser, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
   '--edge-skip-compat-layer-relaunch', '--disable-extensions', '--disable-background-networking',
-  `--user-data-dir=${profile}`, `http://127.0.0.1:${server.address().port}/`], { stdio: 'ignore', windowsHide: true });
+  `--user-data-dir=${profile}`, `http://127.0.0.1:${server.address().port}/`], { stdio: 'ignore', windowsHide: true, detached: process.platform !== 'win32' });
 let timer;
 try {
   const result = await Promise.race([completed, new Promise((_, reject) => {
@@ -92,6 +92,9 @@ try {
         Where-Object { $_.Name -eq ${processName} -and $_.CommandLine -and $_.CommandLine.Contains($profilePath) } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`],
       { stdio: 'ignore', windowsHide: true, timeout: 15000 });
-    } else child.kill();
+    } else if (child.pid) {
+      // The isolated Linux process group includes Chrome's renderer descendants.
+      try { process.kill(-child.pid, 'SIGTERM'); } catch (error) { if (error.code !== 'ESRCH') throw error; }
+    }
   } finally { server.close(); }
 }

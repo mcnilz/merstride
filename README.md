@@ -1,5 +1,9 @@
 # Merstride
 
+P07 adds Windows/Linux native verification, complete runtime notices, input/content
+audits, and fail-closed release scripts. Local implementation remains distinct
+from external release qualification; see [release verification](docs/RELEASING.md).
+
 Revision 0.5 — specification draft — 2026-11-15.
 
 Project name: **Merstride**, accepted on 2026-11-15. CLI: `merstride`. See [naming decision](docs/NAMING.md). A small native CLI executes workflows embedded in Markdown. Mermaid defines control flow; YAML defines node behavior. An existing coding agent handles explicit agent tasks.

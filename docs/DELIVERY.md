@@ -21,8 +21,8 @@ into a successful release qualification.
 | P04 | Accepted and committed by coordinator | P04 implementation; independent full gate: 162 passed, 61 feature cases; 4.902 MiB; status P95 27.951 ms; renderer probes passed |
 | M01 | Accepted and committed by coordinator | M01 migration; .NET 11 / C# 15; independent full gate: 165 passed, 61 feature cases; 4.972 MiB; status P95 34.580 ms |
 | P05 | Accepted and committed by coordinator | P05 implementation; independent full gate: 200 passed, 75 feature cases; 4.972 MiB; status P95 25.460 ms; renderer and reviews passed |
-| P06 | Accepted by coordinator; committing | Independent full gate: 217 tests, 82 feature cases; 4.991 MiB; status P95 26.434 ms; renderer and reviews passed |
-| P07 | Not started | Blocked by P06 acceptance; release qualification requires actual target evidence |
+| P06 | Accepted and committed by coordinator | P06 implementation; independent full gate: 217 tests, 82 feature cases; 4.991 MiB; status P95 26.434 ms |
+| P07 | Local implementation accepted; committing; release criteria remain open | Coordinator repeated prior 252-test gates and final 15 focused checks on each platform; 67 source files match. No full 259 claim. Native full-suite driver, clean-target and token qualification remain incomplete and fail-closed. See STATUS.md |
 | P08 | Approved by user; not started | CLI help and argument handling with a suitable established library; follows P07; local issue 08-cli-usability.md |
 
 The user explicitly extended the sequence with P08 after identifying rudimentary

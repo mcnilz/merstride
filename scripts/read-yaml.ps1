@@ -1,4 +1,5 @@
 # Reuse the reviewed production parser assembly; policy parsing runs only during development.
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $packageRoot = (& dotnet msbuild "$PSScriptRoot/../src/Merstride/Merstride.csproj" -nologo -getProperty:NuGetPackageRoot | Out-String).Trim()
 if ($LASTEXITCODE -ne 0) { throw 'Cannot locate restored YamlDotNet package; run locked restore first.' }
 $yamlAssembly = Join-Path $packageRoot 'yamldotnet/18.1.0/lib/netstandard2.1/YamlDotNet.dll'

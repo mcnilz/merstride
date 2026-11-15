@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "components": [
+    { "name": "Merstride", "version": "release-manifest", "license": "MIT", "notice": "LICENSE", "source": "release-manifest source commit" },
+    { "name": "YamlDotNet", "version": "18.1.0", "license": "MIT", "notice": "YamlDotNet-LICENSE.txt", "source": "https://github.com/aaubry/YamlDotNet/tree/748334a8fa7c227740018b284b71ad95cc6b7fc7" },
+    { "name": ".NET Native AOT runtime and bundled components", "version": "11.0.0", "license": "MIT and permissive third-party licenses in complete upstream notices", "notice": "dotnet-LICENSE.txt; dotnet-THIRD-PARTY-NOTICES.txt", "source": "https://github.com/dotnet/dotnet/tree/297acf930fb0f5c07fd4e51d78e521b4ad2e5d1f" }
+  ],
+  "buildOnlyInventory": "docs/dependency-inventory.json (not shipped)",
+  "systemLibraries": "Linux uses host glibc, libgcc, ICU and system libraries; Windows uses OS libraries. Host libraries are not bundled or relicensed. Exact loader dependencies are retained with platform evidence."
+}

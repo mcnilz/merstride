@@ -16,7 +16,7 @@ internal sealed class RecoveryWorld : IDisposable
     private readonly List<JsonElement> readerResponses = [];
     private uint? processBaseline;
     private int readCalls;
-    private string Helper => Path.Combine(FeatureTests.Root, "artifacts", "fixture", "test-process.exe");
+    private string Helper => TestPaths.Helper;
     private string StateFile => Path.Combine(cli.State, runId, "state.json");
     private string PathFor(string name) => Path.Combine(cli.DirectoryPath, name);
 
@@ -34,7 +34,7 @@ internal sealed class RecoveryWorld : IDisposable
             case "the process tree is terminated on the supported test platform":
                 foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
                 Assert.That(signalHost!.WaitForExit(2000), Is.True);
-                if (processBaseline.HasValue) Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo(5),
+                if (processBaseline.HasValue) Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo(OperatingSystem.IsWindows() ? 5 : 4),
                     "Signal host, private console host, CLI and two attached helpers.");
                 cli.Response = JsonDocument.Parse(File.ReadAllText(PathFor("signal.stdout"))).RootElement.Clone();
                 Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("interrupted")); break;
@@ -191,7 +191,7 @@ internal sealed class RecoveryWorld : IDisposable
     }
 
     private static string Binary => Environment.GetEnvironmentVariable("MERSTRIDE_BINARY") ??
-        Path.Combine(FeatureTests.Root, "artifacts", "native", "merstride.exe");
+        Path.Combine(FeatureTests.Root, "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
 
     private Process Launch(string command)
     {
@@ -224,7 +224,8 @@ internal sealed class RecoveryWorld : IDisposable
         _ = writer.Handle;
         Assert.That(writer.HasExited, Is.False);
         var created = ProcessObserver.ActiveProcessIds().Except(existing).ToArray();
-        Assert.That(created, Has.Length.EqualTo(5));
+        Assert.That(created, Has.Length.EqualTo(OperatingSystem.IsWindows() ? 5 : 4));
+        if (!OperatingSystem.IsWindows()) return;
         var consoleId = created.Except(helpers.Select(p => p.Id).Concat([writer.Id, signalHost.Id])).Single();
         using var console = Process.GetProcessById(consoleId);
         Assert.That(console.ProcessName, Is.EqualTo("conhost").IgnoreCase, "Extra OS console host belongs to the isolated harness.");
@@ -324,9 +325,12 @@ internal sealed class RecoveryWorld : IDisposable
         StartInterrupt();
         snapshot = File.ReadAllBytes(StateFile);
         var attributes = File.GetAttributes(StateFile);
+        var stateDirectory = Path.GetDirectoryName(StateFile)!;
+        var mode = OperatingSystem.IsWindows() ? default : File.GetUnixFileMode(stateDirectory);
         try
         {
             File.SetAttributes(StateFile, attributes | FileAttributes.ReadOnly);
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(stateDirectory, UnixFileMode.UserRead | UnixFileMode.UserExecute);
             Execute("I send the platform's supported user-interrupt signal");
             Assert.That(cli.ExitCode, Is.EqualTo(130));
             var response = JsonDocument.Parse(File.ReadAllText(PathFor("signal.stdout"))).RootElement;
@@ -339,7 +343,11 @@ internal sealed class RecoveryWorld : IDisposable
             Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
             Assert.That(File.ReadAllBytes(StateFile), Is.EqualTo(snapshot));
         }
-        finally { File.SetAttributes(StateFile, attributes); }
+        finally
+        {
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(stateDirectory, mode);
+            File.SetAttributes(StateFile, attributes);
+        }
     }
 
     public void Dispose()

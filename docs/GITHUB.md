@@ -1,6 +1,8 @@
 # GitHub project, build, and release
 
-Revision 0.5 — required implementation deliverables. No remote repository or working pipeline has been created by this specification package.
+Revision 0.5 — required implementation deliverables. P07 implements local build,
+release scripts and workflow policy. No hosted pipeline or remote release is
+claimed; see STATUS.md and RELEASING.md for actual qualification and prerequisites.
 
 ## Repository
 

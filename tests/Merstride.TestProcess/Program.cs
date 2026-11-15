@@ -16,7 +16,11 @@ switch (args[0])
             var output = engine.StandardOutput.ReadToEndAsync();
             var error = engine.StandardError.ReadToEndAsync();
             while (!File.Exists("signal.request")) Thread.Sleep(5);
-            if (!FixtureSignals.GenerateConsoleCtrlEvent(1, 0)) return 97; // CTRL_BREAK_EVENT, real console signal.
+            if (OperatingSystem.IsWindows())
+            {
+                if (!FixtureSignals.GenerateConsoleCtrlEvent(1, 0)) return 97;
+            }
+            else if (FixtureSignals.kill(engine.Id, 2) != 0) return 97; // Real SIGINT to the engine.
             if (!engine.WaitForExit(10000)) { engine.Kill(true); return 96; }
             Task.WaitAll([output, error], 1000);
             File.WriteAllText("signal.stdout", output.IsCompleted ? output.Result : "");
@@ -115,6 +119,8 @@ internal partial class FixtureJson : System.Text.Json.Serialization.JsonSerializ
 
 internal static class FixtureSignals
 {
+    [System.Runtime.InteropServices.DllImport("libc", SetLastError = true)]
+    internal static extern int kill(int pid, int signal);
     [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
     internal static extern bool GenerateConsoleCtrlEvent(uint signal, uint group);

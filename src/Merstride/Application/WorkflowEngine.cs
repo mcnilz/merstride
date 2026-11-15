@@ -19,15 +19,38 @@ public interface IProcessRunner
 
 public static class WorkflowEngine
 {
-    public static RunState Advance(RunState run, IRunPersistence store, IProcessRunner processes, IContextLogs logs)
+    public static RunState Interrupted(RunState run) => run with
+    {
+        Status = "interrupted",
+        Error = new("INTERRUPTED", "An activation did not finish; inspect external effects before explicit resolution."),
+        Activations = run.Activations.Select(a => a.FinishedAt is null && a.Id == run.Activations.LastOrDefault()?.Id
+            ? a with { FinishedAt = DateTimeOffset.UtcNow, Outcome = "interrupted" } : a).ToArray()
+    };
+
+    public static RunState Resolve(RunState run, bool retry)
+    {
+        if (run.Status == "executing") run = Interrupted(run);
+        if (run.Status != "interrupted")
+            throw new MerstrideException("INVALID_STATE", "Only an interrupted run can be resolved.", 4);
+        return run with { Status = retry ? "ready" : "failed", Error = retry ? null : run.Error };
+    }
+
+    public static RunState Advance(RunState run, IRunPersistence store, IProcessRunner processes, IContextLogs logs,
+        CancellationToken interruption = default)
     {
         if (run.Status == "executing")
         {
-            run = run with { Status = "interrupted", Error = new("INTERRUPTED", "A prior activation did not finish; automatic replay is forbidden.") };
+            run = Interrupted(run);
             store.Write(run);
         }
         while (run.Status == "ready")
         {
+            if (interruption.IsCancellationRequested)
+            {
+                run = Interrupted(run);
+                store.Write(run);
+                return run;
+            }
             var node = run.Definition.Nodes.Single(n => n.Id == run.Cursor);
             if (node.Kind == "end")
             {
@@ -59,10 +82,16 @@ public static class WorkflowEngine
                 run = run with { Status = "executing", Activations = [.. run.Activations, activation] };
                 store.Write(run);
                 activation = processes.Execute(node, run.Workspace, activation);
+                run = run with { Activations = [.. run.Activations[..^1], activation] };
+                if (interruption.IsCancellationRequested)
+                {
+                    run = Interrupted(run);
+                    store.Write(run);
+                    return run;
+                }
                 var edges = run.Definition.Edges.Where(e => e.Source == node.Id).ToArray();
                 var route = edges.SingleOrDefault(e => e.Outcome == activation.Outcome)
                     ?? edges.SingleOrDefault(e => e.Outcome == "default") ?? edges.SingleOrDefault(e => e.Outcome is null);
-                run = run with { Activations = [.. run.Activations[..^1], activation] };
                 run = route is null
                     ? run with { Status = "failed", Error = new("NO_MATCHING_EDGE", $"No route matches {activation.Outcome} at {node.Id}.") }
                     : run with { Status = "ready", Cursor = route.Target, TransitionCount = run.TransitionCount + 1 };

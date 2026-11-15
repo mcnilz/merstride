@@ -1,8 +1,8 @@
 # Agent guide
 
-P01–P03 implement the operating loop below, including selected context and completion
-receipts. Recovery commands remain planned for P06. `merstride guide` ships a concise
-offline description of the implemented protocol and identifies planned recovery.
+P01–P06 implement the operating loop below, including selected context, completion
+receipts and explicit recovery. `merstride guide` ships a concise offline description
+of the implemented protocol. P06 recovery is qualified on local Windows x64.
 
 ## Operating loop
 
@@ -61,6 +61,20 @@ read-only tail; keep the original state root on every call.
 | interrupted | Inspect external effects; explicitly decide whether retry is safe or fail the run. Never blindly retry. |
 
 After interruption, `resolve --retry` permits a new attempt; it cannot undo or detect all previous external effects. `resolve --fail` performs no further work. Follow existing user authorization when deciding; ask only if the decision needs information or authorization you do not have.
+
+Use `resolve <run-id> --retry` or `resolve <run-id> --fail`, with the original
+`--state-dir`. Retry returns ready without executing; the next advance creates a
+fresh activation and retains the interrupted activation in saved history. Fail
+returns failed with exit 5. Resolution of any other status returns `INVALID_STATE`
+(exit 4). After a lost writer, status projects interrupted without altering saved
+state, while advance records interruption and returns exit 5 without replay.
+
+The per-run OS lock covers the whole advance chain and each completion/resolution.
+Competing writers fail immediately with `RUN_LOCKED` (exit 4); other runs remain
+independent. Lock-file existence alone says nothing about ownership. Windows Ctrl+C
+and Ctrl+Break use the console cancellation path; the tested Ctrl+Break case kills
+an attached tree, saves interrupted and exits 130. Detached descendants are outside
+the termination guarantee. Corrupt state returns exit 6 and is never reset.
 
 ## Context and token discipline
 

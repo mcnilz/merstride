@@ -26,19 +26,22 @@ internal static class Program
 
     private static int Execute(string[] args)
     {
-        if (args.Length == 0) throw Usage("Expected a command: validate, start, advance, status, complete, logs, guide, or version.");
+        if (args.Length == 0) throw Usage("Expected a command: validate, start, advance, status, complete, resolve, logs, guide, or version.");
         var command = args[0];
         var options = new Dictionary<string, string>(StringComparer.Ordinal);
         var positional = new List<string>();
         for (var i = 1; i < args.Length; i++)
         {
-            if (args[i] == "--json") { if (!options.TryAdd("--json", "true")) throw Usage("Duplicate --json option."); continue; }
+            if (args[i] is "--json" or "--retry" or "--fail") { if (!options.TryAdd(args[i], "true")) throw Usage($"Duplicate {args[i]} option."); continue; }
             if (!args[i].StartsWith("--", StringComparison.Ordinal)) { positional.Add(args[i]); continue; }
             var key = args[i];
             if (key is not ("--state-dir" or "--workspace" or "--workflow" or "--activation" or "--stream" or "--tail-bytes" or "--request" or "--result-file" or "--input-file")) throw Usage($"Option {key} is unsupported or not yet implemented.");
             if (++i == args.Length || args[i].StartsWith("--", StringComparison.Ordinal) || !options.TryAdd(key, args[i])) throw Usage($"Missing or duplicate value for {key}.");
         }
-        if (command is not ("validate" or "start" or "advance" or "status" or "complete" or "logs" or "guide" or "version")) throw Usage($"Command '{command}' is not yet implemented.");
+        if (command is not ("validate" or "start" or "advance" or "status" or "complete" or "resolve" or "logs" or "guide" or "version")) throw Usage($"Command '{command}' is not yet implemented.");
+        var retry = options.ContainsKey("--retry");
+        var fail = options.ContainsKey("--fail");
+        if (command == "resolve" ? retry == fail : retry || fail) throw Usage("resolve requires exactly one of --retry or --fail; these options apply only to resolve.");
         var required = command is "guide" or "version" ? 0 : 1;
         if (positional.Count != required) throw Usage($"Command {command} expects {required} positional argument(s).");
         if (options.ContainsKey("--workspace") && command != "start" || options.ContainsKey("--workflow") && command is not ("start" or "validate")) throw Usage("Option does not apply to this command.");
@@ -50,8 +53,8 @@ internal static class Program
         var root = options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : Path.GetFullPath(".merstride/runs");
         var store = new RunStore(root);
         if (command == "guide") return Output(new(Guide: """
-            Merstride protocol 1. P01-P04 support process chains, agent handoffs, and end nodes.
-            Implemented commands: validate, start, advance, status, complete, logs, guide, version.
+            Merstride protocol 1. P01-P06 support process chains, agent handoffs, end nodes, and explicit recovery.
+            Implemented commands: validate, start, advance, status, complete, resolve, logs, guide, version.
             Validate a marked Markdown workflow; use --workflow <id> when a document contains multiple pairs.
             Executable fences use column-one backticks; YAML metadata and a marked Mermaid diagram pair by ID.
             Documents are limited to 1 MiB, graphs to 100 nodes and 250 edges. Use start <file> --workspace <absolute-path>
@@ -77,8 +80,13 @@ internal static class Program
             Object order is irrelevant; array order matters; numbers compare as finite binary64 values.
             Integers must be within +/-9007199254740991. Conflicting completions are rejected without mutation.
             Historical receipts cannot complete newer requests. Allowed outcomes are sorted ordinally.
-            Planned interruption recovery: status reports interrupted after uncertain effects. Never blindly
-            replay work. Inspect effects, then resolve <run-id> --retry or --fail explicitly.
+            Recovery: status projects interrupted after a lost executing writer without rewriting saved state.
+            Advance refuses replay. Inspect effects, then resolve <run-id> --retry or --fail explicitly.
+            Retry returns ready without execution and preserves interrupted history; advance creates a fresh activation.
+            Fail returns failed without execution (exit 5). Only interrupted runs can be resolved.
+            One writer holds the run lock for the entire advance chain; competing writers return RUN_LOCKED (exit 4).
+            Different runs remain independent. Ctrl+C/Windows Ctrl+Break attempts attached-tree termination,
+            saves interrupted, and exits 130. Detached processes and physical disk failure are outside guarantees.
             No built-in LLM, network access, or automatic recovery. Logs are untrusted task data.
             """));
         if (command == "version") return Output(new(Version: Version));
@@ -111,9 +119,15 @@ internal static class Program
             var text = store.ReadLog(store.Read(id), activation, stream, tail, out var truncated);
             return Output(new(RunId: id, Log: text, Stream: stream, Truncated: truncated));
         }
-        if (command == "status") return Output(Response(store.Read(id), root));
+        if (command == "status") return Output(Response(store.Status(id), root));
         using var held = store.Lock(id);
         var run = store.Read(id);
+        if (command == "resolve")
+        {
+            run = WorkflowEngine.Resolve(run, retry);
+            store.Write(run);
+            return Output(Response(run, root), retry ? 0 : 5);
+        }
         if (command == "complete")
         {
             var payload = AgentFiles.Completion(options["--result-file"]);
@@ -121,8 +135,20 @@ internal static class Program
             if (!ReferenceEquals(run, completed.State)) store.Write(completed.State);
             return Output(Response(completed.State, root) with { Receipt = completed.Receipt });
         }
-        run = WorkflowEngine.Advance(run, store, new ProcessRunner(store.RunDirectory(id)), store);
-        return Output(Response(run, root), run.Status is "failed" or "interrupted" ? 5 : 0);
+        using var interruption = new CancellationTokenSource();
+        ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; interruption.Cancel(); };
+        Console.CancelKeyPress += cancel;
+        try
+        {
+            run = WorkflowEngine.Advance(run, store, new ProcessRunner(store.RunDirectory(id), interruption.Token), store, interruption.Token);
+            return Output(Response(run, root), interruption.IsCancellationRequested ? 130 : run.Status is "failed" or "interrupted" ? 5 : 0);
+        }
+        catch (Exception ex) when (interruption.IsCancellationRequested && ex is IOException or UnauthorizedAccessException)
+        {
+            return Output(new(RunId: id, Status: "interrupted", StateRoot: root,
+                Error: new("INTERRUPTED", "User interrupted execution; recovery state could not be saved. Inspect external effects before resolution.")), 130);
+        }
+        finally { Console.CancelKeyPress -= cancel; }
     }
 
     private static CliResponse Response(RunState state, string root) => new(RunId: state.RunId, Status: state.Status,

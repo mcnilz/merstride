@@ -20,6 +20,11 @@ into a successful release qualification.
 | P03 | Accepted and committed by coordinator | P03 implementation; independent full gate: 78 passed, 31 feature cases; 4.855 MiB; status P95 25.550 ms |
 | P04 | Accepted and committed by coordinator | P04 implementation; independent full gate: 162 passed, 61 feature cases; 4.902 MiB; status P95 27.951 ms; renderer probes passed |
 | M01 | Accepted and committed by coordinator | M01 migration; .NET 11 / C# 15; independent full gate: 165 passed, 61 feature cases; 4.972 MiB; status P95 34.580 ms |
-| P05 | Accepted by coordinator; committing | Independent full gate: 200 passed, 75 feature cases; 4.972 MiB; status P95 25.460 ms; renderer and reviews passed |
-| P06 | Not started | Blocked by P05 acceptance |
+| P05 | Accepted and committed by coordinator | P05 implementation; independent full gate: 200 passed, 75 feature cases; 4.972 MiB; status P95 25.460 ms; renderer and reviews passed |
+| P06 | Accepted by coordinator; committing | Independent full gate: 217 tests, 82 feature cases; 4.991 MiB; status P95 26.434 ms; renderer and reviews passed |
 | P07 | Not started | Blocked by P06 acceptance; release qualification requires actual target evidence |
+| P08 | Approved by user; not started | CLI help and argument handling with a suitable established library; follows P07; local issue 08-cli-usability.md |
+
+The user explicitly extended the sequence with P08 after identifying rudimentary
+CLI help and parsing. The coordinator will start, accept and locally commit that
+slice after P07. The external global C# 15 skill remains outside the repository.

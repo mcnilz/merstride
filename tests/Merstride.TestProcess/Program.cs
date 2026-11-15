@@ -4,6 +4,49 @@ Console.OutputEncoding = new System.Text.UTF8Encoding(false);
 
 switch (args[0])
 {
+    case "signal_host":
+        Console.CancelKeyPress += (_, e) => e.Cancel = true;
+        using (var engine = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(args[1])
+        {
+            ArgumentList = { "advance", args[2], "--state-dir", args[3], "--json" },
+            RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false
+        })!)
+        {
+            File.WriteAllText("engine.pid", engine.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            var output = engine.StandardOutput.ReadToEndAsync();
+            var error = engine.StandardError.ReadToEndAsync();
+            while (!File.Exists("signal.request")) Thread.Sleep(5);
+            if (!FixtureSignals.GenerateConsoleCtrlEvent(1, 0)) return 97; // CTRL_BREAK_EVENT, real console signal.
+            if (!engine.WaitForExit(10000)) { engine.Kill(true); return 96; }
+            Task.WaitAll([output, error], 1000);
+            File.WriteAllText("signal.stdout", output.IsCompleted ? output.Result : "");
+            File.WriteAllText("signal.stderr", error.IsCompleted ? error.Result : "descendants retained redirected pipes");
+            File.WriteAllText("signal.exit.tmp", engine.ExitCode.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            File.Move("signal.exit.tmp", "signal.exit");
+        }
+        break;
+    case "interrupt_parent":
+        Console.CancelKeyPress += (_, e) => e.Cancel = true;
+        File.WriteAllText("parent.pid", Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        using (var child = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!)
+               { ArgumentList = { "interrupt_child" }, UseShellExecute = false })!)
+        {
+            while (!File.Exists("child.ready")) Thread.Sleep(5);
+            File.WriteAllText("parent.ready", "ready");
+            Thread.Sleep(Timeout.Infinite);
+        }
+        break;
+    case "interrupt_child":
+        Console.CancelKeyPress += (_, e) => e.Cancel = true;
+        File.WriteAllText("child.pid", Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        File.WriteAllText("child.ready", "ready");
+        Thread.Sleep(Timeout.Infinite); break;
+    case "barrier":
+        File.WriteAllText(args[1] + ".pid", Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        File.AppendAllText("effects.txt", args[1] + "\n");
+        File.WriteAllText(args[1] + ".ready", "ready");
+        while (!File.Exists(args[1] + ".release")) Thread.Sleep(5);
+        break;
     case "labelled_streams": Console.Write(new string(args[1][0], 200)); Console.Error.Write(new string(args[2][0], 200)); break;
     case "unicode_output": Console.Write(string.Concat(Enumerable.Repeat("界🌍", 1000))); break;
     case "invalid_output":
@@ -69,3 +112,10 @@ return 0;
 
 [System.Text.Json.Serialization.JsonSerializable(typeof(string[]))]
 internal partial class FixtureJson : System.Text.Json.Serialization.JsonSerializerContext;
+
+internal static class FixtureSignals
+{
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    internal static extern bool GenerateConsoleCtrlEvent(uint signal, uint group);
+}

@@ -18,6 +18,21 @@ internal static class ProcessObserver
         return info.TotalProcesses;
     }
 
+    internal static int[] ActiveProcessIds()
+    {
+        if (Job is null) return [];
+        const int size = 65536;
+        var buffer = Marshal.AllocHGlobal(size);
+        try
+        {
+            if (!QueryProcessIds(Job, 3, buffer, size, IntPtr.Zero))
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            var count = Marshal.ReadInt32(buffer, 4);
+            return Enumerable.Range(0, count).Select(i => checked((int)Marshal.ReadIntPtr(buffer, 8 + i * IntPtr.Size))).ToArray();
+        }
+        finally { Marshal.FreeHGlobal(buffer); }
+    }
+
     private static SafeFileHandle? CreateObserver()
     {
         if (!OperatingSystem.IsWindows()) return null;
@@ -44,4 +59,7 @@ internal static class ProcessObserver
     [DllImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool QueryInformationJobObject(SafeFileHandle job, int informationClass, out Accounting information, int size, IntPtr returnLength);
+    [DllImport("kernel32.dll", EntryPoint = "QueryInformationJobObject", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool QueryProcessIds(SafeFileHandle job, int informationClass, IntPtr information, int size, IntPtr returnLength);
 }

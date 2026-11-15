@@ -5,7 +5,7 @@ using Merstride.Domain;
 
 namespace Merstride.Infrastructure;
 
-public sealed class ProcessRunner(string runDirectory) : IProcessRunner
+public sealed class ProcessRunner(string runDirectory, CancellationToken interruption = default) : IProcessRunner
 {
     public Activation Execute(Node node, string workspace, Activation activation) =>
         ExecuteAsync(node, workspace, activation).GetAwaiter().GetResult();
@@ -25,6 +25,8 @@ public sealed class ProcessRunner(string runDirectory) : IProcessRunner
         };
         foreach (var argument in node.Args) start.ArgumentList.Add(argument);
         using var process = new Process { StartInfo = start };
+        if (interruption.IsCancellationRequested)
+            return activation with { FinishedAt = DateTimeOffset.UtcNow, Outcome = "interrupted" };
         try { process.Start(); }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         { return activation with { FinishedAt = DateTimeOffset.UtcNow, Outcome = "spawn_error" }; }
@@ -32,6 +34,7 @@ public sealed class ProcessRunner(string runDirectory) : IProcessRunner
         var cause = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(node.TimeoutSeconds));
         using var registration = timeout.Token.Register(() => cause.TrySetResult("timeout"));
+        using var interruptRegistration = interruption.Register(() => cause.TrySetResult("interrupted"));
         using var drain = new CancellationTokenSource();
         var budget = new OutputBudget(cause);
         var output = CopyAsync(process.StandardOutput.BaseStream, stdout, budget, drain.Token);

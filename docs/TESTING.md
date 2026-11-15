@@ -1,7 +1,7 @@
 # Acceptance testing with Gherkin
 
 Revision 0.5. The `.feature` files are the reviewable behavioral contract. The NUnit
-runner executes all P01/P02/P03/P04/P05-tagged cases from these files against the published
+runner executes all P01/P02/P03/P04/P05/P06-tagged cases from these files against the published
 native executable. Later cases are inventoried as not yet implemented. See STATUS.md
 for current evidence and limitations.
 
@@ -29,7 +29,7 @@ Windows Job accounting asserts exact CLI plus declared child counts per call; st
 status, guide, validate, and logs still require no children.
 
 Run `pwsh -NoProfile -File scripts/build.ps1` for the complete local gate. Results are
-`artifacts/tests/p05.trx`, `artifacts/tests/scenarios.json`, and
+`artifacts/tests/p06.trx`, `artifacts/tests/scenarios.json`, and
 `artifacts/benchmark.json`. Supplemental safety regressions do not mark later
 feature scenarios implemented. Native helper/toolchain packages reuse the existing
 reviewed dependency inventory and are never published into the product directory.
@@ -60,6 +60,37 @@ production sizing helpers. Targeted log reads compare state/log bytes before/aft
 and retain external no-child accounting. None of these claims P06 crash recovery.
 
 Before introducing an internal persistence fault hook, document and confirm that extra seam. Add fault scenarios for before process launch and after process exit/before commit when that seam exists; do not claim those precise crash windows are covered by a single uncontrolled kill test. The provided after-effect barrier scenario covers a real external ambiguity window already.
+
+P06 executes all seven actual recovery scenarios. A two-process barrier chain tests
+writer exclusion for advance, complete and resolve while a separate run completes.
+Crash tests terminate only the engine after an external marker; the helper remains
+alive until explicit cleanup. Read-only status compares authoritative bytes before
+and after projection. Retry/fail calls require no new descendants according to
+Windows Job accounting, and retry history retains the uncertain activation ID.
+Truncated and structurally corrupt snapshots are refused by readers and writers.
+
+The Windows signal test launches a native test-only host in a separate hidden
+console, sends real CTRL_BREAK_EVENT, and requires exit 130 and both attached
+helpers to terminate. Helpers explicitly ignore the signal themselves. Job evidence
+counts the signal host, CLI, two helpers and one independently identified conhost.
+The harness never broadcasts into the NUnit host's console. Each marker wait has
+a 10-second watchdog; CLI operations retain their 15-second watchdog. Teardown
+recovers private PID markers, verifies helper images, retains OS handles and kills
+only task-owned leftovers after failure. No detached descendants are qualified.
+
+A supplemental interruption check marks only its own authoritative state file
+read-only while the real attached process tree is running. Ctrl+Break still exits
+130 and returns interrupted JSON; replacement failure leaves executing bytes intact,
+and fresh status projects interruption without rewriting them. Attributes are
+restored in finally. This exercises a public filesystem refusal, not a private
+fault hook or a physical disk failure guarantee.
+
+Four independent native readers race a twelve-process barrier chain. Every query
+must succeed with one JSON object and an explicit valid cursor/status/transition
+combination; external Job accounting requires exactly all reader CLIs, the writer
+and twelve helpers. Windows replacement sharing/name races have a bounded 100 ms
+open retry; malformed JSON never retries or resets. This is local filesystem
+evidence, not physical disk failure or precise internal fault-window qualification.
 
 ## Coverage map
 

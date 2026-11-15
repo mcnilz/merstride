@@ -4,10 +4,11 @@ Revision 0.5 — specification draft — 2026-11-15.
 
 Project name: **Merstride**, accepted on 2026-11-15. CLI: `merstride`. See [naming decision](docs/NAMING.md). A small native CLI executes workflows embedded in Markdown. Mermaid defines control flow; YAML defines node behavior. An existing coding agent handles explicit agent tasks.
 
-P01–P04 implement native sequential process/agent/end workflows, persistent
+P01–P05 implement native sequential process/agent/end workflows, persistent
 start/status/advance/complete, selected context, idempotent completion receipts,
 separate raw-byte logs, offline guide/version, and initial architecture/build policy
-checks, multi-workflow selection, and supported authoring validation.
+checks, multi-workflow selection, supported authoring validation, and exact runtime,
+data and context boundaries.
 See [current status](docs/STATUS.md) for verified results and limitations.
 
 Build on Windows x64 with .NET SDK 11.0.100, PowerShell 7, and the Native AOT C++ toolchain:
@@ -50,8 +51,8 @@ frozen JSON object. Input and completion data are limited to 16 KiB and depth 16
 Process arguments are literal strings; PowerShell requires an explicit `pwsh`
 command. Exact outcome edges precede `default`; unmatched outcomes fail the run.
 Start and status execute nothing. Logs retain child bytes separately from CLI JSON;
-timeout and output limits attempt process-tree termination. P02 has basic limits,
-while full boundary and recovery qualification belongs to P05/P06. The unreleased
+timeout and output limits attempt process-tree termination. P05 qualifies exact
+boundaries on local Windows x64; recovery qualification remains P06. The unreleased
 P02 state shape requires new runs; P01 saved runs are not migrated.
 
 All current CLI output is protocol JSON, with or without `--json`. Unsupported commands

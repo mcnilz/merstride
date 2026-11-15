@@ -1,7 +1,7 @@
 # Acceptance testing with Gherkin
 
 Revision 0.5. The `.feature` files are the reviewable behavioral contract. The NUnit
-runner executes all P01/P02/P03/P04-tagged cases from these files against the published
+runner executes all P01/P02/P03/P04/P05-tagged cases from these files against the published
 native executable. Later cases are inventoried as not yet implemented. See STATUS.md
 for current evidence and limitations.
 
@@ -22,13 +22,14 @@ The proposed seam is the public CLI: invoke the actual executable; assert JSON, 
 The accepted seams are the public CLI and the public build boundary. P02's native
 helper is `tests/Merstride.TestProcess`, published separately to `artifacts/fixture`.
 It currently records effects/arguments, chooses exits, emits normal/raw/flood output,
-checks closed stdin, and waits for timeout checks. Barrier and attached-child modes
-remain later-slice work. PowerShell 7 is required for its explicit invocation case.
+checks closed stdin, and waits for timeout checks. P05 adds an attached parent/child
+readiness barrier, synchronized concurrent stream writers, labelled streams and
+Unicode/invalid-byte output. PowerShell 7 is required for its explicit invocation case.
 Windows Job accounting asserts exact CLI plus declared child counts per call; start,
 status, guide, validate, and logs still require no children.
 
 Run `pwsh -NoProfile -File scripts/build.ps1` for the complete local gate. Results are
-`artifacts/tests/m01.trx`, `artifacts/tests/scenarios.json`, and
+`artifacts/tests/p05.trx`, `artifacts/tests/scenarios.json`, and
 `artifacts/benchmark.json`. Supplemental safety regressions do not mark later
 feature scenarios implemented. Native helper/toolchain packages reuse the existing
 reviewed dependency inventory and are never published into the product directory.
@@ -44,6 +45,19 @@ Named Given steps construct complete minimal Markdown/YAML/Mermaid fixtures. Dis
 Crash tests synchronize through marker files/barriers, not arbitrary sleeps. Kill the engine separately from its helper, observe persisted public behavior, and clean up any orphan helpers in teardown. User interruption needs a platform-specific harness. Timeouts use an outer watchdog of 15 seconds for the one-second timeout fixture; document any platform adjustment. A scenario failing its watchdog fails rather than hangs the suite.
 
 Depth counts the root JSON object as depth 1; each nested object/array increases depth by 1. Byte boundaries refer to compact serialized UTF-8 JSON. Required-size fixtures must calculate this explicitly. Tests for the input object use the same limits as completion data.
+
+P05 runs all 14 expanded cases in 04-limits and supplemental CLI checks. The timeout
+test observes both helpers alive through retained OS process handles before releasing
+their native readiness barrier, then checks termination; Windows Job accounting
+also requires exactly the CLI plus two descendants. Its outer watchdog remains
+15 seconds for the one-second timeout. Output writers synchronize after each stream
+has written a byte and then write concurrently; exact 10 MiB and 10 MiB + 1 cases
+qualify the cap separately from the larger flood. Retained log lengths are observed
+directly. Data fixtures independently count eight JSON framing bytes, UTF-8 payload
+bytes, and root/nested object/array depth. Context fixtures use an explicit public
+JSON envelope to exercise exactly 32768 and 32769 assembled bytes, without calling
+production sizing helpers. Targeted log reads compare state/log bytes before/after
+and retain external no-child accounting. None of these claims P06 crash recovery.
 
 Before introducing an internal persistence fault hook, document and confirm that extra seam. Add fault scenarios for before process launch and after process exit/before commit when that seam exists; do not claim those precise crash windows are covered by a single uncontrolled kill test. The provided after-effect barrier scenario covers a real external ambiguity window already.
 

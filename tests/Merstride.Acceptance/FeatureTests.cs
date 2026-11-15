@@ -50,7 +50,7 @@ public class FeatureTests
                 var tags = feature.Tags.Concat(scenario.Tags).Select(t => t.Name).ToArray();
                 var steps = background.Concat(scenario.Steps.Select(s => s.Text)).ToArray();
                 if (!scenario.Examples.Any())
-                    yield return new(file, scenario.Name, scenario.Location.Line, tags, steps, tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04"));
+                    yield return new(file, scenario.Name, scenario.Location.Line, tags, steps, tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05"));
                 foreach (var examples in scenario.Examples)
                 foreach (var row in examples.TableBody)
                 {
@@ -58,7 +58,7 @@ public class FeatureTests
                     string Expand(string text) => values.Aggregate(text, (s, p) => s.Replace($"<{p.Key}>", p.Value));
                     var rowTags = tags.Concat(examples.Tags.Select(t => t.Name)).ToArray();
                     yield return new(file, Expand(scenario.Name) + " [" + string.Join(", ", values.Values) + "]",
-                        row.Location.Line, rowTags, steps.Select(Expand).ToArray(), rowTags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04"));
+                        row.Location.Line, rowTags, steps.Select(Expand).ToArray(), rowTags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05"));
                 }
             }
         }
@@ -89,6 +89,12 @@ public class FeatureTests
 
     private static void Execute(FeatureCase scenario)
     {
+        if (scenario.Tags.Contains("@P05"))
+        {
+            using var limits = new LimitWorld();
+            foreach (var step in scenario.Steps) limits.Execute(step);
+            return;
+        }
         if (scenario.Tags.Contains("@P04"))
         {
             using var authoring = new AuthoringWorld();

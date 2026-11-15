@@ -40,6 +40,15 @@ other malformed completion payloads return `INVALID_PAYLOAD`. Input uses
 `INPUT_LIMIT` for size errors. Prompt plus serialized selected context is capped
 at 32768 UTF-8 bytes; excess fails advance with `CONTEXT_LIMIT` before requesting work.
 
+P05 qualifies the exact boundaries: equality is allowed for data size/depth and
+assembled context. A cursor change uses one transition; an end reached on the last
+allowed transition may finish, while another process or agent fails before activation.
+Combined process logs retain at most 10 MiB; exceeding that cap routes `output_limit`.
+Timeout routes `timeout` after best-effort attached-tree termination. Context tails
+remain within 4096 decoded UTF-8 bytes even when invalid bytes require replacement.
+Use `logs <run-id> --activation <id> --stream stderr --tail-bytes 100` for a targeted,
+read-only tail; keep the original state root on every call.
+
 ## State handling
 
 | Status | Next action |

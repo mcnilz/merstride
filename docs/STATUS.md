@@ -1,6 +1,6 @@
 # Implementation status
 
-Historical M01 implementation notes. This revision retains the product,
+Historical P05 implementation notes. This revision retains the product,
 tests and reproducible build scripts; raw local environment and execution
 logs are not versioned. Historical measurements are not release qualification.
 

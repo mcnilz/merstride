@@ -28,6 +28,20 @@ try {
     $first = Invoke-Cli -Arguments @('status', $run.runId)
     $samples = @(1..30 | ForEach-Object { (Invoke-Cli -Arguments @('status', $run.runId)).milliseconds })
     $sorted = @($samples | Sort-Object)
+    $helper = Join-Path $repo 'artifacts/fixture/test-process.exe'
+    if (!(Test-Path -LiteralPath $helper)) { throw 'Native process fixture is required for process feasibility measurement.' }
+    $processWorkflow = (Get-Content -Raw "$repo/examples/process-chain.md").Replace('command: git', "command: $($helper | ConvertTo-Json -Compress)").Replace('args: [status, --short]', 'args: [effect, first]').Replace('args: [diff, --stat]', 'args: [effect, second]')
+    $processFile = Join-Path $temp 'process.md'
+    Set-Content -LiteralPath $processFile -Value $processWorkflow
+    $processSamples = @(1..10 | ForEach-Object {
+        $started = Invoke-Cli -Arguments @('start', $processFile, '--workspace', $temp)
+        $advanced = Invoke-Cli -Arguments @('advance', $started.response.runId)
+        if ($advanced.response.status -ne 'completed' -or $advanced.response.transitionCount -ne 2 -or $advanced.response.lastActivation.outcome -ne 'exit_0') { throw 'Native process chain feasibility failed.' }
+        $advanced.milliseconds
+    })
+    $expectedEffects = (1..10 | ForEach-Object { "first`nsecond`n" }) -join ''
+    if ([IO.File]::ReadAllText((Join-Path $temp 'effects.txt')) -cne $expectedEffects) { throw 'Process effects did not occur once in graph order.' }
+    $processSorted = @($processSamples | Sort-Object)
     $bytes = (Get-Item -LiteralPath $binaryPath).Length
     $cpu = if ($IsWindows) { (Get-CimInstance Win32_Processor | Select-Object -First 1).Name } else { 'not recorded' }
     $defender = if ($IsWindows) { try { (Get-MpComputerStatus -ErrorAction Stop).RealTimeProtectionEnabled } catch { 'unavailable' } } else { 'not applicable' }
@@ -40,6 +54,14 @@ try {
         os = [Runtime.InteropServices.RuntimeInformation]::OSDescription; cpu = $cpu
         sdk = (& dotnet --version); defenderRealTimeProtection = $defender
         methodology = '30 sequential fresh status processes; Stopwatch includes process creation, JSON stdout/stderr drain and exit. First status reported separately after start; not a cold boot or clean-runtime test. No antivirus exclusion applied.'
+        processFeasibility = [ordered]@{
+            fixtureSha256 = (Get-FileHash $helper -Algorithm SHA256).Hash.ToLowerInvariant()
+            fixtureBytes = (Get-Item -LiteralPath $helper).Length
+            chains = 10; processesPerChain = 2; orderedEffects = 20
+            advanceMilliseconds = $processSamples
+            p95Milliseconds = $processSorted[[Math]::Ceiling(0.95 * $processSamples.Count) - 1]
+            methodology = 'Ten fresh native CLI advances, each executing two sequential native helpers and atomically persisting their results. All twenty file effects checked in order. Timings include CLI startup and process/log/state IO; no chain-latency gate is specified. External Windows descendant counting is in the acceptance suite.'
+        }
     }
     New-Item -ItemType Directory -Force "$repo/artifacts" | Out-Null
     $report | ConvertTo-Json -Depth 6 | Set-Content "$repo/artifacts/benchmark.json"

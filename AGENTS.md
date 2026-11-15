@@ -1,11 +1,14 @@
 # Merstride development
 
 Implement the accepted baseline in docs/CONTRACT.md and docs/IMPLEMENTATION.md.
-Work one approved slice at a time; P02 requires user acceptance of P01.
+Work one approved slice at a time. The user delegated acceptance of P02–P07 to the
+coordinating chat: it reviews each completed slice, commits locally, and starts the
+next implementation chat sequentially. Implementation chats stop at their slice.
 Use English for development artifacts and CLI messages.
 Use the public CLI for behavior tests and the public build boundary for architecture/policy tests.
 Keep required Gherkin steps strict: undefined, ambiguous, pending, or skipped steps fail.
-Leave changes uncommitted unless the user explicitly requests a commit. Do not push or publish.
+Implementation chats leave changes uncommitted for coordinator acceptance. The user
+authorized the coordinator to commit between slices. Do not push or publish.
 
 ## Agent skills
 

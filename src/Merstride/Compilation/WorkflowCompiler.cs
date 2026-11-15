@@ -9,7 +9,7 @@ namespace Merstride.Compilation;
 public static partial class WorkflowCompiler
 {
     private sealed record Block(string Info, string Text, int Line);
-    private sealed record Value(string? Text, bool Plain, SourceLocation Location, Dictionary<string, Value>? Fields = null);
+    private sealed record Value(string? Text, bool Plain, SourceLocation Location, Dictionary<string, Value>? Fields = null, Value[]? Items = null);
 
     public static Workflow Compile(byte[] bytes, string? selected)
     {
@@ -21,7 +21,7 @@ public static partial class WorkflowCompiler
         var metadata = blocks.Where(b => b.Info == "yaml merstride").ToArray();
         var diagrams = blocks.Where(b => b.Info == "mermaid" && b.Text.Contains("%% merstride:", StringComparison.Ordinal)).ToArray();
         if (metadata.Length != 1 || diagrams.Length != 1)
-            throw Invalid("P01 requires exactly one marked workflow pair; multiple workflows are not yet implemented.", new(1, 1));
+            throw Invalid("Exactly one marked workflow pair is supported; multiple workflows are not yet implemented.", new(1, 1));
         var block = metadata[0];
         Value root;
         try
@@ -36,6 +36,11 @@ public static partial class WorkflowCompiler
         catch (YamlException ex)
         {
             throw Invalid(ex.Message, new((int)ex.Start.Line + block.Line, (int)ex.Start.Column + 1));
+        }
+        catch (InvalidOperationException)
+        {
+            // The low-level scanner can report malformed flow sequences this way.
+            throw Invalid("Malformed YAML structure.", new(block.Line, 1));
         }
         var fields = Map(root, "schemaVersion", "id", "entry", "nodes", "limits");
         var version = Required(fields, "schemaVersion", root.Location);
@@ -52,15 +57,40 @@ public static partial class WorkflowCompiler
                 throw Invalid("maxTransitions must be an integer from 1 to 10000.", max.Location);
         }
         var nodes = Required(fields, "nodes", root.Location);
-        if (nodes.Fields is null || nodes.Fields.Count != 1 || !nodes.Fields.TryGetValue(entry, out var node))
-            throw Invalid("P01 supports exactly one node matching entry; other graphs are not yet implemented.", nodes.Location);
-        var n = Map(node, "kind", "result");
-        if (String(Required(n, "kind", node.Location)) != "end")
-            throw Invalid("Only end nodes are implemented in P01.", node.Location);
-        var result = String(Required(n, "result", node.Location));
-        if (result is not ("success" or "failure")) throw Invalid("End result must be success or failure.", node.Location);
-        ValidateDiagram(diagrams[0], id, entry);
-        return new(id, entry, result, transitions);
+        if (nodes.Fields is null || !nodes.Fields.ContainsKey(entry)) throw Invalid("Entry must name a defined node.", nodes.Location);
+        var definitions = new List<Node>();
+        foreach (var (nodeId, node) in nodes.Fields)
+        {
+            if (!Id().IsMatch(nodeId)) throw Invalid("Invalid node identifier.", node.Location);
+            var n = Map(node, "kind", "result", "command", "args", "timeoutSeconds");
+            var kind = String(Required(n, "kind", node.Location));
+            if (kind == "end")
+            {
+                Map(node, "kind", "result");
+                var result = String(Required(n, "result", node.Location));
+                if (result is not ("success" or "failure")) throw Invalid("End result must be success or failure.", node.Location);
+                definitions.Add(new(nodeId, kind, result, null, [], 0));
+            }
+            else if (kind == "process")
+            {
+                Map(node, "kind", "command", "args", "timeoutSeconds");
+                var command = String(Required(n, "command", node.Location));
+                if (string.IsNullOrWhiteSpace(command) || command.Contains('\0')) throw Invalid("Command must be nonempty and contain no NUL.", node.Location);
+                var arguments = Required(n, "args", node.Location);
+                if (arguments.Items is null) throw Invalid("args must be an array of strings.", arguments.Location);
+                var args = arguments.Items.Select(String).ToArray();
+                if (args.Any(a => a.Contains('\0'))) throw Invalid("Arguments cannot contain NUL.", arguments.Location);
+                var timeout = Required(n, "timeoutSeconds", node.Location);
+                if (!timeout.Plain || !int.TryParse(timeout.Text, out var seconds) || seconds is < 1 or > 3600)
+                    throw Invalid("timeoutSeconds must be an integer from 1 to 3600.", timeout.Location);
+                definitions.Add(new(nodeId, kind, null, command, args, seconds));
+            }
+            else throw Invalid("Only process and end nodes are implemented.", node.Location);
+        }
+        var edges = ValidateDiagram(diagrams[0], id, entry, definitions);
+        var warnings = edges.Where(e => e.Outcome is null).Select(e => new Diagnostic("warning", "IGNORES_PROCESS_FAILURE",
+            $"Unlabeled edge at {e.Source} accepts all outcomes, including failures.", new(diagrams[0].Line, 1))).ToArray();
+        return new(id, entry, definitions.ToArray(), edges, transitions, warnings);
     }
 
     private static List<Block> Scan(string source)
@@ -94,7 +124,7 @@ public static partial class WorkflowCompiler
     {
         var ev = parser.Current ?? throw Invalid("Missing YAML value.", new(offset, 1));
         var location = new SourceLocation((int)ev.Start.Line + offset, (int)ev.Start.Column + 1);
-        if (depth > 16) throw Invalid("YAML nesting exceeds P01 limits.", location);
+        if (depth > 16) throw Invalid("YAML nesting exceeds supported limits.", location);
         if (ev is NodeEvent ne && (!ne.Anchor.IsEmpty || !ne.Tag.IsEmpty)) throw Invalid("YAML anchors and tags are forbidden.", location);
         if (parser.TryConsume<Scalar>(out var scalar)) return new(scalar.Value, scalar.Style == ScalarStyle.Plain, location);
         if (parser.TryConsume<MappingStart>(out _))
@@ -111,7 +141,14 @@ public static partial class WorkflowCompiler
             parser.Consume<MappingEnd>();
             return new(null, false, location, fields);
         }
-        throw Invalid("Unsupported YAML value in the P01 single-end profile (aliases are forbidden).", location);
+        if (parser.TryConsume<SequenceStart>(out _))
+        {
+            var items = new List<Value>();
+            while (!parser.Accept<SequenceEnd>(out _)) items.Add(Read(parser, offset, depth + 1));
+            parser.Consume<SequenceEnd>();
+            return new(null, false, location, Items: items.ToArray());
+        }
+        throw Invalid("Unsupported YAML value (aliases are forbidden).", location);
     }
 
     private static Dictionary<string, Value> Map(Value value, params string[] allowed)
@@ -138,9 +175,11 @@ public static partial class WorkflowCompiler
         return id;
     }
 
-    private static void ValidateDiagram(Block diagram, string id, string entry)
+    private static Edge[] ValidateDiagram(Block diagram, string id, string entry, List<Node> definitions)
     {
-        bool header = false, marker = false, node = false;
+        bool header = false, marker = false;
+        var declared = new HashSet<string>(StringComparer.Ordinal);
+        var edges = new List<Edge>();
         var lines = diagram.Text.Split('\n');
         for (var i = 0; i < lines.Length; i++)
         {
@@ -162,15 +201,44 @@ public static partial class WorkflowCompiler
                 header = true; continue;
             }
             var match = Node().Match(line);
-            if (!match.Success || node || match.Groups[1].Value != entry)
-                throw Invalid("P01 requires one explicit end declaration and no edges; other syntax is not yet implemented.", location);
-            node = true;
+            if (match.Success)
+            {
+                if (!declared.Add(match.Groups[1].Value)) throw Invalid("Duplicate graph node.", location);
+                continue;
+            }
+            var edge = EdgePattern().Match(line);
+            if (!edge.Success) throw Invalid("Unsupported Mermaid statement.", location);
+            edges.Add(new(edge.Groups[1].Value, edge.Groups[3].Value, edge.Groups[2].Success ? edge.Groups[2].Value : null));
         }
-        if (!header || !marker || !node) throw Invalid("Incomplete marked Mermaid graph.", new(diagram.Line, 1));
+        var loc = new SourceLocation(diagram.Line, 1);
+        if (!header || !marker || !declared.SetEquals(definitions.Select(n => n.Id))) throw Invalid("Graph and metadata nodes must match exactly.", loc);
+        if (edges.Any(e => !declared.Contains(e.Source) || !declared.Contains(e.Target))) throw Invalid("Edges must reference declared nodes.", loc);
+        foreach (var node in definitions)
+        {
+            var outgoing = edges.Where(e => e.Source == node.Id).ToArray();
+            if (node.Kind == "end" && outgoing.Length != 0) throw Invalid("End nodes cannot have outgoing edges.", loc);
+            if (outgoing.Select(e => e.Outcome).Distinct(StringComparer.Ordinal).Count() != outgoing.Length ||
+                outgoing.Length > 1 && outgoing.Any(e => e.Outcome is null)) throw Invalid("Process edges must be distinct labels or one unlabeled edge.", loc);
+        }
+        HashSet<string> Reach(IEnumerable<string> seeds, bool reverse)
+        {
+            var found = new HashSet<string>(seeds, StringComparer.Ordinal);
+            bool changed;
+            do {
+                changed = false;
+                foreach (var edge in edges)
+                    if (found.Contains(reverse ? edge.Target : edge.Source)) changed |= found.Add(reverse ? edge.Source : edge.Target);
+            } while (changed);
+            return found;
+        }
+        if (!Reach([entry], false).SetEquals(declared) || !Reach(definitions.Where(n => n.Kind == "end").Select(n => n.Id), true).SetEquals(declared))
+            throw Invalid("All nodes must be reachable and have a path to an end.", loc);
+        return edges.ToArray();
     }
 
     private static MerstrideException Invalid(string message, SourceLocation location) => new("INVALID_DOCUMENT", message, 3, location);
     [GeneratedRegex("^[a-z][a-z0-9_]{0,63}$", RegexOptions.CultureInvariant)] private static partial Regex Id();
     [GeneratedRegex("^(?:|null|Null|NULL|~|true|True|TRUE|false|False|FALSE|[-+]?(?:[0-9].*|\\.[0-9].*|\\.(?:inf|Inf|INF|nan|NaN|NAN)))$", RegexOptions.CultureInvariant)] private static partial Regex NonString();
     [GeneratedRegex("^([a-z][a-z0-9_]{0,63})\\[\"[^\"\\\\<>]*\"\\]$", RegexOptions.CultureInvariant)] private static partial Regex Node();
+    [GeneratedRegex("^([a-z][a-z0-9_]{0,63})\\s*-->\\s*(?:\\|([a-z][a-z0-9_]{0,63})\\|\\s*)?([a-z][a-z0-9_]{0,63})$", RegexOptions.CultureInvariant)] private static partial Regex EdgePattern();
 }

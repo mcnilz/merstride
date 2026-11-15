@@ -4,8 +4,9 @@ Revision 0.5 — specification draft — 2026-11-15.
 
 Project name: **Merstride**, accepted on 2026-11-15. CLI: `merstride`. See [naming decision](docs/NAMING.md). A small native CLI executes workflows embedded in Markdown. Mermaid defines control flow; YAML defines node behavior. An existing coding agent handles explicit agent tasks.
 
-P01 implements a native single-end YAML workflow, persistent start/status/advance,
-offline guide/version, and initial architecture/build policy checks. Later slices are
+P01 and P02 implement native sequential process/end workflows, persistent
+start/status/advance, separate raw-byte logs, offline guide/version, and initial
+architecture/build policy checks. Agent nodes and later slices are
 not yet implemented. See [current status](docs/STATUS.md) for verified results and limitations.
 
 Build on Windows x64 with .NET SDK 10.0.404, PowerShell 7, and the Native AOT C++ toolchain:
@@ -19,6 +20,21 @@ $run = & $binary start examples/single-end.md --workspace (Get-Location).Path --
 & $binary status $run.runId --state-dir $state --json
 & $binary advance $run.runId --state-dir $state --json
 ```
+
+Try a real process chain in this Git workspace:
+
+```powershell
+$run = & $binary start examples/process-chain.md --workspace (Get-Location).Path --state-dir $state --json | ConvertFrom-Json
+$result = & $binary advance $run.runId --state-dir $state --json | ConvertFrom-Json
+& $binary logs $run.runId --activation $result.lastActivation.id --stream stdout --state-dir $state --json
+```
+
+Process arguments are literal strings; PowerShell requires an explicit `pwsh`
+command. Exact outcome edges precede `default`; unmatched outcomes fail the run.
+Start and status execute nothing. Logs retain child bytes separately from CLI JSON;
+timeout and output limits attempt process-tree termination. P02 has basic limits,
+while full boundary and recovery qualification belongs to P05/P06. The unreleased
+P02 state shape requires new runs; P01 saved runs are not migrated.
 
 All current CLI output is protocol JSON, with or without `--json`. Unsupported commands
 return usage errors; unsupported workflow syntax returns document diagnostics.

@@ -50,7 +50,7 @@ public class FeatureTests
                 var tags = feature.Tags.Concat(scenario.Tags).Select(t => t.Name).ToArray();
                 var steps = background.Concat(scenario.Steps.Select(s => s.Text)).ToArray();
                 if (!scenario.Examples.Any())
-                    yield return new(file, scenario.Name, scenario.Location.Line, tags, steps, tags.Contains("@P01"));
+                    yield return new(file, scenario.Name, scenario.Location.Line, tags, steps, tags.Contains("@P01") || tags.Contains("@P02"));
                 foreach (var examples in scenario.Examples)
                 foreach (var row in examples.TableBody)
                 {
@@ -58,7 +58,7 @@ public class FeatureTests
                     string Expand(string text) => values.Aggregate(text, (s, p) => s.Replace($"<{p.Key}>", p.Value));
                     var rowTags = tags.Concat(examples.Tags.Select(t => t.Name)).ToArray();
                     yield return new(file, Expand(scenario.Name) + " [" + string.Join(", ", values.Values) + "]",
-                        row.Location.Line, rowTags, steps.Select(Expand).ToArray(), rowTags.Contains("@P01"));
+                        row.Location.Line, rowTags, steps.Select(Expand).ToArray(), rowTags.Contains("@P01") || rowTags.Contains("@P02"));
                 }
             }
         }
@@ -95,6 +95,12 @@ public class FeatureTests
             foreach (var step in scenario.Steps) build.Execute(step);
             return;
         }
+        if (scenario.Tags.Contains("@P02"))
+        {
+            using var processWorld = new ProcessWorld();
+            foreach (var step in scenario.Steps) processWorld.Execute(step);
+            return;
+        }
         using var world = new CliWorld();
         foreach (var step in scenario.Steps) world.Execute(step);
     }
@@ -108,6 +114,8 @@ internal sealed class CliWorld : IDisposable
     private string runId = "";
     internal JsonElement Response;
     internal int ExitCode;
+    internal int ExpectedChildren;
+    internal string Stdout = "", Stderr = "";
 
     public CliWorld() => Directory.CreateDirectory(DirectoryPath);
 
@@ -123,7 +131,8 @@ internal sealed class CliWorld : IDisposable
         var stderr = process.StandardError.ReadToEndAsync();
         if (!process.WaitForExit(15000)) { process.Kill(true); Assert.Fail("CLI exceeded 15-second watchdog."); }
         ExitCode = process.ExitCode;
-        if (processCount.HasValue) Assert.That(ProcessObserver.TotalProcesses() - processCount, Is.EqualTo(1), "Only the CLI process may be launched in P01.");
+        if (processCount.HasValue) Assert.That(ProcessObserver.TotalProcesses() - processCount, Is.EqualTo(1 + ExpectedChildren), "Observed CLI and declared child process count.");
+        Stdout = stdout.Result; Stderr = stderr.Result;
         TestContext.Out.WriteLine($"CLI {string.Join(' ', args)} -> {ExitCode}: {stdout.Result} {stderr.Result}");
         Response = JsonDocument.Parse(stdout.Result).RootElement.Clone();
         Assert.That(Response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));

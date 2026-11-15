@@ -4,7 +4,25 @@ Revision 0.5 — specification draft — 2026-11-15.
 
 Project name: **Merstride**, accepted on 2026-11-15. CLI: `merstride`. See [naming decision](docs/NAMING.md). A small native CLI executes workflows embedded in Markdown. Mermaid defines control flow; YAML defines node behavior. An existing coding agent handles explicit agent tasks.
 
-This package is a specification, not an implemented engine. The Gherkin features are acceptance specifications; no step bindings or passing implementation tests are claimed.
+P01 implements a native single-end YAML workflow, persistent start/status/advance,
+offline guide/version, and initial architecture/build policy checks. Later slices are
+not yet implemented. See [current status](docs/STATUS.md) for verified results and limitations.
+
+Build on Windows x64 with .NET SDK 10.0.404, PowerShell 7, and the Native AOT C++ toolchain:
+
+```powershell
+pwsh -NoProfile -File scripts/build.ps1
+$binary = Resolve-Path artifacts/native/merstride.exe
+$state = Join-Path (Get-Location) '.merstride/runs'
+& $binary guide --json
+$run = & $binary start examples/single-end.md --workspace (Get-Location).Path --state-dir $state --json | ConvertFrom-Json
+& $binary status $run.runId --state-dir $state --json
+& $binary advance $run.runId --state-dir $state --json
+```
+
+All current CLI output is protocol JSON, with or without `--json`. Unsupported commands
+return usage errors; unsupported workflow syntax returns document diagnostics.
+The complete review workflow example below belongs to later slices.
 
 ## Reading order
 

@@ -1,0 +1,50 @@
+# Build and test tool review
+
+Reviewed 2026-11-15. The exact direct/transitive NuGet graph, hashes, provenance,
+purposes, licenses, and classifications are in dependency-inventory.json and the
+two versioned packages.lock.json files. The dependency gate requires evidence for
+every locked version. All package license expressions were inspected from their
+official NuGet packages; all are MIT except the explicitly approved NsDepCop tool.
+
+## Separate architecture tool inventory
+
+NsDepCop 3.3.0, GPL-2.0-only, is build-only. Its package carries Roslyn 4 and 5
+analyzers and DotNet.Glob (assembly version 2.1.1.0, MIT; bundled analyzer support,
+not a NuGet runtime dependency). Both remain analyzer inputs, excluded from compile
+and runtime assets. Upstream: [NsDepCop](https://github.com/realvizu/NsDepCop),
+[DotNet.Glob license](https://github.com/dazinator/DotNet.Glob/blob/master/LICENSE).
+The architecture config enables namespace and assembly checks; the two illegal
+dependency diagnostics are errors. SDK reference-pack assembly exceptions are
+explicit; namespace rules still constrain actual use. Networking namespaces are
+forbidden across production code. No production project references a test assembly.
+
+YamlDotNet 18.1.0 is the sole third-party runtime package. It targets .NET 10 and
+has no transitive dependencies for this target. The event-parser path passes native
+publishing without trimming/AOT warnings. Full release-link/input and platform
+notice verification remains the P07 A22 gate; this P01 executable is not a release.
+
+NUnit 4.6.1 retains the selected major version; the latest upstream major was 5.
+NUnit3TestAdapter 6.3.1 and Microsoft.NET.Test.Sdk 18.12.0 provide official test
+execution. Gherkin 43.0.0 and Cucumber.Messages 35.0.0 are the maintained official
+Cucumber parser/protocol, used only by tests. The adapter's Microsoft test-platform
+dependencies are all test-only, including telemetry support. Development scripts
+opt out of test-platform and SDK telemetry. None are production PackageReferences.
+No FluentAssertions, LLM SDK, CLI framework, or Mermaid renderer is adopted.
+
+## GitHub Actions and hosted image evidence
+
+Official latest stable release API results and tag-to-commit resolution were checked
+on 2026-11-15 and recorded in .github/action-pins.json. Each pinned action.yml was
+also inspected: checkout, setup-dotnet, and upload-artifact use Node 24. The documented
+[windows-2025 image](https://github.com/actions/runner-images/blob/main/images/windows/Windows2025-Readme.md)
+was image 20261111.331.1, Windows Server 2025 build 10.0.26100.33822, with Visual
+Studio/C++ tooling and Node 24 support. The SDK is selected by global.json.
+[Native AOT prerequisites](https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/)
+require the Desktop development with C++ workload. Actual hosted image evidence
+will be captured by the future GitHub run; no hosted run was performed locally.
+
+The build workflow uses pull_request, read-only contents permission, disabled
+credential persistence, and an always-running aggregate gate. It has no publication
+job. P07 adds the release workflow; download-artifact is not yet needed. Dependabot
+checks Actions and NuGet weekly; it does not automerge. A local policy check is not
+proof of actual hosted fork execution or repository branch protection.

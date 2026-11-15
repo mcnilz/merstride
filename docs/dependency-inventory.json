@@ -1,0 +1,299 @@
+{
+  "Microsoft.DotNet.ILCompiler/10.0.15": {
+    "upstream": "https://github.com/dotnet/dotnet",
+    "license": "MIT",
+    "purpose": "Official .NET Native AOT compiler/linker and platform toolchain selected by the pinned SDK.",
+    "classification": "build-only",
+    "maintenanceEvidence": "Microsoft .NET 10 servicing release 10.0.15; package source commit and SDK 10.0.404 verified.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.dotnet.ilcompiler/10.0.15/microsoft.dotnet.ilcompiler.nuspec",
+    "sourceCommit": "8e0f8ed2312954727f8919d7d1c2f78b483b4ee7",
+    "contentHash": "MjeBT/P5YgUuXfwSbI3ms+F5DkQ2+ilynoHE2jA/Kto//MaE/wtP5EveCAL8abpxFGw9tlHNTAV1j60Wh1oLqg==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.NET.ILLink.Tasks/10.0.15": {
+    "upstream": "https://github.com/dotnet/dotnet",
+    "license": "MIT",
+    "purpose": "Official .NET Native AOT compiler/linker and platform toolchain selected by the pinned SDK.",
+    "classification": "build-only",
+    "maintenanceEvidence": "Microsoft .NET 10 servicing release 10.0.15; package source commit and SDK 10.0.404 verified.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.net.illink.tasks/10.0.15/microsoft.net.illink.tasks.nuspec",
+    "sourceCommit": "8e0f8ed2312954727f8919d7d1c2f78b483b4ee7",
+    "contentHash": "u0WnRcZgBZYHlVFpbe/3Adpmb9rmNJ8/fmEwqc/xjB7fFppq+gfaLJd3Sdaw+J02zV0eP/T9dneQ3Dv5jWw6bw==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "NsDepCop/3.3.0": {
+    "upstream": "https://github.com/realvizu/NsDepCop.git",
+    "license": "GPL-2.0-only",
+    "purpose": "Enforce namespace and assembly boundaries during compilation only.",
+    "classification": "build-only",
+    "maintenanceEvidence": "Explicitly selected established architecture tool; latest stable 3.3.0 records active C# analysis fixes and Roslyn 5 support.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/nsdepcop/3.3.0/nsdepcop.nuspec",
+    "sourceCommit": "6d93a1177b3563e741805c6342a725f51ceb686d",
+    "contentHash": "y+6b1rK9fHm60A5twITBuFTtVWufXymP9oBZDizyFDeuZizLa8w/dxJQ4PObOMugAEHBrCbOMGfG5LYLWtB7pw==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "YamlDotNet/18.1.0": {
+    "upstream": "https://github.com/aaubry/YamlDotNet",
+    "license": "MIT",
+    "purpose": "Parse constrained YAML using low-level events; no object deserialization.",
+    "classification": "runtime",
+    "maintenanceEvidence": "Long-running upstream YAML project with .NET 10 target and documented event API; NuGet latest stable 18.1.0 verified.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/yamldotnet/18.1.0/yamldotnet.nuspec",
+    "sourceCommit": "748334a8fa7c227740018b284b71ad95cc6b7fc7",
+    "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw==",
+    "dependencies": {},
+    "aotEvidence": "P01 win-x64 Native AOT publish and CLI acceptance passed; uses event parsing only."
+  },
+  "runtime.win-x64.Microsoft.DotNet.ILCompiler/10.0.15": {
+    "upstream": "https://github.com/dotnet/dotnet",
+    "license": "MIT",
+    "purpose": "Official .NET Native AOT compiler/linker and platform toolchain selected by the pinned SDK.",
+    "classification": "build-only",
+    "maintenanceEvidence": "Microsoft .NET 10 servicing release 10.0.15; package source commit and SDK 10.0.404 verified.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/runtime.win-x64.microsoft.dotnet.ilcompiler/10.0.15/runtime.win-x64.microsoft.dotnet.ilcompiler.nuspec",
+    "sourceCommit": "8e0f8ed2312954727f8919d7d1c2f78b483b4ee7",
+    "contentHash": "WEtOJ41ItA7fJ+pqQFYgCmZxiX5d6AByfLWbifqEjyjkfFXmD9/T9V7xTwrvh5OxkJkBhnZsygcdU0Al9MNcVw==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Gherkin/43.0.0": {
+    "upstream": "https://github.com/cucumber/gherkin",
+    "license": "MIT",
+    "purpose": "Parse the real acceptance feature files using the official Cucumber grammar.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established Cucumber cross-platform grammar/protocol used by Cucumber tooling; release and source commit in official NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/gherkin/43.0.0/gherkin.nuspec",
+    "sourceCommit": "3d70e2bb4e0f16a568ee539a5ce0b03fb247a777",
+    "contentHash": "MibnuxJ3fKWKQHYkcD4PTWBx58RpehxhdKFVSt2gZf277Cb9EFLJFgAYLGUU1gKuUUNKxnCjsKLKBIxyPJqoRQ==",
+    "dependencies": {
+      "Cucumber.Messages": "35.0.0"
+    },
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.NET.Test.Sdk/18.12.0": {
+    "upstream": "https://github.com/microsoft/vstest",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.net.test.sdk/18.12.0/microsoft.net.test.sdk.nuspec",
+    "sourceCommit": "8c03f23cd7df6ab28c3f1e3d112dea978eae8b0c",
+    "contentHash": "MdVkskM2ZCKSlNts5DIbz9MZidX7SwcXKBoBqY4XT91b30hAwC8PkjWbdGKRak6BKAD1BQqaZnh/SD0AJGoDCQ==",
+    "dependencies": {
+      "Microsoft.CodeCoverage": "18.12.0",
+      "Microsoft.TestPlatform.TestHost": "18.12.0"
+    },
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "NUnit/4.6.1": {
+    "upstream": "https://github.com/nunit/nunit",
+    "license": "MIT",
+    "purpose": "Host public-boundary tests and assertions, explicitly retaining NUnit 4.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/nunit/4.6.1/nunit.nuspec",
+    "sourceCommit": null,
+    "contentHash": "xS4+YaBFUv1r8bcAbjitSfYaRZGfMwUiMdiaRziBXZpKgVxKDSHhjUn0mV5mObHGZRZq6eNa+WFWr3g8grj66A==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "NUnit3TestAdapter/6.3.1": {
+    "upstream": "https://github.com/nunit/nunit3-vs-adapter",
+    "license": "MIT",
+    "purpose": "Discover and execute NUnit tests with dotnet test.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/nunit3testadapter/6.3.1/nunit3testadapter.nuspec",
+    "sourceCommit": null,
+    "contentHash": "Ft72evCCPjWhimwSda+oDDX0aStX/dty2S3clJ+tK5bMtO9u0n+521OJmsOecUmpc1a+xfhS6kUprc+Gve/wcA==",
+    "dependencies": {
+      "Microsoft.Extensions.DependencyModel": "8.0.2",
+      "Microsoft.TestPlatform.AdapterUtilities": "18.10.1",
+      "Microsoft.Testing.Extensions.VSTestBridge": "2.4.1",
+      "Microsoft.Testing.Platform.MSBuild": "2.4.1"
+    },
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Cucumber.Messages/35.0.0": {
+    "upstream": "https://github.com/cucumber/messages",
+    "license": "MIT",
+    "purpose": "Official Cucumber message types required by Gherkin.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established Cucumber cross-platform grammar/protocol used by Cucumber tooling; release and source commit in official NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/cucumber.messages/35.0.0/cucumber.messages.nuspec",
+    "sourceCommit": "e0ed539970ee5a10aa3535ac1c13b00e68264712",
+    "contentHash": "TXgi5eonuCc6H/cU/tFZBuqR61eP4+SreAEswCRU1wk49+MIIc6A3nJQMZzojrSuUWhS0krsdSffMAXLXuxpog==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.ApplicationInsights/2.23.0": {
+    "upstream": "https://github.com/Microsoft/ApplicationInsights-dotnet",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.applicationinsights/2.23.0/microsoft.applicationinsights.nuspec",
+    "sourceCommit": "2faa7e8b157a431daa2e71785d68abd5fa817b53",
+    "contentHash": "nWArUZTdU7iqZLycLKWe0TDms48KKGE6pONH2terYNa8REXiqixrMOkf1sk5DHGMaUTqONU2YkS4SAXBhLStgw==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.CodeCoverage/18.12.0": {
+    "upstream": "https://github.com/microsoft/vstest",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.codecoverage/18.12.0/microsoft.codecoverage.nuspec",
+    "sourceCommit": "8c03f23cd7df6ab28c3f1e3d112dea978eae8b0c",
+    "contentHash": "OhOPSaCAQhBJgXF1OrX0uK3eTkwZ1XnM44iGLZplYgKrmgKzQUdv9xtGGaE568RuQ738TlrTJ3pm9aWL5FH7iw==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.Extensions.DependencyModel/8.0.2": {
+    "upstream": "https://github.com/dotnet/runtime",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.extensions.dependencymodel/8.0.2/microsoft.extensions.dependencymodel.nuspec",
+    "sourceCommit": "81cabf2857a01351e5ab578947c7403a5b128ad1",
+    "contentHash": "mUBDZZRgZrSyFOsJ2qJJ9fXfqd/kXJwf3AiDoqLD9m6TjY5OO/vLNOb9fb4juC0487eq4hcGN/M2Rh/CKS7QYw==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.Testing.Extensions.Telemetry/2.4.1": {
+    "upstream": "https://github.com/microsoft/testfx",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.testing.extensions.telemetry/2.4.1/microsoft.testing.extensions.telemetry.nuspec",
+    "sourceCommit": "9a14d19cb8ef1ec6a2aae81d4223a09190f96593",
+    "contentHash": "C+bq5ydHrBNCDXjvFtRa1/JcAS2Wq2dpXOnzy/TFYC8qb1dDEgB1XhQayBaYE/5BKviikByHb7mth8P+qJaOJw==",
+    "dependencies": {
+      "Microsoft.ApplicationInsights": "2.23.0",
+      "Microsoft.Testing.Platform": "[2.4.1, 3.0.0)"
+    },
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.Testing.Extensions.TrxReport.Abstractions/2.4.1": {
+    "upstream": "https://github.com/microsoft/testfx",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.testing.extensions.trxreport.abstractions/2.4.1/microsoft.testing.extensions.trxreport.abstractions.nuspec",
+    "sourceCommit": "9a14d19cb8ef1ec6a2aae81d4223a09190f96593",
+    "contentHash": "tDxLLic2IfeChbyo8oeGZj/eBdFpPe3Dp80hUoIOefSCqqMHbsob+lX1TfFWV75PJCPouxj2zz0zzPHZxiM4nQ==",
+    "dependencies": {
+      "Microsoft.Testing.Platform": "[2.4.1, 3.0.0)"
+    },
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.Testing.Extensions.VSTestBridge/2.4.1": {
+    "upstream": "https://github.com/microsoft/testfx",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.testing.extensions.vstestbridge/2.4.1/microsoft.testing.extensions.vstestbridge.nuspec",
+    "sourceCommit": "9a14d19cb8ef1ec6a2aae81d4223a09190f96593",
+    "contentHash": "O+fy8t+qse6ZexS7TzuA47Z3Ojw/4x6fIF+xGSwFypgoDAg3+bFmu1vkz8smLla0A+QRopphxfBYJBOPedDPYw==",
+    "dependencies": {
+      "Microsoft.TestPlatform.ObjectModel": "18.9.0",
+      "Microsoft.Testing.Extensions.Telemetry": "2.4.1",
+      "Microsoft.Testing.Extensions.TrxReport.Abstractions": "2.4.1",
+      "Microsoft.Testing.Platform": "[2.4.1, 3.0.0)"
+    },
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.Testing.Platform/2.4.1": {
+    "upstream": "https://github.com/microsoft/testfx",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.testing.platform/2.4.1/microsoft.testing.platform.nuspec",
+    "sourceCommit": "9a14d19cb8ef1ec6a2aae81d4223a09190f96593",
+    "contentHash": "3nW9NyhN1BnHRF994DCOOUQCqVA9pDT+gPpbuhI/xUntZnGnXO4ySovKxFlFuoT/48pnI74LK/DeKVlve1L3VQ==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.Testing.Platform.MSBuild/2.4.1": {
+    "upstream": "https://github.com/microsoft/testfx",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.testing.platform.msbuild/2.4.1/microsoft.testing.platform.msbuild.nuspec",
+    "sourceCommit": "9a14d19cb8ef1ec6a2aae81d4223a09190f96593",
+    "contentHash": "K4W2hAATe9wA1xt4oEZWmUsnQqnLD5H18NXKsm81xclf9PI4AHieb3DxJpE/2uA6Xl9DtjpLXif7/9Sn8Y2y7w==",
+    "dependencies": {
+      "Microsoft.Testing.Platform": "[2.4.1, 3.0.0)"
+    },
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.TestPlatform.AdapterUtilities/18.10.1": {
+    "upstream": "https://github.com/microsoft/vstest",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.testplatform.adapterutilities/18.10.1/microsoft.testplatform.adapterutilities.nuspec",
+    "sourceCommit": "87dfd4b2d2bacd91ad69e009ade6f4715b3b46ec",
+    "contentHash": "EDomLQOqzKhMHLWl+WlR2TEIwduApQffQKNsFBVnkjDsiNKwRpbYZPNlYcEa0CqWW+4NL0PongzgroCvaf+4zQ==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.TestPlatform.ObjectModel/18.12.0": {
+    "upstream": "https://github.com/microsoft/vstest",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.testplatform.objectmodel/18.12.0/microsoft.testplatform.objectmodel.nuspec",
+    "sourceCommit": "8c03f23cd7df6ab28c3f1e3d112dea978eae8b0c",
+    "contentHash": "ilT2o4v/c1joLgsfzS4dYQ71bWAy/RsA6fBY7f5OEUpUsUhwIzoliGeXdS3yctWuy4NZyuSVlO7dPX4ed7R06A==",
+    "dependencies": {},
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  },
+  "Microsoft.TestPlatform.TestHost/18.12.0": {
+    "upstream": "https://github.com/microsoft/vstest",
+    "license": "MIT",
+    "purpose": "Official test-platform support dependency required by the locked NUnit adapter / Microsoft test SDK graph.",
+    "classification": "test-only",
+    "maintenanceEvidence": "Established NUnit or Microsoft test infrastructure; official maintained release line, project documentation, and package repository verified in NuGet metadata.",
+    "reviewedOn": "2026-11-15",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/microsoft.testplatform.testhost/18.12.0/microsoft.testplatform.testhost.nuspec",
+    "sourceCommit": "8c03f23cd7df6ab28c3f1e3d112dea978eae8b0c",
+    "contentHash": "WTT912JUqmFa2BkCeXPkMCUpbYOqsbeRfRJdhaIQROx49iokgnGPAlKvXmHWKC9nJwWrHwSQfR+k+Qn7NCxfzw==",
+    "dependencies": {
+      "Microsoft.TestPlatform.ObjectModel": "18.12.0"
+    },
+    "aotEvidence": "Development-only; not linked into product. Full distribution audit belongs to P07."
+  }
+}

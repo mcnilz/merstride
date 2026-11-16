@@ -30,14 +30,55 @@ YAML schema
 - Required root fields: schemaVersion: 1, id, entry, nodes (a mapping by node ID).
   Optional limits: {maxTransitions: 20}; default 100, integer range 1..10000.
   A document is at most 1 MiB; a graph at most 100 nodes and 250 edges.
-- Process fields: kind: process, nonempty command, args (array of strings, possibly
-  []), timeoutSeconds (integer 1..3600). All are required. Pass arguments literally
+- Process fields: kind: process, timeoutSeconds (integer 1..3600), and exactly one
+  of command/args, script, or variants. command is nonempty; args is an array of
+  strings, possibly []. Pass direct arguments literally
   via the OS API: no shell expansion, globbing, interpolation or manual quoting.
   Quote YAML numeric/boolean arguments, e.g. args: ["123", "true", "path with spaces"].
   Bare commands resolve through PATH, relative program paths against the selected
   absolute workspace. Child cwd is that workspace; environment is inherited and
-  stdin closed. A shell is explicit, e.g. command: pwsh and
+  direct stdin closed. A shell is explicit, e.g. command: pwsh and
   args: [-NoProfile, -NonInteractive, -File, scripts/check.ps1].
+- Inline script: use a multiline literal block (script: |) beginning with a shebang.
+  Example node-map fragments (indent beneath the node, retain timeoutSeconds):
+    script: |
+      #!/usr/bin/env -S python3 -X utf8 -
+      print('Shared script: Grüße')
+  This needs installed Python 3 named python3 on PATH on every selected platform.
+  Bash example (requires installed Bash):
+    script: |
+      #!bash --noprofile --norc
+      printf 'Shared script\n'
+  PowerShell/platform example (requires pwsh on Windows and Bash on macOS/Linux):
+    variants:
+    - platforms: windows
+      script: |
+        #!pwsh -NoLogo -NoProfile -NonInteractive -Command -
+        Write-Output 'Windows'
+    - platforms: [macos, linux]
+      script: |
+        #!bash --noprofile --norc
+        printf 'Unix\n'
+  variants is a nonempty array; each entry has command/args or script and optional
+  platforms (single string or unique nonempty array: windows, macos, linux).
+  No condition means all platforms, never fallback. All overlapping conditions
+  fail validation, including universal/specific overlap. No match at advance is
+  spawn_error with NO_PLATFORM_VARIANT in stderr. Do not mix execution forms.
+  Shebang tokens use space/tab and single/double quotes; backslashes are literal,
+  without escapes or expansion. Quoted absolute/workspace-relative paths support
+  spaces. Bare names search inherited PATH; Windows tries .exe then .com for names
+  without extensions. Empty PATH entries are ignored; relative entries use workspace.
+  env NAME and env -S NAME ARG... resolve NAME directly without launching env;
+  other env options/assignments are unsupported. NAME must be bare.
+  The body after the shebang travels as UTF-8 stdin then EOF, without script files.
+  Supply flags that execute stdin: no implicit flags or fallback interpreter.
+  YAML normalizes line endings to LF and preserves Unicode/chomping. There is no
+  extra interactive/data stdin. Missing interpreter: spawn_error and
+  INTERPRETER_UNAVAILABLE in stderr; unlaunchable path: PROCESS_UNAVAILABLE.
+  Validation checks syntax only, never launches/downloads/probes interpreters.
+  Scripts/variants freeze at start; workspace script files stay live. All existing
+  logs, context tails, limits, locks and explicit interruption/recovery rules apply.
+  Only already installed interpreters are used; Bash is not an engine prerequisite.
 - Agent fields: kind: agent, nonempty prompt (literal string, at most 16 KiB UTF-8),
   optional context (array of unique selectors). Use prompt: | for multiline text.
   Selectors: input; nodes.<id>.exitCode, nodes.<id>.stdoutTail,

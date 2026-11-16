@@ -119,6 +119,22 @@ evidence, not physical disk failure or precise internal fault-window qualificati
 
 ## Release evidence
 
+The P12 suite executes `12-inline-scripts.feature` at the same native CLI seam.
+It requires installed PowerShell 7, Python 3 and Bash for its real-interpreter
+cases; these are test prerequisites, never product dependencies. Override
+`MERSTRIDE_TEST_PYTHON` / `MERSTRIDE_TEST_BASH` with an executable name or path.
+Windows defaults to `python` and Git's Bash under Program Files; Unix defaults
+to `python3` and `bash`. Missing prerequisites fail rather than skip scenarios.
+The separate native helper accepts a test-only stdin probe, preserving literal
+argv, Unicode transport and exact child accounting. A script reports visible
+workspace/state files while executing; probe args and stdin verify file-free
+transport. These observations do not claim a global filesystem audit.
+Recovery tests use the installed native helper as a shebang interpreter with
+barriers/signals, checking uncertain effects, explicit retry, fresh activation IDs
+and attached-tree termination. Real-interpreter cases check Unicode, separate
+streams and exit routing; unread large stdin checks feeder cancellation. Platform
+conditions are tested on the actual host, without simulating another OS.
+
 The creation-guide suite executes 11-creation-guide.feature using only a copied
 published executable in each isolated directory. It checks default/JSON protocol,
 unusable state paths, root/command help, aliases, global placement and invalid

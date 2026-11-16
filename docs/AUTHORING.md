@@ -38,6 +38,61 @@ These are node-map fragments, not full workflows. Arguments are literal strings.
 
 Route normal success with `exit_0`, specific failures with `exit_1`, and remaining outcomes with `default`. Use explicit failure handling; an unlabeled edge also follows failures. An unavailable executable is a runtime `spawn_error`, not a validation-time process probe.
 
+## Inline scripts and platforms
+
+Instead of `command`/`args`, use `script: |` with a first-line shebang selecting
+an already installed stdin-capable interpreter. For example:
+
+```yaml
+shared:
+  kind: process
+  timeoutSeconds: 10
+  script: |
+    #!/usr/bin/env -S python3 -X utf8 -
+    print('Grüße 🌍')
+platform:
+  kind: process
+  timeoutSeconds: 10
+  variants:
+  - platforms: windows
+    script: |
+      #!pwsh -NoLogo -NoProfile -NonInteractive -Command -
+      Write-Output 'Windows'
+  - platforms: [macos, linux]
+    script: |
+      #!bash --noprofile --norc
+      printf 'macOS/Linux\n'
+```
+
+These fragments require Python 3 as `python3` on each selected platform, plus
+PowerShell 7 on Windows and Bash on macOS/Linux. No interpreter is installed,
+bundled or substituted. A shared script is portable only where its interpreter
+and behavior are available. See the [complete inline example](../examples/inline-scripts.md).
+
+An omitted `platforms` condition means all three platforms. Overlapping variants
+are errors at validation, including an unconditional variant beside a specific
+one. Conditions accept one lowercase name or a unique nonempty array; unknown
+names and mixed execution forms fail. No applicable variant at advance routes
+`spawn_error`, with `NO_PLATFORM_VARIANT` in the activation's stderr.
+
+Shebang tokens use space/tab separators and single/double quotes for grouping;
+backslashes stay literal, without shell escapes or expansion. Quote paths with
+spaces, for example `#!"./tools with spaces/python.exe" -X utf8 -`. Relative
+paths resolve against the saved workspace; bare names search inherited PATH
+(Windows tries `.exe`, then `.com` for extensionless names; no PATHEXT/current
+directory fallback). `env NAME` and `env -S NAME ARG...` resolve a bare name
+directly without running env; other env forms fail validation.
+
+The body after the shebang is sent as UTF-8 stdin then EOF, with no intermediate
+script file. YAML literal-block chomping applies and line endings normalize to
+LF. Authors supply the interpreter's stdin flags; PowerShell needs `-Command -`,
+Python can use `-`, and Bash can consume stdin. File-only or interactive modes are
+unsuitable; interpreter syntax/flag errors retain ordinary exit routing. There
+is no separate data stdin. Missing/unlaunchable interpreters produce `spawn_error`
+with `INTERPRETER_UNAVAILABLE` / `PROCESS_UNAVAILABLE` in stderr. Validation never
+probes interpreter availability. All scripts and variants freeze at start and
+share the existing logs, context, time/output/transition limits and recovery rules.
+
 ## Agent nodes
 
 Use `prompt: |` for readable multiline instructions. Explain what must be inspected, what counts as success, and when each outgoing edge label should be returned. Request only useful context selectors. The agent can use its own tools under the original task authorization; the engine does not grant additional permission.

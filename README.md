@@ -60,7 +60,8 @@ Repeated inspection while waiting returns the same request. If a completion
 response is lost, retry the same request ID with equivalent data. Inspect every
 exit code and returned status in an integration; see the [agent operating loop](docs/AGENT-GUIDE.md).
 
-Try the [process chain](examples/process-chain.md) for literal command arguments
+Try the [inline scripts](examples/inline-scripts.md) for shared scripts and platform
+variants, or the [process chain](examples/process-chain.md) for literal command arguments
 and separate stdout/stderr logs, or the [review loop](examples/review.md) for
 process/agent routing. Workflows execute with your privileges in the selected
 workspace; review their commands before running them.

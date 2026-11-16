@@ -64,7 +64,7 @@ public class FeatureTests
         }
     }
 
-    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11");
+    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11" or "@P12");
 
     public static IEnumerable<TestCaseData> RequiredCases() => Cases().Where(c => c.Implemented)
         .Select(c => new TestCaseData(c).SetName(c.ToString()).SetProperty("Requirements", string.Join(' ', c.Tags))
@@ -93,6 +93,12 @@ public class FeatureTests
 
     private static void Execute(FeatureCase scenario)
     {
+        if (scenario.Tags.Contains("@P12"))
+        {
+            using var inline = new InlineScriptWorld();
+            foreach (var step in scenario.Steps) inline.Execute(step);
+            return;
+        }
         if (scenario.Tags.Contains("@P11"))
         {
             using var creation = new CreationGuideWorld();
@@ -165,6 +171,7 @@ internal sealed class CliWorld : IDisposable
     internal string FilePath => Path.Combine(DirectoryPath, "workflow.md");
     internal string? WorkingDirectory;
     internal string? Binary;
+    internal readonly Dictionary<string, string> EnvironmentOverrides = new(StringComparer.Ordinal);
     private string runId = "";
     internal JsonElement Response;
     internal int ExitCode;
@@ -185,6 +192,7 @@ internal sealed class CliWorld : IDisposable
         foreach (var arg in args) start.ArgumentList.Add(arg);
         start.Environment["DOTNET_CLI_UI_LANGUAGE"] = "de-DE";
         start.Environment["LANG"] = "de_DE.UTF-8";
+        foreach (var (key, value) in EnvironmentOverrides) start.Environment[key] = value;
         var processCount = ProcessObserver.TotalProcesses();
         using var process = Process.Start(start) ?? throw new InvalidOperationException("CLI did not start.");
         var stdout = process.StandardOutput.ReadToEndAsync();

@@ -10,7 +10,8 @@ namespace Merstride.Compilation;
 public static partial class WorkflowCompiler
 {
     private sealed record Block(string Info, string Text, int Line);
-    private sealed record Value(string? Text, bool Plain, SourceLocation Location, Dictionary<string, Value>? Fields = null, Value[]? Items = null);
+    private sealed record Value(string? Text, bool Plain, SourceLocation Location, Dictionary<string, Value>? Fields = null, Value[]? Items = null,
+        bool Literal = false);
 
     public static Workflow Compile(byte[] bytes, string? selected)
     {
@@ -95,7 +96,7 @@ public static partial class WorkflowCompiler
         foreach (var (nodeId, node) in nodes.Fields)
         {
             if (!Id().IsMatch(nodeId)) throw Invalid("Invalid node identifier.", node.Location);
-            var n = Map(node, "kind", "result", "command", "args", "timeoutSeconds", "prompt", "context");
+            var n = Map(node, "kind", "result", "command", "args", "timeoutSeconds", "prompt", "context", "script", "variants");
             var kind = String(Required(n, "kind", node.Location));
             if (kind == "end")
             {
@@ -106,17 +107,7 @@ public static partial class WorkflowCompiler
             }
             else if (kind == "process")
             {
-                Map(node, "kind", "command", "args", "timeoutSeconds");
-                var command = String(Required(n, "command", node.Location));
-                if (string.IsNullOrWhiteSpace(command) || command.Contains('\0')) throw Invalid("Command must be nonempty and contain no NUL.", node.Location);
-                var arguments = Required(n, "args", node.Location);
-                if (arguments.Items is null) throw Invalid("args must be an array of strings.", arguments.Location);
-                var args = arguments.Items.Select(String).ToArray();
-                if (args.Any(a => a.Contains('\0'))) throw Invalid("Arguments cannot contain NUL.", arguments.Location);
-                var timeout = Required(n, "timeoutSeconds", node.Location);
-                if (!Integer(timeout, out var seconds) || seconds is < 1 or > 3600)
-                    throw Invalid("timeoutSeconds must be an integer from 1 to 3600.", timeout.Location);
-                definitions.Add(new(nodeId, kind, null, command, args, seconds));
+                definitions.Add(ProcessNode(nodeId, node));
             }
             else if (kind == "agent")
             {
@@ -186,7 +177,8 @@ public static partial class WorkflowCompiler
         var location = new SourceLocation((int)ev.Start.Line + offset - 1, (int)ev.Start.Column);
         if (depth > 16) throw Invalid("YAML nesting exceeds supported limits.", location);
         if (ev is NodeEvent ne && (!ne.Anchor.IsEmpty || !ne.Tag.IsEmpty)) throw Invalid("YAML anchors and tags are forbidden.", location);
-        if (parser.TryConsume<Scalar>(out var scalar)) return new(scalar.Value, scalar.Style == ScalarStyle.Plain, location);
+        if (parser.TryConsume<Scalar>(out var scalar)) return new(scalar.Value, scalar.Style == ScalarStyle.Plain, location,
+            Literal: scalar.Style == ScalarStyle.Literal);
         if (parser.TryConsume<MappingStart>(out _))
         {
             var fields = new Dictionary<string, Value>(StringComparer.Ordinal);

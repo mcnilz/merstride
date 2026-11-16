@@ -60,8 +60,11 @@ internal static class Program
             Optional --input-file <file> supplies a JSON object (default {}). Input is frozen at start.
             Use status <run-id> to inspect; advance <run-id> executes the declared chain to an end.
             Repeat --state-dir on subsequent calls. All commands support --json.
-            Process nodes require command, literal string args, and timeoutSeconds (1..3600).
-            Programs run in the saved workspace with inherited environment and closed stdin; no implicit shell.
+            Process nodes require timeoutSeconds (1..3600) and command/args, script: |, or variants.
+            Direct commands receive literal args and closed stdin; inline scripts use a shebang and UTF-8 stdin.
+            Variants use platforms: windows, macos, linux (string or array); omitted means all, overlaps fail validation.
+            Programs run in the saved workspace with inherited environment; no implicit shell or interpreter install.
+            Inline flags must request stdin execution, e.g. #!pwsh -NoProfile -NonInteractive -Command -.
             PowerShell is explicit: command pwsh, args [-NoProfile, -NonInteractive, -File, script.ps1].
             Exact exit_<n> or spawn_error routing precedes default. No match fails with NO_MATCHING_EDGE.
             Output stays in separate raw-byte logs, capped at 10 MiB combined per activation.

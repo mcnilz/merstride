@@ -11,7 +11,7 @@ const installed = JSON.parse(await readFile(resolve(root, 'tools/mermaid/node_mo
 if (installed.version !== '12.3.0') throw Error('Installed Mermaid differs from reviewed version');
 await mkdir(output, { recursive: true });
 const diagrams = [];
-for (const name of ['single-end', 'process-chain', 'agent-task', 'review']) {
+for (const name of ['single-end', 'process-chain', 'agent-task', 'review', 'inline-scripts']) {
   const markdown = await readFile(resolve(root, `examples/${name}.md`), 'utf8');
   diagrams.push({ name, source: markdown.match(/```mermaid\r?\n([\s\S]*?)\r?\n```/)[1] });
 }

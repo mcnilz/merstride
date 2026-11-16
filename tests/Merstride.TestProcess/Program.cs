@@ -1,9 +1,15 @@
 using System.Text.Json;
 
 Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+Console.InputEncoding = new System.Text.UTF8Encoding(false);
+if (args.Length == 0) args = ["inline_probe"];
 
 switch (args[0])
 {
+    case "inline_probe":
+        Console.Write(JsonSerializer.Serialize(args[1..], FixtureJson.Default.StringArray));
+        Console.Error.Write(Console.In.ReadToEnd());
+        break;
     case "signal_host":
         Console.CancelKeyPress += (_, e) => e.Cancel = true;
         using (var engine = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(args[1])

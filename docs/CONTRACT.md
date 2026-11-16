@@ -73,11 +73,68 @@ Multiple incoming edges mean alternative arrivals, never a join. Exactly one cur
 
 ## 4. Process nodes
 
-Required fields: `kind: process`, nonempty `command`, `args` (array of strings, possibly empty), integer `timeoutSeconds` from 1 to 3600. No other process fields in version 1.
+Required fields: `kind: process` and integer `timeoutSeconds` from 1 to 3600,
+plus exactly one execution form:
+
+- Nonempty `command` and `args` (array of strings, possibly empty).
+- `script`, a multiline YAML literal block scalar (`|`, `|-` or `|+`) with a
+  first-line shebang. Folded/quoted scalars and NUL characters are invalid.
+- Nonempty `variants` array. Each mapping has exactly one of the two forms above
+  and optional `platforms`: a string or nonempty array of unique strings from
+  `windows`, `macos`, `linux` (case-sensitive). `timeoutSeconds` belongs to the node.
+
+Forms cannot be mixed, including `args` alongside `script` or an execution beside
+`variants`. A variant without `platforms` applies to **all three platforms**.
+Reject overlapping variants during validate/start, including duplicate/equivalent
+conditions and any unconditional/specific overlap. Absence is not fallback.
+All variants are validated without launching/probing anything. Missing coverage
+is valid: advance chooses only the current platform's variant; no match produces
+`spawn_error`, with `NO_PLATFORM_VARIANT` in the activation's stderr log. There is
+no new process outcome. Existing exact/default/unlabeled routing and CLI exit
+semantics apply (including exit 5 / `NO_MATCHING_EDGE` without a matching route).
 
 Resolve bare program names through PATH and relative program paths against the absolute workspace selected at start. Child cwd is that workspace. Inherit the parent environment unchanged and close stdin. Pass each argument using the OS process API without shell interpretation, globbing, interpolation, or manual quoting. Never insert workflow output into arguments or environment variables.
 
 PowerShell is explicit: `command: pwsh` and `args: [-NoProfile, -NonInteractive, -File, scripts/check.ps1]`. The engine itself does not require PowerShell or another shell.
+
+For inline execution, `#!INTERPRETER [ARG ...]` selects an installed executable,
+including on Windows; native OS shebang dispatch is never needed. ASCII space/tab
+separates tokens. Single/double quotes group tokens (including paths with spaces
+and empty arguments); quotes are removed, backslashes are literal, and there are
+no escapes, variables, globbing, substitutions or shell operators. Unclosed quotes,
+empty/option/assignment interpreter tokens and control characters except tab fail
+with located `INVALID_DOCUMENT` (exit 3). The shebang must end with a newline;
+the subsequent body may be empty. YAML normalizes line endings to LF and applies
+its usual literal-block chomping. Unicode is preserved.
+
+`#!/usr/bin/env NAME` and `#!env NAME` resolve NAME directly; the env program is
+not launched. `env -S NAME ARG ...` additionally allows interpreter arguments.
+Other env options, assignments, path-valued NAMEs, and multiple tokens without
+`-S` are unsupported and fail validation. No env command splitting/expansion occurs.
+
+Bare inline interpreter names search inherited PATH in order, ignoring empty
+entries; relative PATH directories resolve against the workspace. On Windows,
+extensionless names try `.exe`, then `.com` in each directory; names with an
+extension are exact. No PATHEXT expansion or implicit current-directory search.
+Explicit absolute paths and paths containing `/` or `\` bypass PATH; relative
+paths resolve against the saved workspace. Paths are native to the current OS.
+A missing bare interpreter produces `spawn_error` with `INTERPRETER_UNAVAILABLE`
+in stderr; a path/interpreter that cannot launch produces `spawn_error` with
+`PROCESS_UNAVAILABLE`. Validation never checks installation or executes a probe.
+
+Pass shebang arguments literally through the OS API. Deliver the body (without
+the shebang) as UTF-8 without BOM through redirected stdin, then close it. Do not
+write a script file, insert invocation flags, replace an interpreter, download or
+bundle one. Authors must choose an interpreter/flags that execute UTF-8 stdin:
+for example `#!bash --noprofile --norc`, `#!python3 -X utf8 -`, or
+`#!pwsh -NoLogo -NoProfile -NonInteractive -Command -`. Interpreters that require
+script files or different invocation modes are unsuitable; their own syntax/flag
+errors retain normal exit routing. There is no separate stdin for interactive or
+workflow data; direct commands retain closed stdin. The feeder is bounded by the
+1 MiB document limit, runs concurrently with log draining, and is canceled under
+the same timeout/output/interruption controls. Early interpreter exit closes input
+without hiding its exit result. Freeze script body, shebang arguments and every
+variant in the run definition; workspace script files remain live.
 
 Drain stdout and stderr concurrently into separate raw-byte log files. Combined retained output is capped at 10 MiB per activation. Exceeding the cap triggers best-effort process-tree termination and `output_limit`. Timeout similarly triggers termination and routes `timeout`. A timeout or output-limit cause takes precedence over the exit code caused by termination; the first observed limiting cause wins. Detached processes are not guaranteed to be terminated. Test process-tree handling on each released platform.
 

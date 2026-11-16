@@ -4,7 +4,8 @@ namespace Merstride.Domain;
 
 public sealed record Workflow(string Id, string Entry, Node[] Nodes, Edge[] Edges, int MaxTransitions, Diagnostic[] Diagnostics);
 public sealed record Node(string Id, string Kind, string? Result, string? Command, string[] Args, int TimeoutSeconds,
-    AgentTask? Agent = null);
+    AgentTask? Agent = null, string? Script = null, ProcessExecution[]? Variants = null);
+public sealed record ProcessExecution(string Command, string[] Args, string? Script, string[] Platforms);
 public sealed record AgentTask(string Prompt, string[] Context);
 public sealed record AgentRequest(string Id, string ActivationId, string NodeId, string Prompt, string[] AllowedOutcomes, ContextItem[] Context);
 public sealed record ContextItem(string Selector, bool Available, JsonElement Value, string? SourceActivationId = null,

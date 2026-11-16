@@ -4,7 +4,7 @@ using NUnit.Framework;
 
 namespace Merstride.Acceptance;
 
-internal sealed class RecoveryWorld : IDisposable
+internal sealed class RecoveryWorld(bool inline = false) : IDisposable
 {
     private readonly CliWorld cli = new();
     private readonly List<Process> helpers = [];
@@ -158,11 +158,13 @@ internal sealed class RecoveryWorld : IDisposable
 
     private void CreateWorkflow(int count = 1, string? mode = null)
     {
+        string Execution(string[] args) => inline
+            ? "script: |\n      #!\"" + Helper + "\" " + string.Join(' ', args) + "\n      test-only stdin payload"
+            : "command: " + JsonSerializer.Serialize(Helper) + "\n    args: " + JsonSerializer.Serialize(args);
         var nodes = string.Join("\n", Enumerable.Range(0, count).Select(i => $$"""
               work{{(count == 1 ? "" : i.ToString(System.Globalization.CultureInfo.InvariantCulture))}}:
                 kind: process
-                command: {{JsonSerializer.Serialize(Helper)}}
-                args: {{JsonSerializer.Serialize(mode is null ? new[] { "barrier", count == 1 ? "effect" : "effect" + i } : new[] { mode })}}
+                {{Execution(mode is null ? ["barrier", count == 1 ? "effect" : "effect" + i] : [mode])}}
                 timeoutSeconds: 30
             """));
         var names = Enumerable.Range(0, count).Select(i => count == 1 ? "work" : "work" + i).ToArray();

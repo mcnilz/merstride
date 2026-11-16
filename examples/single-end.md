@@ -1,4 +1,4 @@
-# Minimal P01 workflow
+# Minimal workflow
 
 ```yaml merstride
 schemaVersion: 1

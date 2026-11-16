@@ -1,6 +1,6 @@
 # Execution contract
 
-Revision 0.5 — draft schema version 1 and CLI protocol version 1.
+Schema version 1 and CLI protocol version 1.
 
 ## 1. Markdown and YAML
 
@@ -101,7 +101,7 @@ Every entry into an agent node creates a fresh random request ID and `waiting_ag
 {"protocolVersion":1,"runId":"r_01","status":"waiting_agent","request":{"id":"q_01","nodeId":"review","prompt":"Review changes.","allowedOutcomes":["approved","recheck"],"context":[]},"error":null}
 ```
 
-P09 makes `complete <run-id> --request <id> --outcome <outcome>` the preferred
+`complete <run-id> --request <id> --outcome <outcome>` is the preferred
 completion input. Optional `--data <json-object>` defaults to `{}` and has the same
 object, size, depth, duplicate-key and numeric rules as file data. For compatibility,
 `--result-file <file>` remains an alternative: completion files contain required
@@ -136,7 +136,7 @@ Every command supports `--json`: exactly one JSON object on stdout; incidental d
 | `guide` | Offline compact agent usage guide, no run required; JSON has a guide string. |
 | `version` | Tool and protocol version. |
 
-P08 adds `-h` / `--help` at the root and for every command. Help exits 0 without
+`-h` / `--help` is available at the root and for every command. Help exits 0 without
 workflow/state access: English text by default, or one protocol object with a
 `guide` string under `--json`. Root `--version` shares the `version` JSON response.
 Global options work before/after the command, before `--`; the delimiter makes

@@ -1,7 +1,7 @@
 # Acceptance testing with Gherkin
 
-Revision 0.5. The `.feature` files are the reviewable behavioral contract. The NUnit
-runner executes P01-P09 local cases from these files against the published
+The `.feature` files are the reviewable behavioral contract. The NUnit
+runner executes local cases from these files against the published
 native executable. The two clean-platform orchestration cases remain mandatory
 separate release qualification and fail explicitly without actual evidence. See STATUS.md
 for current evidence and limitations.
@@ -10,20 +10,21 @@ for current evidence and limitations.
 
 Use English Gherkin (`Feature`, `Scenario`, `Scenario Outline`, `Given`, `When`, `Then`). Give every scenario stable requirement tags (`@A01` through `@A25`) and an owning implementation slice. Preserve tags when renaming prose.
 
-For the proposed .NET implementation, use NUnit 4 as the test host and choose a permissively licensed, maintained Gherkin parser/binding approach during P01. Validate its current license and compatibility then. Development-only Gherkin dependencies do not ship in the product and need not support Native AOT. Do not select a framework by name without checking it. Rust or Go must preserve the same features and public CLI assertions if chosen.
+NUnit 4 hosts explicit bindings over the official Cucumber Gherkin parser.
+Development-only test dependencies are inventoried and do not ship with the product.
 
 The runner MUST execute scenarios from the actual feature files. Do not maintain unrelated tests and claim the prose is automated. Undefined, ambiguous, pending, or skipped required steps fail the relevant release gate. Scenario Outline rows execute independently. Emit machine-readable test results linked to feature, scenario, example row, requirement, and platform. CI shows not-yet-implemented scenarios as not implemented, never passed.
 
-During incremental development, select implemented slices; report remaining scenarios separately. At final release, run every platform-applicable scenario. The release-environment scenario orchestrates this suite and is excluded from its own child invocation to avoid recursion.
+When adding behavior, report remaining scenarios separately from executed cases. At final release, run every platform-applicable scenario. The release-environment scenario orchestrates this suite and is excluded from its own child invocation to avoid recursion.
 
 ## Test boundary and fixtures
 
-The proposed seam is the public CLI: invoke the actual executable; assert JSON, exit codes, logs, process effects, and public status. Isolate each scenario in a temporary workspace and state directory. Build a small native test helper in the chosen language that can echo arguments, emit bytes on both streams, choose an exit code, create a marker, wait on an explicit barrier, and spawn an attached child. It is test-only.
+The accepted behavioral seam is the public CLI: invoke the actual executable; assert JSON, exit codes, logs, process effects, and public status. Isolate each scenario in a temporary workspace and state directory. The separately published native test helper can echo arguments, emit bytes on both streams, choose an exit code, create a marker, wait on an explicit barrier, and spawn an attached child. It is test-only.
 
-The accepted seams are the public CLI and the public build boundary. P02's native
+Architecture and policy checks use the public build boundary. The native
 helper is `tests/Merstride.TestProcess`, published separately to `artifacts/fixture`.
-It currently records effects/arguments, chooses exits, emits normal/raw/flood output,
-checks closed stdin, and waits for timeout checks. P05 adds an attached parent/child
+It records effects/arguments, chooses exits, emits normal/raw/flood output,
+checks closed stdin, and waits for timeout checks. It also supports an attached parent/child
 readiness barrier, synchronized concurrent stream writers, labelled streams and
 Unicode/invalid-byte output. PowerShell 7 is required for its explicit invocation case.
 Windows Job accounting asserts exact CLI plus declared child counts per call; start,
@@ -31,14 +32,12 @@ status, guide, validate, and logs still require no children.
 
 Run `pwsh -NoProfile -File scripts/build.ps1` for the complete local gate. Results are
 `artifacts/tests/p07.trx`, `artifacts/tests/scenarios.json`, and
-`artifacts/benchmark.json`. Supplemental safety regressions do not mark later
-feature scenarios implemented. Native helper/toolchain packages reuse the existing
+`artifacts/benchmark.json`. Native helper/toolchain packages reuse the existing
 reviewed dependency inventory and are never published into the product directory.
 
-P03 adds actual agent-feature bindings and helper modes for a repairable check and
-large context output. Supplemental CLI cases check strict JSON/UTF-8, binary64
+Agent bindings use helper modes for a repairable check and large context output. Supplemental CLI cases check strict JSON/UTF-8, binary64
 receipt equivalence, frozen input, selected bounded tails, and basic context/data
-limits. Full exact boundary qualification remains P05. Completion rejection tests
+limits. Completion rejection tests
 also compare authoritative state bytes, as required by the no-mutation contract.
 
 Named Given steps construct complete minimal Markdown/YAML/Mermaid fixtures. Distinct end nodes in routing scenarios are observed through returned cursor/activation identity. Fixtures MUST not use production parser code to derive their expected answers. The test runner records child invocations externally; “no child process” assertions must not rely solely on an absent application log.
@@ -47,7 +46,7 @@ Crash tests synchronize through marker files/barriers, not arbitrary sleeps. Kil
 
 Depth counts the root JSON object as depth 1; each nested object/array increases depth by 1. Byte boundaries refer to compact serialized UTF-8 JSON. Required-size fixtures must calculate this explicitly. Tests for the input object use the same limits as completion data.
 
-P05 runs all 14 expanded cases in 04-limits and supplemental CLI checks. The timeout
+The limit suite runs all 14 expanded cases in 04-limits and supplemental CLI checks. The timeout
 test observes both helpers alive through retained OS process handles before releasing
 their native readiness barrier, then checks termination; Windows Job accounting
 also requires exactly the CLI plus two descendants. Its outer watchdog remains
@@ -58,11 +57,11 @@ directly. Data fixtures independently count eight JSON framing bytes, UTF-8 payl
 bytes, and root/nested object/array depth. Context fixtures use an explicit public
 JSON envelope to exercise exactly 32768 and 32769 assembled bytes, without calling
 production sizing helpers. Targeted log reads compare state/log bytes before/after
-and retain external no-child accounting. None of these claims P06 crash recovery.
+and retain external no-child accounting.
 
 Before introducing an internal persistence fault hook, document and confirm that extra seam. Add fault scenarios for before process launch and after process exit/before commit when that seam exists; do not claim those precise crash windows are covered by a single uncontrolled kill test. The provided after-effect barrier scenario covers a real external ambiguity window already.
 
-P06 executes all seven actual recovery scenarios. A two-process barrier chain tests
+The recovery suite executes all seven actual recovery scenarios. A two-process barrier chain tests
 writer exclusion for advance, complete and resolve while a separate run completes.
 Crash tests terminate only the engine after an external marker; the helper remains
 alive until explicit cleanup. Read-only status compares authoritative bytes before
@@ -141,16 +140,14 @@ A check of feature syntax is not a behavioral pass. A native publish on one OS d
 
 ## Architecture and distribution gates
 
-A21 maps to 07-architecture: positive/negative compilation fixtures and effective enforcement, owned by P01. A22 maps to the same feature: MIT release and build-only analyzer separation, owned by P07. These `@build` checks use the public compiler/build/publish boundary and are separate from the runtime CLI suite. The clean-runtime platform suite excludes build-only checks; the overall release gate requires both suites.
+A21 maps to 07-architecture: positive/negative compilation fixtures and effective enforcement. A22 maps to the same feature: MIT release and build-only analyzer separation. These `@build` checks use the public compiler/build/publish boundary and are separate from the runtime CLI suite. The clean-runtime platform suite excludes build-only checks; the overall release gate requires both suites.
 
-A23: official Actions, SHA pins, and PR isolation (P01). A24: established dependency review (P01). A25: tested-tag release integrity and publication gates (P07). These are in 08-delivery.feature. Policy checks combine automated allowlist/lock/reference checks with a version-controlled reviewed dependency inventory; maintenance maturity cannot be inferred automatically from a package name.
+A23: official Actions, SHA pins, and PR isolation. A24: established dependency review. A25: tested-tag release integrity and publication gates. These are in 08-delivery.feature. Policy checks combine automated allowlist/lock/reference checks with a version-controlled reviewed dependency inventory; maintenance maturity cannot be inferred automatically from a package name.
 
-M01 preserves all 61 P01–P04 feature cases and adds three public MSBuild property
-checks for effective SDK 11.0.100, net11.0, stable C# 15 and no memory-safety opt-in
-across product, test harness and native helper. See STATUS.md for the 165-test gate
-and migration evidence. The global language skill is not part of the test inputs.
+Public MSBuild property checks require SDK 11.0.100, net11.0, stable C# 15 and
+no memory-safety opt-in across product, test harness and native helper.
 
-P08 binds every expanded case in 09-cli-usability.feature to raw native CLI calls.
+The CLI usability suite binds every expanded case in 09-cli-usability.feature to raw native CLI calls.
 German locale settings qualify English help/errors; JSON parsing rejects extra
 stdout content. Discovery checks unchanged directory entries and external process
 counts; native start/status qualifies literal delimited paths and equals-form
@@ -158,11 +155,11 @@ input options. Five public compilation fixtures confine the parser to Cli.
 Release inventory and clean-target expected identities include the added cases.
 The p07.trx filename stays stable for release freshness checks.
 
-P09 binds every row of 10-inline-completion.feature to the native CLI, including
+The inline completion suite binds every row of 10-inline-completion.feature to the native CLI, including
 PowerShell JSON argument passing, invalid modes/payloads, exact byte/depth limits,
 and receipts retried across file/inline modes while a newer request waits. The
-normal P03 agent/context/receipt helper, P05 completion boundary helper, and P06
-competing-completion checks now prefer inline parameters. File-schema/UTF-8,
+normal agent/context/receipt helper, completion boundary helper, and
+competing-completion checks prefer inline parameters. File-schema/UTF-8,
 legacy default-data and cross-mode cases deliberately retain file input. Raw
 results remain local under ignored artifacts; no environment dumps are versioned.
 Linux tracing requests seccomp-BPF filtering with the same follow-forks/execve

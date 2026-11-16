@@ -8,7 +8,8 @@ Source: https://github.com/aaubry/YamlDotNet (commit recorded in docs/dependency
 .NET native runtime components — Copyright (c) .NET Foundation and Contributors.
 Source: https://github.com/dotnet/dotnet.
 The .NET runtime also includes third-party components; full platform-specific notices
-and distribution verification are required in P07 before release.
+and distribution verification are required before release; complete notices are
+retained under docs/licenses/ and included in native archives.
 
 System.CommandLine 3.0.0 — Copyright (c) .NET Foundation and Contributors.
 Source: https://github.com/dotnet/command-line-api.

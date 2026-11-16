@@ -43,7 +43,7 @@ Context selectors expose the latest completed node activation, which may be from
 
 ## Validate before execution
 
-P04 supports multiple marked pairs: select one with `--workflow <id>`, or omit the
+A document supports multiple marked pairs: select one with `--workflow <id>`, or omit the
 option when exactly one pair exists. Block order is irrelevant. Only column-one
 backtick fences execute; enclosing longer/tilde fences hide examples. Keep the
 node declaration token contiguous as `id["Label"]`; indentation and whitespace

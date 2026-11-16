@@ -96,9 +96,7 @@ control-flow tests, not native qualification. Run all 15 affected checks with
 FullyQualifiedName~ReleaseTests` on each platform. Package refuses stale source or
 gate evidence before creating staging or an archive.
 
-Before any real release, configure origin/main, protected maintainer tag rules and
-the required aggregate branch check. Origin already references
-git@github.com:mcnilz/merstride.git; the user reported pushing P01. Actual repository
-settings and hosted execution have not been verified or changed by this task.
-Release scripts do not rename the current local master checkout or configure
-GitHub settings. No remote publication is authorized by P07 implementation.
+Before any real release, verify origin/main, protected maintainer tag rules and
+the required aggregate branch check. Repository settings and hosted execution
+remain unverified. Release scripts do not configure GitHub settings or rename
+local branches. Publication requires separate authorization.

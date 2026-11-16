@@ -79,5 +79,5 @@ Failed-run `status` returns 0. Child exit codes do not become CLI exit codes.
 System.CommandLine 3.0.0 supplies parsing and generated help. It is confined to
 Cli and adds no selected transitive runtime packages. See the
 [decision](adr/0008-p08.md), [dependency review](dependency-inventory.json), and
-[verification status](STATUS.md). Release publication remains blocked by P07's
+[verification status](STATUS.md). Release publication remains blocked by
 unfinished external qualification.

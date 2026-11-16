@@ -1,6 +1,8 @@
 # Local issue tracker
 
-Use `.scratch/merstride/issues/`, one numbered Markdown file per slice.
-Record blockers, scenario tags, acceptance criteria, and status in each ticket.
-Work tickets whose blockers are complete. P02 also requires user acceptance of P01.
+Use `.scratch/merstride/issues/`, one numbered Markdown file per approved scope.
+Record blockers, scenario tags when applicable, acceptance criteria and status.
+Work assigned tickets whose blockers are complete; the baseline discovery and
+breakdown are already accepted. Preserve existing tickets and their history.
+Follow each ticket/session's acceptance and local-commit instructions.
 Never publish these tickets remotely.

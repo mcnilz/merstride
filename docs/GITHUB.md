@@ -1,18 +1,18 @@
 # GitHub project, build, and release
 
-Revision 0.5 — required implementation deliverables. P07 implements local build,
-release scripts and workflow policy. No hosted pipeline or remote release is
-claimed; see STATUS.md and RELEASING.md for actual qualification and prerequisites.
+Repository-owned scripts and workflows implement local build, release controls
+and static workflow policy. Hosted execution and repository controls remain
+unverified; see [status](STATUS.md) and [release verification](RELEASING.md).
 
 ## Repository
 
-Host the project publicly on GitHub under MIT. The repository name is `merstride`; its GitHub owner remains to be selected. Keep source, English docs, examples, feature files, dependency lock files, and build scripts versioned together. Provide CONTRIBUTING.md, SECURITY.md, issue/PR templates, and a correct MIT LICENSE at setup. Repository publishing is a separate action once the owner and source are available.
+Host the project publicly on GitHub under MIT. The repository name is `merstride`; remote hosting and settings must be verified before publication. Keep source, English docs, examples, feature files, dependency lock files, and build scripts versioned together. Preserve CONTRIBUTING.md, SECURITY.md, issue/PR templates and the MIT LICENSE. Publishing requires separate authorization.
 
-Implement `.github/workflows/build.yml`, `.github/workflows/release.yml`, and `.github/dependabot.yml`. Keep build commands in repository-owned PowerShell 7 scripts reusable locally. Do not add a third-party build framework or release action.
+The workflows are `.github/workflows/build.yml`, `.github/workflows/release.yml`, and `.github/dependabot.yml`. Keep build commands in repository-owned PowerShell 7 scripts reusable locally. Do not add a third-party build framework or release action.
 
 ## Official actions policy
 
-Every external `uses:` action MUST be GitHub-maintained and appear on the explicit project allowlist. A Marketplace verified-creator badge alone is insufficient. Start with only these official actions:
+Every external `uses:` action MUST be GitHub-maintained and appear on the explicit project allowlist. A Marketplace verified-creator badge alone is insufficient. The allowlist contains these official actions:
 
 | Action | Stable release observed on 2026-11-15 | Purpose |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ Every external `uses:` action MUST be GitHub-maintained and appear on the explic
 | actions/upload-artifact | v7.0.2 | Store build/test artifacts |
 | actions/download-artifact | v8.0.2 | Retrieve same-run release artifacts |
 
-These are research observations, not perpetual version requirements. At workflow implementation, verify each upstream latest stable release, resolve its full commit SHA from the official repository, and use that SHA with a release-version comment. Never invent a SHA, use an unreviewed branch ref, or copy stale action versions from examples. Check action/runner compatibility. Configure weekly Dependabot updates for `github-actions` and `nuget`; review update PRs and do not enable blind automerge.
+These are research observations, not perpetual version requirements. When updating workflows, verify each upstream stable release, resolve its full commit SHA from the official repository, and use that SHA with a release-version comment. The checked-in workflows pin the observed versions above to full SHAs. Never invent a SHA, use an unreviewed branch ref, or copy stale action versions from examples. Check action/runner compatibility. Configure weekly Dependabot updates for `github-actions` and `nuget`; review update PRs and do not enable blind automerge.
 
 Allowed repository-owned scripts/reusable workflows must also be reviewed. Do not hide external actions inside local wrappers. Adding another official action requires a demonstrated task need and an allowlist update. Official GitHub CLI (`gh`) handles GitHub Releases; no community release action is needed.
 
@@ -29,7 +29,7 @@ Allowed repository-owned scripts/reusable workflows must also be reviewed. Do no
 
 Run on pull requests, pushes to main, and manual dispatch. Use pull_request rather than pull_request_target to execute contribution code. Default token permissions are contents:read; no secrets or write token in untrusted build jobs. Set checkout persist-credentials:false. Cancel superseded PR builds, but never cancel an active release midway through publication.
 
-Build Windows x64 on a pinned supported Windows hosted-runner label and Linux x64 on a pinned supported Ubuntu label. Select concrete labels after checking Native AOT prerequisites; record image/version evidence. Do not claim Windows Server hosted tests prove Windows 11 specifically: retain the Windows 11 release acceptance check. Do not claim a hosted SDK machine is a no-runtime test environment.
+Build Windows x64 on a pinned supported Windows hosted-runner label and Linux x64 on a pinned supported Ubuntu label. The checked-in labels are windows-2025 and ubuntu-24.04; retain actual image/version evidence from hosted runs. Do not claim Windows Server hosted tests prove Windows 11 specifically: retain the Windows 11 release acceptance check. Do not claim a hosted SDK machine is a no-runtime test environment.
 
 For each matrix target:
 
@@ -40,7 +40,7 @@ For each matrix target:
 5. Run acceptance/smoke checks against that actual binary; record version, size, and SHA-256.
 6. Check dependency licensing and build-only/runtime separation; upload test results even after test failure, but never label a failed binary release-ready.
 
-Use an always-running aggregate gate that fails for failed, cancelled, or unexpectedly skipped required jobs, so branch protection can require one stable check name. Configure branch rules when the repository is created. Begin with Windows in P01; add Linux before the first release claiming Linux support.
+Use an always-running aggregate gate that fails for failed, cancelled, or unexpectedly skipped required jobs, so branch protection can require one stable check name. Require the aggregate `gate` check in branch rules before publication. Both Windows and Linux jobs are present; actual hosted outcomes remain unverified.
 
 ## Release workflow
 

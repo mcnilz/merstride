@@ -1,6 +1,6 @@
 # Product specification
 
-Revision 0.5 — draft. MUST, SHOULD, and MAY indicate requirement strength.
+MUST, SHOULD, and MAY indicate requirement strength.
 
 ## Problem statement
 
@@ -27,7 +27,7 @@ A native executable compiles an explicitly marked Mermaid flowchart in Markdown.
 
 ## Implementation decisions
 
-The contract in [CONTRACT.md](CONTRACT.md) defines the draft format and runtime semantics. Inconsistencies between documents MUST be corrected, not silently resolved by implementation guesswork.
+The contract in [CONTRACT.md](CONTRACT.md) defines the format and runtime semantics. Inconsistencies between documents MUST be corrected, not silently resolved by implementation guesswork.
 
 ### Scope and trust
 
@@ -35,7 +35,7 @@ Three node kinds: `process`, `agent`, `end`. One active cursor, bounded loops, n
 
 ### GitHub and dependencies
 
-The project MUST be a public GitHub project with official-only build/release Actions as specified in [GITHUB.md](GITHUB.md). Only established, reviewed dependencies are allowed under [DEPENDENCIES.md](DEPENDENCIES.md). MIT licensing remains mandatory. Naming research is recorded in [NAMING.md](NAMING.md).
+The project MUST be a public GitHub project with official-only build/release Actions as specified in [GITHUB.md](GITHUB.md). Only established, reviewed dependencies are allowed under [DEPENDENCIES.md](DEPENDENCIES.md). MIT licensing remains mandatory. Merstride is the accepted project and CLI name; it suggests Mermaid plus a stride through a process and does not imply an official Mermaid product. The name is not registered or reserved externally; namespace availability and trademark clearance remain unverified.
 
 ### Distribution
 
@@ -49,7 +49,7 @@ The project MUST be a public GitHub project with official-only build/release Act
 
 ### Language and architecture
 
-Use C# 15/.NET 11 Native AOT following the accepted post-P04 technology change (ADR 0004); preserve native feasibility checks covering YAML, JSON, locks, persistence, and process execution. Choose one implementation language. Consider Rust or Go only if measured constraints remain unmet after removing unnecessary dependencies.
+Use C# 15/.NET 11 Native AOT as recorded in ADR 0004; preserve native feasibility checks covering YAML, JSON, locks, persistence, and process execution. Choose one implementation language. Consider Rust or Go only if measured constraints remain unmet after removing unnecessary dependencies.
 
 Use proportional separation of compilation, execution/state, and CLI. No general plugin platform, framework-heavy DI, embedded scripting language, or repository abstraction for every file. Snapshot the compiled definition at start; do not claim scripts or the workspace are frozen.
 
@@ -59,7 +59,7 @@ Ship a concise offline `guide` command and an expanded agent guide. The engine M
 
 ## Testing decisions
 
-Gherkin files under `features/` define acceptance behavior. See [TESTING.md](TESTING.md) for bindings, fixtures, release gates, and scenario traceability. Proposed public test boundary: CLI invocation, JSON, exit codes, and observable filesystem/process effects. Confirm that boundary before implementation under the selected development workflow.
+Gherkin files under `features/` define acceptance behavior. See [TESTING.md](TESTING.md) for bindings, fixtures, release gates, and scenario traceability. The accepted public test boundary is CLI invocation, JSON, exit codes, and observable filesystem/process effects. Architecture and policy checks use the public build boundary.
 
 Use real subprocesses in isolated temporary directories. Do not test private parser methods or persistence fields merely to increase coverage. .NET tests use NUnit 4 without FluentAssertions. Any additional fault-injection seam requires a justified, documented decision.
 

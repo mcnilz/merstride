@@ -1,92 +1,85 @@
 # Merstride
 
-P08 adds English command help and predictable argument parsing while preserving
-the JSON agent protocol; see [CLI usage](docs/CLI.md). P07 adds Windows/Linux native verification, complete runtime notices, input/content
-audits, and fail-closed release scripts. Local implementation remains distinct
-from external release qualification; see [release verification](docs/RELEASING.md).
+Merstride is a small native CLI that executes workflows embedded in Markdown.
+Mermaid defines control flow; YAML defines process commands, agent tasks and
+terminal results. Use it for repeatable checks, repair loops and reviews while
+keeping the workflow readable alongside your project documentation.
 
-Revision 0.5 — specification draft — 2026-11-15.
+Execution is sequential and deterministic. Merstride runs process nodes until it
+reaches an agent task, a terminal node or an error, then saves progress locally.
+Your existing coding agent receives an explicit request with a literal prompt,
+selected context and allowed outcomes. It performs the task with its own tools
+and returns an outcome. Merstride has no built-in LLM integration, API key or
+model session; you or your agent explicitly call `advance` to continue.
 
-Project name: **Merstride**, accepted on 2026-11-15. CLI: `merstride`. See [naming decision](docs/NAMING.md). A small native CLI executes workflows embedded in Markdown. Mermaid defines control flow; YAML defines node behavior. An existing coding agent handles explicit agent tasks.
+## Quick start
 
-P01–P06 implement native sequential process/agent/end workflows, persistent
-start/status/advance/complete, selected context, idempotent completion receipts,
-separate raw-byte logs, offline guide/version, and initial architecture/build policy
-checks, multi-workflow selection, supported authoring validation, and exact runtime,
-data and context boundaries, explicit crash recovery, writer exclusion and concurrent snapshots.
-See [current status](docs/STATUS.md) for verified results and limitations.
+Build from source using the [development prerequisites](CONTRIBUTING.md#prerequisites)
+and `pwsh -NoProfile -File scripts/build.ps1`. The examples below use PowerShell
+7.3+ from the repository root and the resulting Windows executable. On Linux,
+use `artifacts/native/merstride` instead. Release qualification is still incomplete;
+see [current status](docs/STATUS.md) before considering distribution.
 
-Build on Windows x64 with .NET SDK 11.0.100, PowerShell 7, and the Native AOT C++ toolchain:
-
-```powershell
-pwsh -NoProfile -File scripts/build.ps1
-$binary = Resolve-Path artifacts/native/merstride.exe
-$state = Join-Path (Get-Location) '.merstride/runs'
-& $binary guide --json
-$run = & $binary start examples/single-end.md --workspace (Get-Location).Path --state-dir $state --json | ConvertFrom-Json
-& $binary status $run.runId --state-dir $state --json
-& $binary advance $run.runId --state-dir $state --json
-```
-
-Try a real process chain in this Git workspace:
+First run a workflow with a single successful end node:
 
 ```powershell
-$run = & $binary start examples/process-chain.md --workspace (Get-Location).Path --state-dir $state --json | ConvertFrom-Json
-$result = & $binary advance $run.runId --state-dir $state --json | ConvertFrom-Json
-& $binary logs $run.runId --activation $result.lastActivation.id --stream stdout --state-dir $state --json
+$binary = (Resolve-Path artifacts/native/merstride.exe).Path
+$workspace = (Get-Location).Path
+$state = Join-Path $workspace '.merstride/runs'
+& $binary --help
+& $binary validate examples/single-end.md --json
+$run = & $binary start examples/single-end.md --workspace $workspace --state-dir $state --json | ConvertFrom-Json
+& $binary status $run.runId --state-dir $run.stateRoot --json
+& $binary advance $run.runId --state-dir $run.stateRoot --json
 ```
 
-For an existing-agent task, start [the task example](examples/agent-task.md) and
-advance to `waiting_agent`. Read the returned literal prompt, selected context, and
-sorted allowed outcomes. After performing the task, return an allowed outcome
-directly through parameters; no result file is needed:
+`start` saves a ready run and executes nothing. `status` inspects it. `advance`
+executes the selected node; this example returns `completed`.
+
+For an existing-agent handoff, use the [agent task example](examples/agent-task.md):
 
 ```powershell
-& $binary complete $run.runId --request $current.request.id --outcome approved --data '{"summary":"Review completed"}' --state-dir $state --json
-& $binary advance $run.runId --state-dir $state --json
+$run = & $binary start examples/agent-task.md --workspace $workspace --state-dir $state --json | ConvertFrom-Json
+$current = & $binary advance $run.runId --state-dir $run.stateRoot --json | ConvertFrom-Json
+$current.request | ConvertTo-Json -Depth 20
 ```
 
-Here `$run` is the task's start response and `$current` its advance response.
-Complete saves a receipt and moves only the cursor; the next advance executes it.
-Repeated status/advance while waiting returns the same request. Retry a lost
-completion response with the same request ID and equivalent payload; historical
-receipts never complete a newer request. Optional start `--input-file` supplies a
-frozen JSON object. Input and completion data are limited to 16 KiB and depth 16.
+The response is `waiting_agent`. Read `request.id`, `prompt`, `context` and
+`allowedOutcomes`, then perform the requested review. Once the review is complete
+and `approved` is the appropriate allowed outcome, return it directly:
 
-Process arguments are literal strings; PowerShell requires an explicit `pwsh`
-command. Exact outcome edges precede `default`; unmatched outcomes fail the run.
-Start and status execute nothing. Logs retain child bytes separately from CLI JSON;
-timeout, output limits and user interruption attempt process-tree termination. P05 qualifies exact
-boundaries and P06 qualifies recovery on local Windows x64. See the [recovery example](examples/recovery.md).
-The unreleased
-P02 state shape requires new runs; P01 saved runs are not migrated.
+```powershell
+& $binary complete $run.runId --request $current.request.id --outcome approved --state-dir $run.stateRoot --json
+& $binary advance $run.runId --state-dir $run.stateRoot --json
+```
 
-P08 adds English top-level and per-command `-h` / `--help`; see [CLI usage](docs/CLI.md).
-Help is text by default, or one JSON object with a `guide` string under `--json`.
-Operational output and version remain protocol JSON, with or without `--json`. Unsupported commands
-return usage errors; unsupported workflow syntax returns document diagnostics.
-The complete review workflow example below belongs to later slices.
+Optional result data goes in one JSON argument, for example
+`--data '{"summary":"Review completed"}'`; omitted data defaults to `{}`. Complete
+saves a receipt and moves the cursor; the subsequent `advance` executes it.
+Repeated inspection while waiting returns the same request. If a completion
+response is lost, retry the same request ID with equivalent data. Inspect every
+exit code and returned status in an integration; see the [agent operating loop](docs/AGENT-GUIDE.md).
 
-## Reading order
+Try the [process chain](examples/process-chain.md) for literal command arguments
+and separate stdout/stderr logs, or the [review loop](examples/review.md) for
+process/agent routing. Workflows execute with your privileges in the selected
+workspace; review their commands before running them.
 
-1. [Product specification](docs/SPEC.md)
-2. [Execution contract](docs/CONTRACT.md)
-3. [Workflow authoring guide](docs/AUTHORING.md)
-4. [Agent guide](docs/AGENT-GUIDE.md)
-5. [Acceptance testing](docs/TESTING.md) and `features/*.feature`
-6. [Implementation plan](docs/IMPLEMENTATION.md)
-7. [Repository start prompt](STARTPROMPT.md)
+## Using Merstride
 
-[Complete example](examples/review.md).
+| Task | Reference |
+| --- | --- |
+| Write and validate workflows | [Authoring guide](docs/AUTHORING.md) and [examples](examples/) |
+| Discover commands and exit codes | `merstride --help`, `merstride <command> --help`, [CLI usage](docs/CLI.md) |
+| Integrate an existing agent or resume a run | `merstride guide --json`, [agent guide](docs/AGENT-GUIDE.md) |
+| Handle interrupted execution | [Recovery example](examples/recovery.md) |
+| Check exact behavior and limits | [Execution contract](docs/CONTRACT.md), [product scope](docs/SPEC.md) |
+| Assess readiness and outstanding work | [Current status](docs/STATUS.md) |
 
-All project specifications, source identifiers, comments, tests, scenarios, tickets, documentation, CLI messages, and commit messages are written in English. User-authored workflow labels, prompts, inputs, and results may contain arbitrary supported UTF-8 text.
+## Developing Merstride
 
-Revision 0.2 replaced the draft JSON metadata fence with YAML, added author and agent guides, and turned acceptance requirements into Gherkin scenarios with an automation plan. The metadata schema and CLI protocol remain draft version 1; this is not a migration for a released product.
-
-Development follows the installed [Matt Pocock skills](https://github.com/mattpocock/skills). No skills are bundled or installed by this package. .NET 11 Native AOT with stable C# 15 is the accepted implementation; see docs/adr/0004-m01-dotnet11.md.
-
-Revision 0.3 fixes MIT as the project license and selects NsDepCop for build-time architecture enforcement. See [Architecture and licensing](docs/ARCHITECTURE.md). Additional Gherkin scenarios verify forbidden dependencies and separation of the analyzer from release artifacts.
-
-Revision 0.4 adds [GitHub build/release requirements](docs/GITHUB.md), an [established dependency policy](docs/DEPENDENCIES.md), naming research, and delivery acceptance scenarios. Workflows themselves will be implemented alongside the product; this remains a specification package.
-
-Revision 0.5 adopts Merstride throughout the contract, examples, agent guide, namespace policy, and repository setup instructions.
+Start with [Contributing](CONTRIBUTING.md) for prerequisites, verification and the
+approved-ticket workflow. [Architecture](docs/ARCHITECTURE.md),
+[decisions](docs/adr/) and the [Gherkin acceptance features](features/) describe
+the development boundaries. Project-owned code and documentation use the
+[MIT license](LICENSE); shipped components retain their [third-party notices](THIRD-PARTY-NOTICES.md).

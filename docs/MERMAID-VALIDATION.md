@@ -1,6 +1,6 @@
 # Development-only Mermaid compatibility evidence
 
-P04 uses official `mermaid` **12.3.0**, MIT, from
+Compatibility verification uses official `mermaid` **12.3.0**, MIT, from
 [mermaid-js/mermaid](https://github.com/mermaid-js/mermaid). The exact package metadata,
 registry integrity hashes, resolved URLs and transitive dependency edges are pinned
 in tools/mermaid/package-lock.json and dependency-inventory.json. Reviewed 2026-11-15.
@@ -48,8 +48,7 @@ ELK.js offers EPL-2.0 or GPL-3.0-or-later; use EPL-2.0 solely as a local develop
 tool dependency, never link or redistribute it in Merstride. Its separate copyleft
 license does not relicense the product; it is not a permissively licensed runtime
 dependency. Khroma omits a manifest license: its actual published `license` file
-was inspected and contains the MIT grant. No claim of a complete P07 distribution
-audit follows from this development tool review. The lock policy fails new or
+was inspected and contains the MIT grant. This development tool review is separate from the product distribution audit. The lock policy fails new or
 changed package entries until their inventory is deliberately reviewed.
 
 Run the full build script, or these focused checks after installing Node and Edge:

@@ -11,6 +11,9 @@ try {
     if ($Runtime -cne $(if ($IsWindows) { 'win-x64' } else { 'linux-x64' })) { throw 'Run native builds on the matching platform, in separate checkouts.' }
     New-Item -ItemType Directory -Force artifacts | Out-Null
     if (Test-Path artifacts/local-gate.json) { Remove-Item -LiteralPath artifacts/local-gate.json }
+    foreach ($summary in @('artifacts/test-summary.json','artifacts/benchmark.json')) {
+        if (Test-Path -LiteralPath $summary) { Remove-Item -LiteralPath $summary }
+    }
     & ./scripts/repository-privacy.ps1
     if ($LASTEXITCODE -ne 0) { throw 'Repository privacy check failed.' }
     & ./tests/fixtures/repository-privacy.ps1
@@ -38,13 +41,31 @@ try {
     $env:MERSTRIDE_FIXTURE = Join-Path (Get-Location) $(if ($IsWindows) { 'artifacts/fixture/test-process.exe' } else { 'artifacts/fixture/test-process' })
     & ./scripts/distribution-audit.ps1
     if ($LASTEXITCODE -ne 0) { throw 'Distribution audit failed.' }
+    foreach ($result in @('artifacts/tests/p07.trx','artifacts/tests/scenarios.json')) {
+        if (Test-Path -LiteralPath $result) { Remove-Item -LiteralPath $result }
+    }
     $testArgs = @('test','tests/Merstride.Acceptance','-c','Release','--no-restore','--filter','TestCategory!=ReleaseEnvironment','--logger','trx;LogFileName=p07.trx','--results-directory','artifacts/tests')
     if ($IsWindows) { & dotnet @testArgs }
     else {
         $env:MERSTRIDE_PROCESS_TRACE = Join-Path (Get-Location) 'artifacts/process.trace'
         & strace -f -qq -e trace=execve -o $env:MERSTRIDE_PROCESS_TRACE dotnet @testArgs
     }
-    if ($LASTEXITCODE -ne 0) { throw 'P01-P08 local acceptance/build checks failed. Required release environment qualification is separate.' }
+    $testExit = $LASTEXITCODE
+    # Retain outcomes on failure without raw errors, local paths or environment data.
+    $testResults = @()
+    $scenarios = @()
+    if (Test-Path artifacts/tests/p07.trx) {
+        [xml]$trx = Get-Content -Raw artifacts/tests/p07.trx
+        $testResults = @($trx.TestRun.Results.UnitTestResult | ForEach-Object { [ordered]@{test=$_.testName;outcome=$_.outcome} })
+    }
+    if (Test-Path artifacts/tests/scenarios.json) {
+        $scenarios = @(Get-Content -Raw artifacts/tests/scenarios.json | ConvertFrom-Json | ForEach-Object {
+            [ordered]@{feature=$_.feature;line=$_.line;scenario=$_.scenario;status=$_.result.status}
+        })
+    }
+    [ordered]@{schemaVersion=1;exitCode=$testExit;releaseReady=$false;tests=$testResults;scenarios=$scenarios} |
+        ConvertTo-Json -Depth 6 | Set-Content artifacts/test-summary.json
+    if ($testExit -ne 0) { throw 'P01-P08 local acceptance/build checks failed. Required release environment qualification is separate.' }
     # Measure native startup before installing/rendering the development browser tool.
     & ./scripts/benchmark.ps1 -Binary $env:MERSTRIDE_BINARY
     if ($LASTEXITCODE -ne 0) { throw 'Initial native budget check failed.' }

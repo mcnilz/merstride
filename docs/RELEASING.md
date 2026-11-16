@@ -16,7 +16,8 @@ The first start is separate from warm P95; hosted timing is informative. The
 reference-machine qualification remains required for publication. Raw diagnostics
 stay under ignored `artifacts/`; version only reviewed summaries without private
 paths or machine identities. Benchmarks record RID, binary identity and timings,
-without hardware/security inventories. CI uploads compact gate/benchmark summaries;
+without hardware/security inventories. CI uploads compact test outcomes (including
+failed runs), gate and benchmark summaries;
 release platform uploads additionally include only the required platform archives.
 
 Run `scripts/build.ps1 -ReleaseQualification` to include the two clean-target

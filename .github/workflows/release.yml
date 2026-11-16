@@ -47,6 +47,7 @@ jobs:
           path: |
             artifacts/release/*.zip
             artifacts/release/*.tar.gz
+            artifacts/test-summary.json
             artifacts/local-gate.json
             artifacts/benchmark.json
           if-no-files-found: error
@@ -78,6 +79,7 @@ jobs:
           path: |
             artifacts/release/*.zip
             artifacts/release/*.tar.gz
+            artifacts/test-summary.json
             artifacts/local-gate.json
             artifacts/benchmark.json
           if-no-files-found: error

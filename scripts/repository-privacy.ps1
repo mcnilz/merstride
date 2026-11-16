@@ -10,7 +10,7 @@ try {
     $failures = @()
     foreach ($file in $files) {
         if ($file -match '^(?:docs/evidence|artifacts)/' -or
-            $file -match '(?i)\.(?:trx|binlog|trace|bundle|pfx|p12|pem|key)$' -or
+            $file -match '(?i)\.(?:log|trx|binlog|trace|bundle|pfx|p12|pem|key)$' -or
             (Split-Path $file -Leaf) -match '^(?:environment\.txt|(?:.*-)?native-benchmark\.json|benchmark\.json|toolchains\.json)$') {
             $failures += "$file : raw log or private file must remain under ignored artifacts."
             continue

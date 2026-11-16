@@ -5,6 +5,7 @@ node_modules/
 .merstride/
 .scratch/research.ps1
 docs/evidence/
+*.log
 *.trx
 *.binlog
 *.trace

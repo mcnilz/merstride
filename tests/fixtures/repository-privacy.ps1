@@ -13,6 +13,7 @@ try {
         @{ path='docs/evidence/raw.json'; content='{}' },
         @{ path='artifacts/raw.json'; content='{}' },
         @{ path='result.trx'; content='<test/>' },
+        @{ path='build.log'; content='raw local diagnostics' },
         @{ path='environment.txt'; content='local environment' },
         @{ path='private.md'; content=('/ho' + 'me/fixture-user/work') },
         @{ path='private.md'; content=('C:' + '\Users\fixture-user\work') },
@@ -30,7 +31,7 @@ try {
         & git -C $temp rm --force --quiet -- $case.path
         if ($LASTEXITCODE -ne 0) { throw 'Cannot remove privacy fixture.' }
     }
-    Write-Output 'PRIVACY FIXTURES: public summary accepted; eight forbidden inputs rejected.'
+    Write-Output 'PRIVACY FIXTURES: public summary accepted; nine forbidden inputs rejected.'
 } finally {
     $resolved = [IO.Path]::GetFullPath($temp)
     if ((Split-Path $resolved -Parent) -ceq [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\','/') -and (Split-Path $resolved -Leaf) -like 'merstride-privacy-*') {

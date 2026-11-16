@@ -32,6 +32,7 @@ jobs:
         with:
           name: windows-evidence
           path: |
+            artifacts/test-summary.json
             artifacts/local-gate.json
             artifacts/benchmark.json
           if-no-files-found: error
@@ -58,6 +59,7 @@ jobs:
         with:
           name: linux-evidence
           path: |
+            artifacts/test-summary.json
             artifacts/local-gate.json
             artifacts/benchmark.json
           if-no-files-found: error

@@ -44,17 +44,13 @@ try {
     if ([IO.File]::ReadAllText((Join-Path $temp 'effects.txt')) -cne $expectedEffects) { throw 'Process effects did not occur once in graph order.' }
     $processSorted = @($processSamples | Sort-Object)
     $bytes = (Get-Item -LiteralPath $binaryPath).Length
-    $cpu = if ($IsWindows) { (Get-CimInstance Win32_Processor | Select-Object -First 1).Name } else { (& uname -m) + '; ' + ((Get-Content /proc/cpuinfo | Select-String '^model name' | Select-Object -First 1).Line) }
-    $defender = if ($IsWindows) { try { (Get-MpComputerStatus -ErrorAction Stop).RealTimeProtectionEnabled } catch { 'unavailable' } } else { 'not applicable' }
     $report = [ordered]@{
-        measuredOn = '2026-11-15'; binary = $binaryPath; sha256 = (Get-FileHash $binaryPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        measuredOn = [DateTime]::UtcNow.ToString('yyyy-MM-dd'); binary = [IO.Path]::GetFileName($binaryPath); sha256 = (Get-FileHash $binaryPath -Algorithm SHA256).Hash.ToLowerInvariant()
         version = (Invoke-Cli -Arguments @('version')).response.version; rid = $(if ($IsWindows) { 'win-x64' } else { 'linux-x64' }); bytes = $bytes; mib = $bytes / 1MB
         sizeTarget15MiB = $bytes -le 15MB; sizeGate25MiB = $bytes -le 25MB
         firstStartMilliseconds = $initial.milliseconds; firstStatusMilliseconds = $first.milliseconds; warmStatusMilliseconds = $samples
         p95Milliseconds = $sorted[[Math]::Ceiling(0.95 * $samples.Count) - 1]; latencyGate150ms = $sorted[28] -lt 150
-        os = [Runtime.InteropServices.RuntimeInformation]::OSDescription; cpu = $cpu
-        sdk = (& dotnet --version); defenderRealTimeProtection = $defender
-        methodology = '30 sequential fresh status processes; Stopwatch includes process creation, JSON stdout/stderr drain and exit. First status reported separately after start; not a cold boot or clean-runtime test. No antivirus exclusion applied.'
+        methodology = '30 sequential fresh status processes; Stopwatch includes process creation, JSON stdout/stderr drain and exit. First status reported separately after start; not a cold boot or clean-runtime test.'
         processFeasibility = [ordered]@{
             fixtureSha256 = (Get-FileHash $helper -Algorithm SHA256).Hash.ToLowerInvariant()
             fixtureBytes = (Get-Item -LiteralPath $helper).Length

@@ -1,5 +1,6 @@
-param([Parameter(Mandatory)][string]$Driver, [string]$Output = 'token-experiment.json')
+param([Parameter(Mandatory)][string]$Driver, [string]$Output = 'artifacts/qualification/token-experiment.json')
 $ErrorActionPreference = 'Stop'
+New-Item -ItemType Directory -Force (Split-Path ([IO.Path]::GetFullPath($Output))) | Out-Null
 # Driver performs the same task with the same external agent/model and returns JSON.
 # Product code never calls it. Real accounting is required; unavailable counts remain null.
 $samples = @()

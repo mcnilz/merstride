@@ -86,7 +86,7 @@ work -->|exit_0| done
     report = dict(schemaVersion=1, result="passed", scope="isolated chroot native smoke only; full inventoried clean-target runtime qualification unavailable",
                   installedDotnet=False, productVersion=version, commands=["guide", "version", "start", "status", "advance"],
                   binarySha256=hashlib.sha256((root / "app/merstride").read_bytes()).hexdigest(), files=files,
-                  environment=subprocess.check_output(["uname", "-a"], text=True).strip())
+                  environment="Linux x64 isolated native smoke")
     (repo / "artifacts/linux-no-runtime-smoke.json").write_text(json.dumps(report, indent=2))
     print(json.dumps(report))
 finally:

@@ -44,7 +44,11 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-windows
-          path: artifacts/
+          path: |
+            artifacts/release/*.zip
+            artifacts/release/*.tar.gz
+            artifacts/local-gate.json
+            artifacts/benchmark.json
           if-no-files-found: error
   linux:
     needs: [tag]
@@ -71,7 +75,11 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-linux
-          path: artifacts/
+          path: |
+            artifacts/release/*.zip
+            artifacts/release/*.tar.gz
+            artifacts/local-gate.json
+            artifacts/benchmark.json
           if-no-files-found: error
   gate:
     if: always()

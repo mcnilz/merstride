@@ -23,7 +23,7 @@ into a successful release qualification.
 | P05 | Accepted and committed by coordinator | P05 implementation; independent full gate: 200 passed, 75 feature cases; 4.972 MiB; status P95 25.460 ms; renderer and reviews passed |
 | P06 | Accepted and committed by coordinator | P06 implementation; independent full gate: 217 tests, 82 feature cases; 4.991 MiB; status P95 26.434 ms |
 | P07 | Local implementation accepted and committed as P07 implementation; release criteria remain open | Coordinator repeated prior 252-test gates and final 15 focused checks on each platform; 67 source files match. No full 259 claim. Native full-suite driver, clean-target and token qualification remain incomplete and fail-closed. See STATUS.md |
-| P08 | Locally accepted by coordinator for commit | System.CommandLine 3.0.0; final full 324-test / 155-local-case gates on Windows and Linux; coordinator independently repeated Windows full gate and 80 affected Linux tests; normalized sources match; no residual review findings. See STATUS.md and local verification report (not versioned). |
+| P08 | Locally accepted by coordinator for commit | System.CommandLine 3.0.0; final full 324-test / 155-local-case gates on Windows and Linux; coordinator independently repeated Windows full gate and 80 affected Linux tests; normalized sources match; no residual review findings. See STATUS.md for the historical summary; raw logs are not versioned. |
 
 The user explicitly extended the sequence with P08 after identifying rudimentary
 CLI help and parsing. The coordinator will start, accept and locally commit that

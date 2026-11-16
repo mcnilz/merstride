@@ -19,3 +19,7 @@ after P07, preferably using a suitable established parser library.
 Local tickets: one file per slice in `.scratch/merstride/issues/`; see docs/agents/issue-tracker.md.
 Domain terminology: GLOSSARY.md. Read relevant decisions in docs/adr/ before changes.
 Triage vocabulary: docs/agents/triage-labels.md.
+
+Keep raw verification logs and environment dumps under ignored artifacts/.
+Version concise result summaries without personal paths or machine identities.
+Run scripts/repository-privacy.ps1 before committing; preserve dependency and license inventories.

@@ -3,7 +3,7 @@ param(
     [Parameter(Mandatory)][string]$Fixture,
     [Parameter(Mandatory)][string]$SuiteDriver,
     [Parameter(Mandatory)][string]$Commit,
-    [string]$Output = 'clean-target.json'
+    [string]$Output = 'artifacts/qualification/clean-target.json'
 )
 $ErrorActionPreference = 'Stop'
 # Run inside a newly provisioned Windows 11 / Linux VM, not on the SDK build host.
@@ -21,6 +21,7 @@ if ($IsWindows) {
 }
 foreach ($path in @($Binary,$Fixture,$SuiteDriver)) { if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing native target input: $path" } }
 $scenarioOutput = [IO.Path]::GetFullPath($Output + '.scenarios.json')
+New-Item -ItemType Directory -Force (Split-Path $scenarioOutput) | Out-Null
 & $SuiteDriver --binary ([IO.Path]::GetFullPath($Binary)) --fixture ([IO.Path]::GetFullPath($Fixture)) --exclude-release-environment-orchestrator --results $scenarioOutput
 if ($LASTEXITCODE -ne 0) { throw 'Clean-target native acceptance driver failed.' }
 $results = Get-Content -Raw $scenarioOutput | ConvertFrom-Json
@@ -32,7 +33,7 @@ $featureHashes = [ordered]@{}
 foreach ($feature in Get-ChildItem "$PSScriptRoot/../features/*.feature") { $featureHashes["features/"+$feature.Name]=(Get-FileHash $feature.FullName).Hash.ToLowerInvariant() }
 [ordered]@{schemaVersion=1;commit=$Commit;binarySha256=(Get-FileHash $Binary).Hash.ToLowerInvariant();fixtureSha256=(Get-FileHash $Fixture).Hash.ToLowerInvariant();featureHashes=$featureHashes;
     cleanNoRuntime=$true;allApplicableScenarios=$true;environment=$environment;
-    checkedRuntimeLocations=$locations;driverSha256=(Get-FileHash $SuiteDriver).Hash.ToLowerInvariant();
+    checkedRuntimeLocationsCount=$locations.Count;driverSha256=(Get-FileHash $SuiteDriver).Hash.ToLowerInvariant();
     scenariosSha256=(Get-FileHash $scenarioOutput).Hash.ToLowerInvariant();scenarios=$results;
     limitation='Installation-location checks supplement clean VM image provenance; retain the VM image identity and provisioning log. This harness requires an actual native suite driver; none is fabricated.'
 } | ConvertTo-Json -Depth 15 | Set-Content $Output

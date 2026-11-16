@@ -11,8 +11,10 @@ try {
     if ($Runtime -cne $(if ($IsWindows) { 'win-x64' } else { 'linux-x64' })) { throw 'Run native builds on the matching platform, in separate checkouts.' }
     New-Item -ItemType Directory -Force artifacts | Out-Null
     if (Test-Path artifacts/local-gate.json) { Remove-Item -LiteralPath artifacts/local-gate.json }
-    & dotnet --info | Set-Content artifacts/environment.txt
-    if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect SDK environment.' }
+    & ./scripts/repository-privacy.ps1
+    if ($LASTEXITCODE -ne 0) { throw 'Repository privacy check failed.' }
+    & ./tests/fixtures/repository-privacy.ps1
+    if ($LASTEXITCODE -ne 0) { throw 'Repository privacy fixtures failed.' }
     & dotnet restore src/Merstride -r $Runtime "-p:RuntimeIdentifier=$Runtime" --locked-mode
     if ($LASTEXITCODE -ne 0) { throw 'Locked product restore failed.' }
     & dotnet restore tests/Merstride.Acceptance --locked-mode
@@ -64,7 +66,6 @@ try {
         testsSha256=(Get-FileHash artifacts/tests/p07.trx).Hash.ToLowerInvariant();
         distributionSha256=(Get-FileHash artifacts/audit/distribution.json).Hash.ToLowerInvariant();
         benchmarkSha256=(Get-FileHash artifacts/benchmark.json).Hash.ToLowerInvariant();
-        environment=(Get-Content -Raw artifacts/environment.txt);
         qualification='Clean no-runtime environments and token experiment remain mandatory release gates.'
     } | ConvertTo-Json -Depth 8 | Set-Content artifacts/local-gate.json
     if ($ReleaseQualification) {

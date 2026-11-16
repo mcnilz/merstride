@@ -10,10 +10,14 @@ Linux validation/start needs ICU and OpenSSL in addition to ldd-visible librarie
 
 The local gate executes 155 actual nonrecursive feature cases plus supplemental
 regressions and policy tests. It records native hashes, actual compiler/ILC/link/
-publish inputs, notices, TRX/scenario results, machine identity and 30-start native
+publish inputs, notices, TRX/scenario results and 30-start native
 benchmarks. A dirty checkout is recorded and cannot produce a release package.
 The first start is separate from warm P95; hosted timing is informative. The
-reference-machine qualification remains required for publication.
+reference-machine qualification remains required for publication. Raw diagnostics
+stay under ignored `artifacts/`; version only reviewed summaries without private
+paths or machine identities. Benchmarks record RID, binary identity and timings,
+without hardware/security inventories. CI uploads compact gate/benchmark summaries;
+release platform uploads additionally include only the required platform archives.
 
 Run `scripts/build.ps1 -ReleaseQualification` to include the two clean-target
 orchestration cases. Without independently collected reports these **fail**;

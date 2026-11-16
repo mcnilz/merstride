@@ -4,3 +4,8 @@ artifacts/
 node_modules/
 .merstride/
 .scratch/research.ps1
+docs/evidence/
+*.trx
+*.binlog
+*.trace
+*.bundle

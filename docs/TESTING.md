@@ -120,6 +120,21 @@ evidence, not physical disk failure or precise internal fault-window qualificati
 
 ## Release evidence
 
+Keep raw logs, TRX, traces, environment dumps and compiler/linker input lists under
+ignored `artifacts/`. Version concise reviewed results and reproduction commands;
+omit user directories, hostnames, hardware/security inventories and unrelated
+installed software. Preserve required dependency inventories and license notices.
+Clean-target provenance must still identify the actual platform/image and exact
+tested source/binaries, without personal machine identities. Review external
+qualification data before supplying it to a release workflow.
+
+`pwsh -NoProfile -File scripts/repository-privacy.ps1` checks tracked file paths
+and their current contents for raw logs, private home paths, private keys and
+machine identity fields. The full build runs it and its disposable Git fixtures.
+This focused guard complements a redacted full-history secret scan; it is not a
+complete secret detector. Run `gitleaks git --log-opts="--all" --redact=100` before
+publication. Raw scanner reports also stay under ignored `artifacts/`.
+
 Record binary hash/version, OS, fixture version, scenario results, native publish output, license inventory, executable size, and timing distribution. Run core tests against the published binary on clean target machines. The test harness may run externally; the target product environment has no installed language runtime. PowerShell-specific scenarios require explicitly provisioned PowerShell and must report that prerequisite; all other core fixtures use native helpers.
 
 A check of feature syntax is not a behavioral pass. A native publish on one OS does not prove another platform. Benchmark and token-benefit measurements are separate from deterministic assertions.

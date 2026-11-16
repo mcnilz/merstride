@@ -91,6 +91,7 @@ internal static class Program
               Direct commands receive literal args and closed stdin. Inline scripts use a
               shebang and UTF-8 stdin; supply flags that request stdin execution, for example:
               #!pwsh -NoProfile -NonInteractive -Command -
+              On Unix, set TERM=dumb when invoking advance for plain PowerShell output.
             - File-based PowerShell is explicit: command pwsh and
               args [-NoProfile, -NonInteractive, -File, script.ps1].
             - variants use platforms: windows, macos, linux (string or array).

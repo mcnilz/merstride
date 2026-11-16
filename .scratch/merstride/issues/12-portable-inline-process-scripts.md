@@ -17,8 +17,8 @@ blocks publication, not this implementation.
 
 **Status:** complete — implemented in the separately assigned session on
 2026-11-16 ("offene issues umsetzen"); full Windows local gate and both
-standards/spec reviews passed. Linux/macOS execution evidence remains unavailable
-for this slice; release qualification remains separate.
+standards/spec reviews passed. Linux execution is now verified by the CI
+correction below; macOS remains unverified. Release qualification stays separate.
 
 **Approval and delivery boundary:** The user approved this second local planning
 ticket with "Passt", after clarifying that an execution definition without a
@@ -154,3 +154,42 @@ existing published-native-CLI and public-build acceptance seams were retained.
   macOS: no available environment, no execution evidence. Git Bash on Windows
   does not qualify either target. External P07 release gates remain outstanding.
 - P13 is a separate open ticket. No push, publication or deployment was performed.
+
+## Linux CI correction — 2026-11-16
+
+The user supplied the failed hosted Build log for commit b446819 and assigned
+an immediate fix in this session. This is a P12 correctness follow-up, independent
+of the newly recorded P15 macOS ticket. The implementation workflow authorizes a
+local commit; no push, workflow dispatch or publication is authorized.
+
+- Hosted Build run 43865608040 passed Windows and failed six Linux P12 cases:
+  four exact-output assertions saw PowerShell terminal-mode bytes, and unread
+  stdin / early interpreter exit returned IO_ERROR rather than process outcomes.
+- Reproduced the PowerShell behavior with TERM=xterm on actual Linux. The native
+  P12 baseline then failed those six cases plus the related retry case (7 failed,
+  38 passed). Catching IOException specifically from stdin close/flush reduced
+  that to four output failures (41 passed), preserving early exit, timeout and retry.
+- Explicit TERM=dumb in the Unix test caller made all 45 P12 cases pass. Product
+  environment inheritance and raw logs are unchanged. A separate published-native
+  CLI check confirmed inherited TERM and retained raw bytes for xterm and dumb.
+- Existing native behavior scenarios provide the regression coverage; no private
+  seam, output filtering, hidden interpreter flags or engine environment override
+  was introduced. Contract, both embedded guides, authoring and testing notes and
+  ADR 0009 document the actual behavior. No scenario tags or dependencies changed.
+- Raw reproduction, focused results and platform gate logs stay under ignored
+  artifacts. Hosted validation of the corrected commit remains to be performed.
+- Final Windows x64 and Linux x64 local gates each passed 480 tests / 298 local
+  feature cases, zero failures/skips, with no native build/publish warnings or
+  errors. Architecture, dependency, distribution and privacy gates pass on both.
+  Feature sources/tags and the release scenario inventory are unchanged.
+- Windows native size: 5.974 MiB; warm status P95: 23.598 ms. Linux native size:
+  6.064 MiB; warm status P95: 6.392 ms. All existing budgets pass. Actual Linux
+  interpreter: PowerShell 7.6.1; native SDK: 11.0.100.
+- Linux's initial Mermaid restore warned that the preinstalled Node 18 was below
+  the documented prerequisite. Only the affected policy/restore/render steps were
+  repeated with isolated official Node 22.23.5, verified against upstream archive
+  checksums; all passed. Windows Mermaid checks also passed.
+- Independent Standards and Spec reviews found zero actionable findings. Both
+  platforms tested the same four changed build/test source files. P15 remains
+  untouched; no hosted rerun, push or publication was performed. The two required
+  clean-target scenarios and P07 qualification remain outstanding.

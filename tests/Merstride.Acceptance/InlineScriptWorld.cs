@@ -13,6 +13,13 @@ internal sealed class InlineScriptWorld : IDisposable
     private const string ProbeBody = "line one\nGrüße 🌍\n";
     private static string HostPlatform => OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "linux";
 
+    internal InlineScriptWorld()
+    {
+        // PowerShell's stdin command mode otherwise emits terminal controls on Unix.
+        // Select a plain terminal in the caller; the engine must inherit it unchanged.
+        if (!OperatingSystem.IsWindows()) cli.EnvironmentOverrides["TERM"] = "dumb";
+    }
+
     internal void Write(string execution, string route = "exit_0", int timeout = 5)
     {
         File.WriteAllText(cli.FilePath, $$"""

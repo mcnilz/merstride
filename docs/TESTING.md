@@ -120,6 +120,11 @@ evidence, not physical disk failure or precise internal fault-window qualificati
 ## Release evidence
 
 The P12 suite executes `12-inline-scripts.feature` at the same native CLI seam.
+Its Unix callers explicitly select TERM=dumb for deterministic PowerShell stdin
+output. A separate TERM=xterm reproduction demonstrates interpreter-generated
+control bytes; the engine still inherits the caller's environment and retains
+raw logs. Existing unread-input and early-exit cases also guard against pipe
+close/flush errors masking the process outcome.
 It requires installed PowerShell 7, Python 3 and Bash for its real-interpreter
 cases; these are test prerequisites, never product dependencies. Override
 `MERSTRIDE_TEST_PYTHON` / `MERSTRIDE_TEST_BASH` with an executable name or path.

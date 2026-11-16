@@ -133,8 +133,12 @@ errors retain normal exit routing. There is no separate stdin for interactive or
 workflow data; direct commands retain closed stdin. The feeder is bounded by the
 1 MiB document limit, runs concurrently with log draining, and is canceled under
 the same timeout/output/interruption controls. Early interpreter exit closes input
-without hiding its exit result. Freeze script body, shebang arguments and every
-variant in the run definition; workspace script files remain live.
+without hiding its exit result, including pipe write/close errors after the reader
+has exited. On Unix, PowerShell's `-Command -` can emit terminal control bytes even
+with redirected output and `-NonInteractive`. Callers requiring plain PowerShell
+output can set `TERM=dumb` when invoking advance; the engine does not change that
+environment variable or remove bytes from raw logs. Freeze script body, shebang
+arguments and every variant in the run definition; workspace script files remain live.
 
 Drain stdout and stderr concurrently into separate raw-byte log files. Combined retained output is capped at 10 MiB per activation. Exceeding the cap triggers best-effort process-tree termination and `output_limit`. Timeout similarly triggers termination and routes `timeout`. A timeout or output-limit cause takes precedence over the exit code caused by termination; the first observed limiting cause wins. Detached processes are not guaranteed to be terminated. Test process-tree handling on each released platform.
 

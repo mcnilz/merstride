@@ -23,6 +23,29 @@ from a local build.
 
 ## Verification
 
+On 2026-11-16, the P12 Linux CI correction passed the complete Windows x64 and
+Linux x64 local gates: each executed 480 tests / 298 local feature cases with no
+failures/skips or native build/publish warnings/errors. The six Linux failures in
+hosted Build run 43865608040 were reproduced locally, together with the related
+retry case. Handling IOException from stdin close/flush restored early-exit,
+timeout and retry outcomes; declaring TERM=dumb in Unix test callers removed
+PowerShell-generated terminal modes from their expected plain output. All 45 P12
+native scenarios pass. A separate native check proves TERM inheritance and raw
+log preservation for both xterm and dumb; production environment/log semantics
+are unchanged. Contract, embedded guides, authoring notes and ADR 0009 explain
+the calling convention. Existing feature tags and scenario inventory are unchanged.
+
+Architecture, dependency, distribution, privacy and Mermaid checks pass. The Linux
+Mermaid steps were repeated on officially checksummed Node 22.23.5 after the
+initial run warned about its preinstalled Node 18; the native suites did not
+require rerunning for this development-only tool correction. Windows/Linux sizes
+are 5.974/6.064 MiB, with warm status P95 23.598/6.392 ms. Independent Standards
+and Spec reviews found zero actionable findings. No dependency/notice changes,
+macOS execution or corrected hosted rerun is claimed. The earlier hosted Build
+passed Windows and failed Linux; local corrected results do not change that run.
+P07 release qualification remains incomplete. No push or publication occurred;
+raw evidence stays under ignored artifacts.
+
 On 2026-11-16, P14's tag-release completion passed the full Windows x64 local
 gate with the example product version `0.2.0-rc.1`: 480 tests / 298 local feature
 cases, no failures/skips or build/publish warnings/errors. The published native

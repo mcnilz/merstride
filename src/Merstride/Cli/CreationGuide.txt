@@ -75,6 +75,8 @@ YAML schema
   other env options/assignments are unsupported. NAME must be bare.
   The body after the shebang travels as UTF-8 stdin then EOF, without script files.
   Supply flags that execute stdin: no implicit flags or fallback interpreter.
+  On Unix, PowerShell -Command - may emit terminal controls. For plain output,
+  set TERM=dumb in the environment invoking advance; raw logs stay unchanged.
   YAML normalizes line endings to LF and preserves Unicode/chomping. There is no
   extra interactive/data stdin. Missing interpreter: spawn_error and
   INTERPRETER_UNAVAILABLE in stderr; unlaunchable path: PROCESS_UNAVAILABLE.

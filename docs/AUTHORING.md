@@ -94,6 +94,14 @@ with `INTERPRETER_UNAVAILABLE` / `PROCESS_UNAVAILABLE` in stderr. Validation nev
 probes interpreter availability. All scripts and variants freeze at start and
 share the existing logs, context, time/output/transition limits and recovery rules.
 
+On Unix, PowerShell's `-Command -` may emit terminal control sequences despite
+`-NonInteractive` and redirected output. For plain output, invoke advance from
+a shell with `TERM=dumb`, for example `TERM=dumb merstride advance <run-id> --json`
+(also pass the saved `--state-dir`). Merstride inherits that environment unchanged
+and preserves raw process output; it does not filter interpreter control bytes.
+An interpreter that exits before reading the complete body still retains its
+own exit outcome; stdin pipe cleanup does not turn it into a storage error.
+
 ## Agent nodes
 
 Use `prompt: |` for readable multiline instructions. Explain what must be inspected, what counts as success, and when each outgoing edge label should be returned. Request only useful context selectors. The agent can use its own tools under the original task authorization; the engine does not grant additional permission.

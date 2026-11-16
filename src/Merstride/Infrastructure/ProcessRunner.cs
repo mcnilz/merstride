@@ -113,7 +113,12 @@ public sealed class ProcessRunner(string runDirectory, CancellationToken interru
         // An interpreter may exit without consuming all input. Its exit still determines routing.
         catch (IOException) { }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
-        finally { process.StandardInput.Close(); }
+        finally
+        {
+            // Closing can flush pipe buffers after the interpreter has closed its reader.
+            try { process.StandardInput.Close(); }
+            catch (IOException) { }
+        }
     }
 
     private static async Task<long> CopyAsync(Stream source, Stream target, OutputBudget budget, CancellationToken cancellation)

@@ -1,5 +1,6 @@
 **/bin/
 **/obj/
+.idea/
 artifacts/
 node_modules/
 .merstride/

@@ -1,6 +1,6 @@
 # Agent guide
 
-P01–P06 implement the operating loop below, including selected context, completion
+P01–P09 implement the operating loop below, including selected context, completion
 receipts and explicit recovery. `merstride guide` ships a concise offline description
 of the implemented protocol. P06 recovery is qualified on local Windows x64.
 
@@ -11,7 +11,7 @@ of the implemented protocol. P06 recovery is qualified on local Windows x64.
 3. Start with an absolute workspace and explicit state directory. Retain the returned run ID and state root.
 4. Call `advance` to execute deterministic work.
 5. On `waiting_agent`, use the returned request ID, prompt, selected context, and allowed outcomes. Perform the requested work with your existing tools. Do not infer outcomes from display labels.
-6. Write a UTF-8 JSON result file containing `outcome` and optional object `data`. Call `complete`. It moves the cursor but runs nothing else.
+6. Prefer `complete <run-id> --request <id> --outcome <allowed-outcome>`, with optional `--data <json-object>` (default `{}`). No result file is needed. It moves the cursor but runs nothing else.
 7. Call `advance` again until completed, failed, or interrupted. Report the actual terminal result.
 
 Use `status` to resume after losing conversation context. Repeated status/advance while waiting returns the same request. Do not start a new run merely because a completion response was lost: resend the same completion for the same ID. A conflicting result requires investigation, not a fresh request invented by the agent.
@@ -92,12 +92,19 @@ $current = merstride advance $run.runId --state-dir $state --json | ConvertFrom-
 # Inspect status and actually perform the returned task before completing it.
 # The following assumes the review has finished and approved is allowed.
 if ($current.status -eq 'waiting_agent') {
-    @{ outcome = 'approved'; data = @{ summary = 'Review completed' } } |
-        ConvertTo-Json -Depth 16 | Set-Content -Encoding utf8 .\result.json
-    merstride complete $run.runId --request $current.request.id --result-file .\result.json --state-dir $state --json
+    $data = @{ summary = 'Review completed' } | ConvertTo-Json -Compress
+    merstride complete $run.runId --request $current.request.id --outcome approved --data $data --state-dir $state --json
     if ($LASTEXITCODE -ne 0) { throw 'Completion failed' }
     merstride advance $run.runId --state-dir $state --json
 }
 ```
 
 This is an interaction example, not an autonomous approval script. A real integration branches on every status and checks each CLI exit code.
+
+Inline completion is the preferred path. PowerShell 7.3+ standard native argument
+passing preserves a quoted JSON argument; omit `--data` when no data is needed.
+Existing integrations may instead use `--result-file <file>` with required
+`outcome` and optional object `data`; do not mix file mode with either inline option.
+Both modes validate and store the same receipt and share the same limits and retry
+semantics. Command arguments remain subject to shell history, process visibility
+and OS length limits; use the file alternative where appropriate.

@@ -62,7 +62,7 @@ internal sealed class UsabilityWorld : IDisposable
                 if (command != "root") Assert.That(text, Does.Contain("merstride " + command).And.Not.Contain("--version"));
                 if (command is "start" or "validate") Assert.That(text, Does.Contain("<file>"));
                 if (command == "start") Assert.That(text, Does.Contain("--workspace").And.Contain("--input-file"));
-                if (command == "complete") Assert.That(text, Does.Contain("--request").And.Contain("--result-file"));
+                if (command == "complete") Assert.That(text, Does.Contain("--request").And.Contain("--outcome").And.Contain("--data").And.Contain("--result-file"));
                 if (command == "logs") Assert.That(text, Does.Contain("65536").And.Contain("--activation"));
                 if (command == "resolve") Assert.That(text, Does.Contain("Exactly one of --retry or --fail"));
                 NoEffects(); break;

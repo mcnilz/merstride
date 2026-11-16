@@ -64,7 +64,7 @@ public class FeatureTests
         }
     }
 
-    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08");
+    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09");
 
     public static IEnumerable<TestCaseData> RequiredCases() => Cases().Where(c => c.Implemented)
         .Select(c => new TestCaseData(c).SetName(c.ToString()).SetProperty("Requirements", string.Join(' ', c.Tags))
@@ -93,6 +93,12 @@ public class FeatureTests
 
     private static void Execute(FeatureCase scenario)
     {
+        if (scenario.Tags.Contains("@P09"))
+        {
+            using var completion = new InlineCompletionWorld();
+            foreach (var step in scenario.Steps) completion.Execute(step);
+            return;
+        }
         if (scenario.Tags.Contains("@P08"))
         {
             using var usability = new UsabilityWorld();

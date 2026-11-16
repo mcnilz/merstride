@@ -143,7 +143,7 @@ internal sealed class RecoveryWorld : IDisposable
                     var args = command switch
                     {
                         "resolve" => new[] { command, runId, "--retry" },
-                        "complete" => new[] { command, runId, "--request", "q_unknown", "--result-file", "absent.json" },
+                        "complete" => new[] { command, runId, "--request", "q_unknown", "--outcome", "finish" },
                         _ => new[] { command, runId }
                     };
                     cli.Call(args);

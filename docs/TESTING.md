@@ -1,7 +1,7 @@
 # Acceptance testing with Gherkin
 
 Revision 0.5. The `.feature` files are the reviewable behavioral contract. The NUnit
-runner executes P01-P08 local cases from these files against the published
+runner executes P01-P09 local cases from these files against the published
 native executable. The two clean-platform orchestration cases remain mandatory
 separate release qualification and fail explicitly without actual evidence. See STATUS.md
 for current evidence and limitations.
@@ -157,3 +157,16 @@ counts; native start/status qualifies literal delimited paths and equals-form
 input options. Five public compilation fixtures confine the parser to Cli.
 Release inventory and clean-target expected identities include the added cases.
 The p07.trx filename stays stable for release freshness checks.
+
+P09 binds every row of 10-inline-completion.feature to the native CLI, including
+PowerShell JSON argument passing, invalid modes/payloads, exact byte/depth limits,
+and receipts retried across file/inline modes while a newer request waits. The
+normal P03 agent/context/receipt helper, P05 completion boundary helper, and P06
+competing-completion checks now prefer inline parameters. File-schema/UTF-8,
+legacy default-data and cross-mode cases deliberately retain file input. Raw
+results remain local under ignored artifacts; no environment dumps are versioned.
+Linux tracing requests seccomp-BPF filtering with the same follow-forks/execve
+observation: unrelated syscalls no longer incur a ptrace stop when supported.
+This reduces interference with real process timeouts; neither product deadlines
+nor externally asserted process counts are relaxed. The tracer can fall back to
+ordinary observation if kernel filtering is unavailable; required tests still run.

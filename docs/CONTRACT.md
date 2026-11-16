@@ -101,7 +101,17 @@ Every entry into an agent node creates a fresh random request ID and `waiting_ag
 {"protocolVersion":1,"runId":"r_01","status":"waiting_agent","request":{"id":"q_01","nodeId":"review","prompt":"Review changes.","allowedOutcomes":["approved","recheck"],"context":[]},"error":null}
 ```
 
-Completion files contain required `outcome` and optional object `data` (default `{}`), with no unknown fields. `complete` validates the request, outcome, and payload; atomically stores its receipt and the next cursor; and returns `ready`. It MUST NOT execute the next node, even an end node.
+P09 makes `complete <run-id> --request <id> --outcome <outcome>` the preferred
+completion input. Optional `--data <json-object>` defaults to `{}` and has the same
+object, size, depth, duplicate-key and numeric rules as file data. For compatibility,
+`--result-file <file>` remains an alternative: completion files contain required
+`outcome` and optional object `data` (default `{}`), with no unknown fields. Exactly
+one input mode is required; `--data` requires `--outcome`. Invalid mode/argument
+syntax returns USAGE (exit 2); invalid JSON/data returns INVALID_PAYLOAD, or DATA_LIMIT
+for oversized data (exit 4), without mutation. Input mode does not affect receipt
+identity or equivalence. `complete` validates the request, outcome, and payload;
+atomically stores its receipt and the next cursor; and returns `ready`. It MUST NOT
+execute the next node, even an end node.
 
 Repeating an accepted completion with the same request ID and equivalent parsed payload returns the original receipt and current run status, without another transition. Object key order is irrelevant, array order matters, strings compare ordinally. Numbers compare as finite IEEE-754 binary64 values; reject integers outside ±9007199254740991. A differing payload for an accepted ID yields `COMPLETION_CONFLICT`. An unknown ID yields `INVALID_REQUEST`; an unknown outcome yields `INVALID_OUTCOME`; oversize data yields `DATA_LIMIT`. Rejected completion leaves persisted state unchanged. A historical accepted request never completes a newer request.
 
@@ -119,7 +129,7 @@ Every command supports `--json`: exactly one JSON object on stdout; incidental d
 | `start <file> --workspace <absolute-path> [--workflow <id>] [--input-file <file>]` | Validate, snapshot, persist a new run, return ready; execute nothing. |
 | `advance <run-id>` | Execute synchronously until waiting_agent, terminal state, or error. |
 | `status <run-id>` | Read compact state, cursor, and current request. |
-| `complete <run-id> --request <id> --result-file <file>` | Save completion and transition only. |
+| `complete <run-id> --request <id> --outcome <outcome> [--data <json-object>]` | Preferred file-free completion; save receipt and transition only. Alternative: `--result-file <file>`. |
 | `resolve <run-id> --retry` | Only interrupted: explicitly allow a new attempt, return ready. |
 | `resolve <run-id> --fail` | Only interrupted: finish failed without actions. |
 | `logs <run-id> --activation <id> --stream stdout\|stderr [--tail-bytes <n>]` | Read selected log; default/maximum 65536 bytes; n is positive. |

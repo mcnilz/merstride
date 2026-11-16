@@ -40,8 +40,8 @@ $run = & $binary start 'workflow with spaces.md' --workspace $workspace --state-
 $current = & $binary advance $run.runId --state-dir $run.stateRoot --json | ConvertFrom-Json
 & $binary status $run.runId --state-dir $run.stateRoot --json
 # If waiting_agent: perform the literal requested task with your existing agent.
-# Write an allowed outcome and optional object data to a UTF-8 completion file.
-& $binary complete $run.runId --request $current.request.id --result-file 'agent result.json' --state-dir $run.stateRoot --json
+# Return an allowed outcome directly; --data is optional and defaults to {}.
+& $binary complete $run.runId --request $current.request.id --outcome approved --data '{"summary":"Review completed"}' --state-dir $run.stateRoot --json
 & $binary advance $run.runId --state-dir $run.stateRoot --json
 # If interrupted: inspect external effects, then choose exactly one explicit resolution.
 & $binary resolve $run.runId --retry --state-dir $run.stateRoot --json
@@ -54,6 +54,22 @@ unless it is interrupted. `start` creates ready without executing; `complete`
 moves only the cursor. Reuse the returned absolute `stateRoot` on subsequent calls.
 On Linux use an absolute Linux workspace/state path; ordinary single-quoted paths
 work in PowerShell there too. The workflow's process arguments remain literal.
+
+Prefer `complete <run-id> --request <id> --outcome <allowed-outcome>` for agent
+feedback. Add `--data <json-object>` only when result data is needed. Pass the JSON
+as one literal argument: in PowerShell 7.3+ with standard native argument passing,
+use single quotes around JSON or build a value with `ConvertTo-Json -Compress`.
+This creates no completion file. Data uses the existing 16 KiB compact UTF-8,
+depth-16 and safe-number limits. Invalid JSON/data or a rejected request/outcome
+exits 4 without changing state; invalid option combinations exit 2.
+
+For existing file-based callers, use `--result-file <file>` instead of `--outcome`
+and `--data`. That UTF-8 JSON file still contains required `outcome` and optional
+object `data`. Never combine the two modes. Equivalent parsed completions are
+idempotent across modes and return the same receipt. Shell/OS argument-size limits
+still apply; file mode remains useful for payloads unsuitable for command arguments.
+Arguments may be retained in shell history or visible to local process inspection;
+choose file mode when that matters for the data being returned.
 
 Exit codes: 0 successful operation/inspection/help/version; 2 usage; 3 document
 validation; 4 state/lock/completion conflict; 5 failed/interrupted advance or

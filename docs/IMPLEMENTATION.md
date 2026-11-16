@@ -34,6 +34,7 @@ The baseline, P01–P07 tickets and public native CLI/build-policy test seams ar
 | P06 | Crashes and concurrent access cannot silently replay effects | P05 | 05-recovery; OS-specific interruption and process-tree evidence |
 | P07 | Native release is portable and its benefit measured | P06 | 06-interface plus all applicable features; Windows/Linux; A22 distribution checks; license and benchmark reports; release workflow and A25 |
 | P08 | Discoverable English help and predictable argument handling preserve protocol JSON | Accepted P07 local implementation | 09-cli-usability; established parser review; Cli-only build boundaries; native Windows/Linux regression and budget gates |
+| P09 | Existing agents return outcomes and optional data directly through CLI parameters | P03 and P08 | 10-inline-completion; preferred inline path in existing agent/limit/recovery coverage; cross-mode compatibility |
 
 Feature-level tags identify the main owning slice; individual tags may identify earlier ownership. P01 implements the single-end smoke scenario in 00-bootstrap.feature. It MUST use the real YAML path, not a temporary JSON-only format. Later unimplemented syntax must fail explicitly. Initial locks belong in P01; full concurrency/crash acceptance belongs in P06.
 

@@ -29,7 +29,7 @@ internal sealed class CommandLine
         Add(root, "start", "Snapshot a workflow and persist a ready run without executing it.", "file", "merstride start 'workflow with spaces.md' --workspace 'C:\\work tree' --json", ("--workspace", "Required existing absolute workspace directory."), ("--workflow", "Select a workflow ID; default: the single pair."), ("--input-file", "JSON object input file; default: {}."));
         Add(root, "advance", "Execute sequentially until waiting_agent, terminal state, or error.", "run-id", "merstride advance r_example --state-dir 'C:\\work tree\\state' --json");
         Add(root, "status", "Inspect a run without executing; failed-run inspection exits 0.", "run-id", "merstride status r_example --state-dir 'C:\\work tree\\state' --json");
-        Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "run-id", "merstride complete r_example --request q_example --result-file 'agent result.json' --json", ("--request", "Required request ID from waiting_agent."), ("--result-file", "Required UTF-8 JSON completion file: outcome and optional object data."));
+        Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "run-id", "merstride complete r_example --request q_example --outcome approved --json", ("--request", "Required request ID from waiting_agent."), ("--outcome", "Preferred: allowed outcome from waiting_agent; mutually exclusive with --result-file."), ("--data", "Optional inline JSON object with --outcome; default: {}."), ("--result-file", "Alternative UTF-8 JSON completion file: outcome and optional object data."));
         Add(root, "resolve", "Resolve interrupted work explicitly; inspect external effects first. Exactly one of --retry or --fail is required.", "run-id", "merstride resolve r_example --retry --json", ("--retry", "Return ready without execution; a later advance attempts again."), ("--fail", "Finish failed without execution; exits 5."));
         Add(root, "logs", "Read an activation's UTF-8 log tail without executing or changing state.", "run-id", "merstride logs r_example --activation a_example --stream stdout --tail-bytes 1024", ("--activation", "Required activation ID."), ("--stream", "Required: stdout or stderr."), ("--tail-bytes", "Tail length in bytes, 1..65536; default: 65536."));
         Add(root, "guide", "Read the offline existing-agent protocol guide as JSON.", null, "merstride guide --json");
@@ -55,6 +55,11 @@ internal sealed class CommandLine
         if (Options.ContainsKey("--version") && (selected != root || Options.ContainsKey("--help")))
             throw Usage("Use --version alone or with global output/storage options; use version for the command form.");
         if (parsed.Errors.Count > 0) throw Usage(string.Join(" ", parsed.Errors.Select(e => e.Message)));
+        if (Command == "complete" &&
+            (Options.ContainsKey("--outcome") && Options.ContainsKey("--result-file") ||
+             Options.ContainsKey("--data") && !Options.ContainsKey("--outcome") ||
+             !Options.ContainsKey("--help") && !Options.ContainsKey("--outcome") && !Options.ContainsKey("--result-file")))
+            throw Usage("complete requires exactly one of --outcome or --result-file; --data requires --outcome.");
         if (Options.ContainsKey("--help"))
         {
             ValidateHelp(root, help, args, configuration);
@@ -107,7 +112,7 @@ internal sealed class CommandLine
         {
             Option option = optionName is "--retry" or "--fail"
                 ? new Option<bool>(optionName) { Arity = ArgumentArity.Zero }
-                : new Option<string>(optionName) { Arity = ArgumentArity.ExactlyOne, Required = optionName is "--workspace" or "--request" or "--result-file" or "--activation" or "--stream" };
+                : new Option<string>(optionName) { Arity = ArgumentArity.ExactlyOne, Required = optionName is "--workspace" or "--request" or "--activation" or "--stream" };
             option.Description = optionDescription;
             command.Options.Add(option);
         }
@@ -119,7 +124,7 @@ internal sealed class CommandLine
           merstride start 'workflow with spaces.md' --workspace 'C:\work tree' --json
           merstride advance r_example --state-dir 'C:\work tree\state' --json
           merstride status r_example --state-dir 'C:\work tree\state' --json
-          merstride complete r_example --request q_example --result-file 'agent result.json' --json
+          merstride complete r_example --request q_example --outcome approved --data '{"summary":"Review completed"}' --json
           merstride resolve r_example --retry --json
         PowerShell: use & 'C:\tools\merstride.exe' followed by the arguments above.
         Reuse start's absolute stateRoot as --state-dir on every later call.

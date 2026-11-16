@@ -59,10 +59,8 @@ internal sealed class AgentWorld : IDisposable
 
     private void Complete(string outcome, string data = "{}", string? id = null)
     {
-        var path = Path.Combine(cli.DirectoryPath, "result.json");
-        File.WriteAllText(path, "{\"outcome\":\"" + outcome + "\",\"data\":" + data + "}");
         cli.ExpectedChildren = 0;
-        cli.Call("complete", runId, "--request", id ?? requestId, "--result-file", path);
+        cli.Call("complete", runId, "--request", id ?? requestId, "--outcome", outcome, "--data", data);
     }
 
     private void Wait()

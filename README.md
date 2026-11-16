@@ -38,11 +38,11 @@ $result = & $binary advance $run.runId --state-dir $state --json | ConvertFrom-J
 
 For an existing-agent task, start [the task example](examples/agent-task.md) and
 advance to `waiting_agent`. Read the returned literal prompt, selected context, and
-sorted allowed outcomes. After performing the task, write a UTF-8 JSON result such
-as `{"outcome":"approved","data":{"summary":"Review completed"}}`, then run:
+sorted allowed outcomes. After performing the task, return an allowed outcome
+directly through parameters; no result file is needed:
 
 ```powershell
-& $binary complete $run.runId --request $current.request.id --result-file result.json --state-dir $state --json
+& $binary complete $run.runId --request $current.request.id --outcome approved --data '{"summary":"Review completed"}' --state-dir $state --json
 & $binary advance $run.runId --state-dir $state --json
 ```
 

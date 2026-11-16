@@ -48,7 +48,7 @@ try {
     if ($IsWindows) { & dotnet @testArgs }
     else {
         $env:MERSTRIDE_PROCESS_TRACE = Join-Path (Get-Location) 'artifacts/process.trace'
-        & strace -f -qq -e trace=execve -o $env:MERSTRIDE_PROCESS_TRACE dotnet @testArgs
+        & strace --seccomp-bpf -f -qq -e trace=execve -o $env:MERSTRIDE_PROCESS_TRACE dotnet @testArgs
     }
     $testExit = $LASTEXITCODE
     # Retain outcomes on failure without raw errors, local paths or environment data.
@@ -65,7 +65,7 @@ try {
     }
     [ordered]@{schemaVersion=1;exitCode=$testExit;releaseReady=$false;tests=$testResults;scenarios=$scenarios} |
         ConvertTo-Json -Depth 6 | Set-Content artifacts/test-summary.json
-    if ($testExit -ne 0) { throw 'P01-P08 local acceptance/build checks failed. Required release environment qualification is separate.' }
+    if ($testExit -ne 0) { throw 'P01-P09 local acceptance/build checks failed. Required release environment qualification is separate.' }
     # Measure native startup before installing/rendering the development browser tool.
     & ./scripts/benchmark.ps1 -Binary $env:MERSTRIDE_BINARY
     if ($LASTEXITCODE -ne 0) { throw 'Initial native budget check failed.' }

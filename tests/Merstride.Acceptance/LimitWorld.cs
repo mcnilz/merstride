@@ -197,9 +197,7 @@ internal sealed class LimitWorld : IDisposable
     {
         var requestId = cli.Response.GetProperty("request").GetProperty("id").GetString()!;
         (data, dataError) = DataFixture(property);
-        var path = Path.Combine(cli.DirectoryPath, "completion.json");
-        File.WriteAllText(path, "{\"outcome\":\"next\",\"data\":" + data + "}");
-        cli.Call("complete", runId, "--request", requestId, "--result-file", path);
+        cli.Call("complete", runId, "--request", requestId, "--outcome", "next", "--data", data);
     }
 
     private void AssertData(bool allowed)

@@ -63,8 +63,10 @@ internal static class Program
             advance stops at waiting_agent; use its request ID, prompt, selected context, and allowed outcomes.
             Prompts are literal; context is separate data. Context selectors expose availability and source activation IDs.
             Repeated status/advance while waiting returns the same request without another transition.
-            Perform the task with your existing agent, then complete <run-id> --request <id>
-            --result-file <file>, containing outcome and optional object data. Complete moves only the cursor;
+            Perform the task with your existing agent, then prefer complete <run-id> --request <id>
+            --outcome <allowed-outcome> [--data <json-object>]. No result file is needed.
+            For file compatibility instead use --result-file <file>, containing outcome and optional object data.
+            Choose exactly one input mode; --data requires --outcome. Complete moves only the cursor;
             advance again explicitly, even for an end node. Data defaults to {} and is limited to 16 KiB/depth 16.
             Repeating equivalent parsed data for an accepted ID returns its original receipt and current status.
             Object order is irrelevant; array order matters; numbers compare as finite binary64 values.
@@ -119,7 +121,9 @@ internal static class Program
         }
         if (command == "complete")
         {
-            var payload = AgentFiles.Completion(options["--result-file"]);
+            var payload = options.TryGetValue("--result-file", out var resultFile)
+                ? AgentFiles.Completion(resultFile)
+                : (Outcome: options["--outcome"], Data: InlineData(options.GetValueOrDefault("--data")));
             var completed = AgentCompletion.Complete(run, options["--request"], payload.Outcome, payload.Data);
             if (!ReferenceEquals(run, completed.State)) store.Write(completed.State);
             return Output(Response(completed.State, root) with { Receipt = completed.Receipt });
@@ -138,6 +142,18 @@ internal static class Program
                 Error: new("INTERRUPTED", "User interrupted execution; recovery state could not be saved. Inspect external effects before resolution.")), 130);
         }
         finally { Console.CancelKeyPress -= cancel; }
+    }
+
+    private static JsonElement InlineData(string? json)
+    {
+        if (json is null) return JsonValues.EmptyObject;
+        try
+        {
+            using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 64 });
+            return JsonValues.Object(document.RootElement, "DATA_LIMIT");
+        }
+        catch (JsonException)
+        { throw new MerstrideException("INVALID_PAYLOAD", "Invalid JSON completion data; expected an object.", 4); }
     }
 
     private static CliResponse Response(RunState state, string root) => new(RunId: state.RunId, Status: state.Status,

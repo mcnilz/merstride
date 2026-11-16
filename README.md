@@ -19,6 +19,11 @@ response; existing callers that relied on default JSON must add that flag.
 
 ## Quick start
 
+For binary downloads and platform requirements, see
+[download and run](docs/RELEASING.md#download-and-run). Releases use SemVer tags
+and GitHub Actions for Windows x64 and Linux x64. macOS distribution is deferred;
+release qualification remains incomplete.
+
 Build from source using the [development prerequisites](CONTRIBUTING.md#prerequisites)
 and `pwsh -NoProfile -File scripts/build.ps1`. The examples below use PowerShell
 7.3+ from the repository root and the resulting Windows executable. On Linux,

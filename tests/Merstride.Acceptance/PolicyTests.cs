@@ -10,6 +10,8 @@ public class PolicyTests
     [TestCase("conditional-platform")]
     [TestCase("token-in-build")]
     [TestCase("echo-assembly")]
+    [TestCase("moving-checkout")]
+    [TestCase("missing-checkout-ref")]
     public void ReleaseWorkflowRejectsPublicationBypasses(string defect)
     {
         var temp = Path.Combine(FeatureTests.Root, "artifacts", "policy-tests", Guid.NewGuid().ToString("N"));
@@ -24,6 +26,8 @@ public class PolicyTests
                 "wrong-publish-needs" => original.Replace("    needs: [gate, verify]", "    needs: [gate]"),
                 "conditional-platform" => original.Replace("  linux:\n", "  linux:\n    if: false\n"),
                 "token-in-build" => original.Replace("      RELEASE_VERSION:", "      GH_TOKEN: ${{ github.token }}\n      RELEASE_VERSION:"),
+                "moving-checkout" => original.Replace("ref: ${{ github.sha }}", "ref: main"),
+                "missing-checkout-ref" => original.Replace("          ref: ${{ github.sha }}\n", ""),
                 _ => original.Replace("          ./scripts/release.ps1 -Mode Assemble", "          Write-Output './scripts/release.ps1 -Mode Assemble'")
             };
             Assert.That(changed, Is.Not.EqualTo(original), "Mutation must actually change the workflow.");

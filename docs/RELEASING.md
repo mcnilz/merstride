@@ -1,5 +1,114 @@
 # Native verification and release
 
+## Versions and release tags
+
+Release tags use `vMAJOR.MINOR.PATCH`, for example `v1.2.3`, or a SemVer
+prerelease such as `v1.3.0-rc.1`. Increment PATCH for compatible fixes, MINOR for
+compatible features, and MAJOR for incompatible public behavior. During `0.y.z`
+development the API is unstable; document incompatible changes in release notes.
+The CLI JSON protocol version is a separate compatibility contract.
+Numeric components and numeric prerelease identifiers cannot have leading zeros.
+Build metadata (`+build.1`) is deliberately excluded from release tags: every
+published version has one unambiguous tag and immutable asset set. Both annotated
+and lightweight tags are accepted; use annotated tags for maintainer releases.
+There is no automatic version bump or version-file edit: the validated tag without
+`v` is passed to the build and must equal the native CLI's reported version.
+
+## Maintainer procedure
+
+Before the first release, configure the GitHub repository's `main` branch and
+`origin`, enable Actions, and require the aggregate build gate for contributions.
+Restrict creation/update/deletion of `v*` tags to authorized maintainers through
+repository rulesets. The scripts check tag ancestry on `origin/main`; authorization
+comes from repository settings, not from the tag spelling. Allow GitHub Actions
+to create releases with the final job's `contents: write` permission. Fork/PR
+builds retain read-only permissions and cannot publish.
+
+1. Prepare the candidate commit on `main`, update release notes, and choose an
+   unused SemVer version. Verify the full Windows/Linux gates for that source.
+2. Collect the exact-commit/binary qualification and experiment reports described
+   below. Configure `MERSTRIDE_WINDOWS_QUALIFICATION`,
+   `MERSTRIDE_LINUX_QUALIFICATION` and `MERSTRIDE_TOKEN_EXPERIMENT` as repository
+   variables. A green hosted SDK build is insufficient qualification.
+3. After explicit release authorization, fetch `origin/main`, create an annotated
+   tag on the qualified commit and push only that tag. For example, replacing
+   the example version and commit with the reviewed values:
+
+   ```sh
+   git fetch origin main --tags
+   git tag -a v1.2.3 QUALIFIED_COMMIT_SHA -m "Merstride 1.2.3"
+   git push origin refs/tags/v1.2.3
+   ```
+
+4. The tag push starts Release: validate tag, build/test/package Windows and
+   Linux, aggregate their results, verify the same-run assets and qualification,
+   then create a draft, verify uploaded bytes and publish. Prerelease tags produce
+   GitHub prereleases. Every checkout uses the event's exact source commit.
+5. Check the workflow result and the release manifest/checksums. Missing proof or
+   any required failure blocks publication. If evidence was missing, supply the
+   correct reports and rerun the failed workflow. Matching drafts can resume;
+   existing public releases and mismatched draft assets cannot be overwritten.
+   Fix a published version with a new patch tag; do not move/reuse its tag.
+
+These commands document the authorized maintainer procedure; implementing or
+testing release automation does not itself authorize a push or publication.
+
+## Download and run
+
+Once a qualified release exists, choose its archive in the repository's GitHub
+Releases page. Prereleases may require selecting the specific release rather
+than the latest stable release. The current distribution targets are:
+
+| Target | Archive | Runtime requirements |
+| --- | --- | --- |
+| Windows x64 | `merstride-VERSION-win-x64.zip` | Windows 11 x64; no installed .NET runtime |
+| Linux x64 | `merstride-VERSION-linux-x64.tar.gz` | Compatible glibc Linux x64, ICU and OpenSSL; no installed .NET runtime |
+| macOS | Not currently released | See the feasibility decision below |
+
+Download `SHA256SUMS` alongside the archive and compare its entry before
+extraction. PowerShell: `Get-FileHash ./merstride-1.2.3-win-x64.zip -Algorithm SHA256`.
+Linux: `sha256sum --check --ignore-missing SHA256SUMS` (the archive must be present;
+the command must report it as OK). Checksums establish consistency with the
+release's published assets; they are not signatures.
+
+On Windows, extract the ZIP and run `./merstride.exe version` and
+`./merstride.exe guide`. On Linux, extract with
+`tar -xzf merstride-1.2.3-linux-x64.tar.gz`, then run `./merstride version` and
+`./merstride guide`. The archive preserves executable permissions. Keep the
+included notices. Add `--json` for scripts; use an absolute state directory to
+resume runs from another working directory. Workflow commands may require their
+own tools; the Merstride engine does not install them.
+
+## macOS feasibility and reference review
+
+Native AOT supports macOS x64/Arm64 with Xcode Command Line Tools, but does not
+support cross-OS compilation from this Windows environment. See Microsoft's
+[Native AOT prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/#prerequisites)
+and [cross-compilation constraints](https://learn.microsoft.com/dotnet/core/deploying/native-aot/cross-compile).
+No macOS runner was available for this implementation. More concretely, the
+current build treats every non-Windows host as Linux and requires `strace`;
+process observation uses `/proc`, and package locks, audits, manifests and
+qualification collection currently cover only `win-x64` and `linux-x64`.
+Consequently adding a macOS job would fail the mandatory acceptance path.
+
+macOS distribution is deferred. A follow-up must select `osx-arm64` as the first
+target, provide real macOS process/interruption observation and full native
+acceptance, review target-specific dependency locks/notices, extend the archive/
+manifest/qualification policies and collect clean-target evidence on macOS.
+Only then may the required job and matching release asset be added together.
+macOS process variant names in authored workflows do not imply a released binary.
+Signing/notarization remains outside P14's scope.
+
+Reviewed [DailyWingetNotify's release workflow](https://github.com/mcnilz/DailyWingetNotify/blob/c8007fbffd9b9ea704e6c382afce5edb193ebeac/.github/workflows/release.yml)
+and its MIT license at revision `c8007fbffd9b9ea704e6c382afce5edb193ebeac` on
+2026-11-16. Its tag-to-version, Native AOT archive and prerelease conventions
+match this release procedure. No source code was copied and no dependency was
+added. Merstride retains its reviewed action pins, separate platform gates,
+restricted publication permission and immutable releases rather than adopting
+the reference's asset replacement behavior.
+
+## Verification and qualification
+
 Run `pwsh -NoProfile -File scripts/build.ps1` on Windows or Linux with SDK 11.0.100,
 PowerShell 7, native compiler/linker, Node/npm and a headless browser. Linux also
 requires strace; set `MERSTRIDE_BROWSER=/usr/bin/google-chrome`. Keep platform

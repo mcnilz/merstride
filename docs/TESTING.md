@@ -169,6 +169,14 @@ A21 maps to 07-architecture: positive/negative compilation fixtures and effectiv
 
 A23: official Actions, SHA pins, and PR isolation. A24: established dependency review. A25: tested-tag release integrity and publication gates. These are in 08-delivery.feature. Policy checks combine automated allowlist/lock/reference checks with a version-controlled reviewed dependency inventory; maintenance maturity cannot be inferred automatically from a package name.
 
+P14 supplements those build-boundary checks with disposable local Git repositories
+invoking the public release `Tag` mode. Stable/prerelease and annotated/lightweight
+tags must export their expected version; malformed tags, build metadata, wrong
+commits and missing main ancestry must not export one. Workflow mutations prove
+that moving or missing checkout refs are rejected. Publication fixtures use the
+controlled GitHub CLI boundary; these tests create no remote tags/releases and
+are not clean-platform qualification.
+
 Public MSBuild property checks require SDK 11.0.100, net11.0, stable C# 15 and
 no memory-safety opt-in across product, test harness and native helper.
 

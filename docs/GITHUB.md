@@ -46,6 +46,12 @@ Use an always-running aggregate gate that fails for failed, cancelled, or unexpe
 
 A pushed SemVer tag `vX.Y.Z` or prerelease tag triggers release validation. Restrict release tags to authorized maintainers through repository rules. Reject malformed versions and tags whose commit is not on main. Resolve the exact tag commit; check that embedded version and intended release version match.
 
+Every release checkout explicitly selects `${{ github.sha }}` so all jobs use
+the event commit even if a tag moves later. Build metadata is excluded from
+release tag syntax. See the [maintainer procedure](RELEASING.md#maintainer-procedure)
+for version selection, setup, qualification and tag creation, and
+[download instructions](RELEASING.md#download-and-run) for supported platforms.
+
 Build and test that commit for all advertised platforms using the same build scripts. Release only artifacts produced by that successful run, not the latest artifacts from another branch/run. Require architecture, Gherkin, license, package-content, size, and applicable platform gates. Performance thresholds run on a documented stable reference environment; hosted-runner timings are informative and do not substitute for that gate.
 
 Create versioned ZIP (Windows) and tar.gz (Linux) archives, preserving executable permissions, plus SHA256SUMS, MIT license, required third-party notices, and release notes. Include source commit, RID, SDK/toolchain versions, test evidence, and clearly stated platform limitations. Verify archive contents and checksums before publication.

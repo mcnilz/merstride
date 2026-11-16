@@ -22,6 +22,7 @@ try {
                     throw "Unapproved action reference: $reference"
                 }
                 if ($parts[0] -eq 'actions/checkout' -and $step['with']['persist-credentials'] -cne 'false') { throw 'Checkout credentials must not persist.' }
+                if ($release -and $parts[0] -eq 'actions/checkout' -and $step['with']['ref'] -cne '${{ github.sha }}') { throw 'Release checkout must select the exact event commit.' }
             }
             if ($job.ContainsKey('permissions')) {
                 if ($job['permissions'] -isnot [Collections.Generic.Dictionary[string,object]]) { throw 'Job permissions must be an explicit mapping.' }

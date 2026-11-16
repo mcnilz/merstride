@@ -23,6 +23,28 @@ from a local build.
 
 ## Verification
 
+On 2026-11-16, P14's tag-release completion passed the full Windows x64 local
+gate with the example product version `0.2.0-rc.1`: 480 tests / 298 local feature
+cases, no failures/skips or build/publish warnings/errors. The published native
+CLI reports that exact prerelease version with protocol 1. All release checkouts
+now select the event commit, enforced through public workflow policy; a moving
+checkout mutation exposed the missing restriction before the fix. Ten new public
+Tag-mode tests and two checkout-policy mutations pass; all 37 focused release/
+policy checks pass. Existing package, integrity, qualification, draft and
+no-overwrite tests remain green, as do privacy, architecture, dependency,
+distribution and Mermaid gates. Four unchanged official action pins were
+reverified against their stable release tags. No dependency/notice changes.
+
+P14 documents SemVer/tag and download procedures and defers macOS distribution
+with a concrete osx-arm64 follow-up: the current non-Windows acceptance path
+requires Linux strace and /proc; macOS native acceptance, locks/audits and
+qualification remain absent. See ADR 0011 and RELEASING.md. No new Linux/macOS or
+hosted execution evidence is claimed. P07 clean-target/experiment prerequisites
+remain outstanding; no remote tag or release was created. Raw logs stay under
+ignored artifacts. Standards/spec review results are recorded in the local ticket.
+Both independent reviews found zero actionable findings. Native size was
+5.973 MiB and warm status P95 was 29.356 ms, within the existing budgets.
+
 On 2026-11-16, P13's guide-formatting follow-up passed the complete Windows x64 local gate: 468 tests /
 298 local feature cases, no failures or skips, native publish with no
 warnings/errors, architecture/dependency/distribution/privacy checks and Mermaid

@@ -4,6 +4,27 @@ namespace Merstride.Acceptance;
 
 public class UsabilityTests
 {
+    [Test]
+    public void AgentGuideSeparatesStepsAndReferenceSectionsInTextAndJson()
+    {
+        using var world = new CliWorld();
+        world.Raw("guide", "--state-dir", "not-absolute");
+        Assert.That(world.ExitCode, Is.Zero);
+        Assert.That(world.Stderr, Is.Empty);
+        var text = world.Stdout.Replace("\r\n", "\n").TrimEnd('\n');
+        foreach (var section in new[] { "Quick start", "Agent handoffs", "Process execution", "Logs and limits", "Recovery" })
+            Assert.That(text, Does.Contain("\n\n" + section + "\n"), $"Separate readable section: {section}");
+        Assert.That(text, Does.Contain("\n  merstride start ").And.Contain("\n  merstride complete "));
+
+        world.Raw("guide", "--json", "--state-dir", "not-absolute");
+        Assert.That(world.ExitCode, Is.Zero);
+        Assert.That(world.Stderr, Is.Empty);
+        using var response = System.Text.Json.JsonDocument.Parse(world.Stdout);
+        Assert.That(response.RootElement.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+        Assert.That(response.RootElement.GetProperty("guide").GetString()!.Replace("\r\n", "\n"), Is.EqualTo(text));
+        Assert.That(Directory.GetFileSystemEntries(world.DirectoryPath), Is.Empty);
+    }
+
     [TestCase("Cli", true)]
     [TestCase("Domain", false)]
     [TestCase("Application", false)]

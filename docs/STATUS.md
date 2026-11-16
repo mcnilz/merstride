@@ -23,7 +23,7 @@ from a local build.
 
 ## Verification
 
-On 2026-11-16, P13 passed the complete Windows x64 local gate: 467 tests /
+On 2026-11-16, P13's guide-formatting follow-up passed the complete Windows x64 local gate: 468 tests /
 298 local feature cases, no failures or skips, native publish with no
 warnings/errors, architecture/dependency/distribution/privacy checks and Mermaid
 compatibility including the new inline example. The 33 dedicated P13 cases verify
@@ -37,6 +37,13 @@ all 14 current feature hashes; stale-hash publication fixtures failed before the
 inventory update and pass in the final gate. This is controlled local testing,
 not actual publication.
 
+The guide follow-up reproduced the native operational guide's missing paragraph
+breaks. It now separates quick start, handoffs, receipts, process execution,
+logs/limits, recovery and discovery, with numbered steps and indented command
+templates. The added native regression fails on the previous text block and
+checks readable sections plus identical decoded guide content in JSON. Both
+review axes found no outstanding findings. No execution or parser changes.
+
 The 45 dedicated P12 cases remain passing and cover
 frozen scripts/variants, multiline Unicode, literal shebang arguments, absolute/
 relative/PATH resolution, env forms, malformed definitions, overlap rejection,
@@ -47,7 +54,7 @@ Actual installed interpreters were PowerShell 7.6.10, Python 3.12.10 and Git Bas
 example validated and executed on Windows. Both standards/spec reviews had no
 outstanding findings. P11's 28 offline-guide cases and all prior local regressions
 remain in the passing suite.
-The executable measured 5.972 MiB; warm `status` P95 was 24.814 ms, within the
+The executable measured 5.973 MiB; warm `status` P95 was 20.993 ms, within the
 25 MiB / 150 ms gates.
 
 The most recent prior full Linux x64 (WSL2) verification passed 361 tests / 192

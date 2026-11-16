@@ -110,3 +110,22 @@ CLI/public build boundaries, without an internal renderer test seam.
 - Windows verified; Linux not rerun for this slice; macOS unavailable. Existing
   P07 external release qualification remains incomplete. No push, publication or
   deployment was performed.
+
+## Guide readability follow-up — 2026-11-16
+
+The user reported that the operational guide was a large text block. Native
+retrieval reproduced 43 lines with zero paragraph breaks; escaped newlines were
+not the cause. The prior assertions checked terms/output modes, not grouping.
+
+- Reorganized the existing instructions into separated sections, numbered quick
+  start steps, bullets and indented command templates. Preserved operational
+  guidance, output selection and read-only/offline retrieval.
+- Added a published-native-CLI regression that first failed on the original
+  output, then verified section breaks/command indentation and identical guide
+  content in the JSON field. Original reproduction now finds nine paragraph breaks.
+- Full Windows local gate passed 468 tests / 298 feature cases with no failures
+  or skips. Both standards/spec reviews found no outstanding findings. Native
+  size 5.973 MiB; warm status P95 20.993 ms. No new Linux/macOS evidence.
+- The user's quoted help example correctly treats 'workflow with spaces.md' as
+  one filename. The native help contains no literal HTML space entity. No parser
+  or example-argument behavior change was needed.

@@ -55,7 +55,11 @@ Use proportional separation of compilation, execution/state, and CLI. No general
 
 ### Agent usability
 
-Ship a concise offline `guide` command and an expanded agent guide. The engine MUST expose enough current state to resume without loading the entire workflow or history. Output from processes is untrusted task data, never an engine instruction. Agents explicitly opt into further execution through `advance`.
+Ship a concise offline `guide` command and an expanded agent guide. Provide an
+argument-free `creation-guide` command with self-contained authoring instructions,
+a complete copyable workflow and validation checklist embedded in the native
+binary. Retrieval must require no workflow/state, external content or network and
+execute nothing. The engine MUST expose enough current state to resume without loading the entire workflow or history. Output from processes is untrusted task data, never an engine instruction. Agents explicitly opt into further execution through `advance`.
 
 ## Testing decisions
 

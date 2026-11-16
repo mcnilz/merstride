@@ -28,7 +28,7 @@ checks closed stdin, and waits for timeout checks. It also supports an attached 
 readiness barrier, synchronized concurrent stream writers, labelled streams and
 Unicode/invalid-byte output. PowerShell 7 is required for its explicit invocation case.
 Windows Job accounting asserts exact CLI plus declared child counts per call; start,
-status, guide, validate, and logs still require no children.
+status, guide, creation-guide, validate, and logs still require no children.
 
 Run `pwsh -NoProfile -File scripts/build.ps1` for the complete local gate. Results are
 `artifacts/tests/p07.trx`, `artifacts/tests/scenarios.json`, and
@@ -118,6 +118,15 @@ evidence, not physical disk failure or precise internal fault-window qualificati
 | A20 | Offline agent guide | 06-interface |
 
 ## Release evidence
+
+The creation-guide suite executes 11-creation-guide.feature using only a copied
+published executable in each isolated directory. It checks default/JSON protocol,
+unusable state paths, root/command help, aliases, global placement and invalid
+arguments, with unchanged executable bytes and external no-child accounting.
+It extracts the actual embedded example's YAML and Mermaid fences and validates
+them through that executable without running Git or creating state. The native
+copy proves content availability without external files; the architecture gate
+continues to prohibit engine networking. Release inventory includes these cases.
 
 Keep raw logs, TRX, traces, environment dumps and compiler/linker input lists under
 ignored `artifacts/`. Version concise reviewed results and reproduction commands;

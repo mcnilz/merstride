@@ -33,6 +33,7 @@ internal sealed class CommandLine
         Add(root, "resolve", "Resolve interrupted work explicitly; inspect external effects first. Exactly one of --retry or --fail is required.", "run-id", "merstride resolve r_example --retry --json", ("--retry", "Return ready without execution; a later advance attempts again."), ("--fail", "Finish failed without execution; exits 5."));
         Add(root, "logs", "Read an activation's UTF-8 log tail without executing or changing state.", "run-id", "merstride logs r_example --activation a_example --stream stdout --tail-bytes 1024", ("--activation", "Required activation ID."), ("--stream", "Required: stdout or stderr."), ("--tail-bytes", "Tail length in bytes, 1..65536; default: 65536."));
         Add(root, "guide", "Read the offline existing-agent protocol guide as JSON.", null, "merstride guide --json");
+        Add(root, "creation-guide", "Read the offline workflow authoring instructions and a complete example as JSON.", null, "merstride creation-guide --json");
         Add(root, "version", "Read tool and protocol version as JSON.", null, "merstride version --json");
         var configuration = new ParserConfiguration { ResponseFileTokenReplacer = null, EnablePosixBundling = false };
         var parsed = root.Parse(args, configuration);

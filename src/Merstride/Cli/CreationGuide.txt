@@ -1,0 +1,126 @@
+Merstride workflow creation guide (schema 1, protocol 1)
+
+Create UTF-8 Markdown with one YAML/Mermaid pair per workflow. This guide is
+embedded in the native binary: no checkout, content file, runtime or network is
+needed. Reading it accesses no workflow/state and executes nothing. For the
+execution/completion/recovery loop, use merstride guide --json.
+
+Pairing and syntax
+- Start executable fences at column 1 with at least three backticks; close with
+  at least as many. Use the exact info string yaml merstride for metadata and
+  mermaid for the graph, containing a whole-line %% merstride: <id> comment.
+  The marker and YAML id must match case-sensitively. Block order is irrelevant.
+- Ordinary YAML and unmarked Mermaid fences are ignored. Enclosing longer
+  backtick or tilde fences hide examples; tilde, indented and container fences
+  cannot introduce executable blocks. Reject missing, duplicate or conflicting
+  pairs. Omit --workflow only for exactly one pair; otherwise select --workflow <id>.
+- IDs (workflow, nodes, outcomes): [a-z][a-z0-9_]{0,63}, case-sensitive.
+  Node IDs cannot be end, subgraph, style, class, flowchart, graph or interpolate
+  (reserved by Mermaid); workflow IDs may use these names.
+- Mermaid header: flowchart TD or flowchart LR. Declare each node explicitly as
+  work["Readable label"], with that token contiguous. One declaration or edge per
+  line. Use work --> next or work -->|outcome| next. Indentation/whitespace between
+  header/edge tokens is allowed; whole-line %% comments and blank lines are allowed.
+  Labels cannot contain physical newlines, backslashes, double quotes or HTML;
+  Mermaid entities such as #quot; are allowed. Labels are display text, never code.
+  No implicit nodes, chained edges, other shapes/arrows, subgraphs, styling,
+  click directives, diagram frontmatter or other statements.
+
+YAML schema
+- Required root fields: schemaVersion: 1, id, entry, nodes (a mapping by node ID).
+  Optional limits: {maxTransitions: 20}; default 100, integer range 1..10000.
+  A document is at most 1 MiB; a graph at most 100 nodes and 250 edges.
+- Process fields: kind: process, nonempty command, args (array of strings, possibly
+  []), timeoutSeconds (integer 1..3600). All are required. Pass arguments literally
+  via the OS API: no shell expansion, globbing, interpolation or manual quoting.
+  Quote YAML numeric/boolean arguments, e.g. args: ["123", "true", "path with spaces"].
+  Bare commands resolve through PATH, relative program paths against the selected
+  absolute workspace. Child cwd is that workspace; environment is inherited and
+  stdin closed. A shell is explicit, e.g. command: pwsh and
+  args: [-NoProfile, -NonInteractive, -File, scripts/check.ps1].
+- Agent fields: kind: agent, nonempty prompt (literal string, at most 16 KiB UTF-8),
+  optional context (array of unique selectors). Use prompt: | for multiline text.
+  Selectors: input; nodes.<id>.exitCode, nodes.<id>.stdoutTail,
+  nodes.<id>.stderrTail for process nodes; nodes.<id>.data for agent nodes.
+  Referenced nodes and kinds must be valid. Context is data separate from the
+  literal prompt, with no template evaluation. Each selector reads the latest
+  completed activation, possibly a previous loop iteration; check availability
+  and source activation IDs. Unavailable results are explicit. Stream tails are
+  at most 4096 UTF-8 bytes, with truncation/byte counts. Prompt plus serialized
+  context must fit 32 KiB; start input and agent data are objects <=16 KiB/depth 16.
+- End fields: kind: end, result: success or failure. Both required.
+- Only documented fields for each kind are allowed. Required strings must be
+  strings, not numbers/booleans/null. Constrained YAML 1.2 core permits string keys,
+  strings, booleans, null, finite numbers, sequences, mappings and block strings;
+  dates remain strings. Reject unknown fields, duplicate keys, wrong types,
+  anchors, aliases, merge keys, explicit/custom tags and multiple documents.
+  No includes, object construction, environment expansion or executable expressions.
+
+Graph and routing
+- Exactly one YAML definition per Mermaid node and vice versa. Entry must exist;
+  every node must be reachable from entry and have a graph path to an end.
+  Keep all routing in Mermaid: no YAML edges or next-node fields.
+- End nodes have no outgoing edges. Processes have either one unlabeled edge
+  (validation warning: it ignores failures) or distinct labeled edges; never mix.
+  Normal exits yield exit_<n> (nonnegative n); other outcomes are spawn_error,
+  timeout, output_limit and signal. An exact label beats default; no match fails
+  with NO_MATCHING_EDGE. Timeout/output-limit termination takes precedence over
+  its resulting exit code; first observed limiting cause wins.
+- Agent edges are labeled and distinct, with no default. Their labels are the
+  complete allowed-outcome set returned to your existing agent. There is no built-in
+  LLM. Completion moves only the cursor; advance again explicitly, even for an end.
+- Multiple incoming edges are alternative arrivals, never joins. One cursor runs
+  sequentially. Cycles need a finite transition budget: each cursor change consumes
+  one; an end reached on the last allowed transition may finish. Process output is
+  capped at 10 MiB combined per activation; time/output limits attempt tree termination.
+
+Complete example: save the following two fences together as review.md.
+Running its process requires Git installed on PATH and a Git workspace; guide
+retrieval and validation require neither. Git arguments below are literal strings.
+
+```yaml merstride
+schemaVersion: 1
+id: review
+entry: check
+limits:
+  maxTransitions: 20
+nodes:
+  check:
+    kind: process
+    command: git
+    args: [diff, --check]
+    timeoutSeconds: 60
+  review:
+    kind: agent
+    prompt: |
+      Inspect the workspace changes with your existing tools.
+      Return approved if they are acceptable, otherwise rejected.
+    context: [nodes.check.exitCode, nodes.check.stdoutTail, nodes.check.stderrTail]
+  done:
+    kind: end
+    result: success
+  failed:
+    kind: end
+    result: failure
+```
+```mermaid
+flowchart TD
+    %% merstride: review
+    check["Check whitespace errors"]
+    review["Review changes"]
+    done["Accepted"]
+    failed["Needs work"]
+    check -->|exit_0| review
+    check -->|default| failed
+    review -->|approved| done
+    review -->|rejected| failed
+```
+
+Authoring checklist
+1. Match workflow IDs, fences, node IDs and the existing entry.
+2. Use only the supported YAML fields/Mermaid forms, literal string arguments and
+   valid selectors. Check interpreter/program prerequisites before execution.
+3. Check reachability, paths to ends, explicit failure routes and transition budget.
+4. Save UTF-8 and validate; validation launches/downloads nothing and creates no run.
+   For multiple pairs add --workflow <id>. Finish with:
+   merstride validate <file> --json

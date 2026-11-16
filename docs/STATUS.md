@@ -6,7 +6,9 @@ YAML/Mermaid validation, frozen definitions, literal process arguments, bounded
 execution and selected context, persistent runs, idempotent completion receipts,
 writer exclusion, concurrent snapshots and explicit crash recovery. English help
 and the offline guide describe protocol version 1. Inline outcome parameters are
-the preferred completion path; file completion remains compatible.
+the preferred completion path; file completion remains compatible. The embedded
+`creation-guide` supplies offline authoring instructions, a complete copyable
+workflow and validation checklist without external content files.
 
 The product uses .NET 11 Native AOT and stable C# 15. Windows x64 and Linux x64
 have local development-host verification. **Release qualification is incomplete
@@ -15,17 +17,20 @@ from a local build.
 
 ## Verification
 
-On 2026-11-16, the documentation consolidation passed the complete Windows x64
-local gate: 361 tests / 192 local feature cases, no failures or skips, native
+On 2026-11-16, P11's embedded workflow creation guide passed the complete Windows
+x64 local gate: 389 tests / 220 local feature cases, no failures or skips, native
 publish with no warnings/errors, architecture/dependency/distribution/privacy
-checks and Mermaid compatibility. The executable measured 5.840 MiB and warm
-`status` P95 was 21.429 ms. README command blocks, all four workflow validations,
-inline JSON completion, the process chain and log inspection also passed. Local
-Markdown links and both standards/spec reviews had no outstanding findings.
+checks and Mermaid compatibility. The 28 dedicated P11 cases check standalone
+binary retrieval, default/JSON output, root/command help, aliases, global options,
+invalid arguments and unusable state paths. The actual embedded example was
+extracted and validated without execution or state creation. Local Markdown links
+and both standards/spec reviews had no outstanding findings.
+The executable measured 5.849 MiB; warm `status` P95 was 26.535 ms, within the
+25 MiB / 150 ms gates.
 
 The most recent prior full Linux x64 (WSL2) verification passed 361 tests / 192
 local feature cases with no failures/skips and met size/status gates. Linux was
-not rerun for this documentation-only change. These are development-host results,
+not rerun for P11; its new behavior is verified on Windows only. These are development-host results,
 not clean-target or cold-boot qualification.
 
 Reproduce the complete local gate with
@@ -38,7 +43,7 @@ audits and timing records stay under ignored `artifacts/`. See
 - Implement the independent native clean-target suite driver. The NUnit host
   requires .NET and cannot serve as the no-runtime driver.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 177 runtime cases, plus the separately
+  candidate commit and binary hashes: all 205 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.

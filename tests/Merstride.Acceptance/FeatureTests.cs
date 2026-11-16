@@ -64,7 +64,7 @@ public class FeatureTests
         }
     }
 
-    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09");
+    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11");
 
     public static IEnumerable<TestCaseData> RequiredCases() => Cases().Where(c => c.Implemented)
         .Select(c => new TestCaseData(c).SetName(c.ToString()).SetProperty("Requirements", string.Join(' ', c.Tags))
@@ -93,6 +93,12 @@ public class FeatureTests
 
     private static void Execute(FeatureCase scenario)
     {
+        if (scenario.Tags.Contains("@P11"))
+        {
+            using var creation = new CreationGuideWorld();
+            foreach (var step in scenario.Steps) creation.Execute(step);
+            return;
+        }
         if (scenario.Tags.Contains("@P09"))
         {
             using var completion = new InlineCompletionWorld();
@@ -158,6 +164,7 @@ internal sealed class CliWorld : IDisposable
     internal string State => Path.Combine(DirectoryPath, "state");
     internal string FilePath => Path.Combine(DirectoryPath, "workflow.md");
     internal string? WorkingDirectory;
+    internal string? Binary;
     private string runId = "";
     internal JsonElement Response;
     internal int ExitCode;
@@ -172,7 +179,7 @@ internal sealed class CliWorld : IDisposable
 
     private void Invoke(string[] args, bool requireProtocol)
     {
-        var binary = Environment.GetEnvironmentVariable("MERSTRIDE_BINARY")
+        var binary = Binary ?? Environment.GetEnvironmentVariable("MERSTRIDE_BINARY")
             ?? Path.Combine(FeatureTests.Root, "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
         var start = new ProcessStartInfo(binary) { WorkingDirectory = WorkingDirectory ?? DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var arg in args) start.ArgumentList.Add(arg);

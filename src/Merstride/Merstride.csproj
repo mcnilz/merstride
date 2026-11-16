@@ -10,6 +10,7 @@
     <WarningsAsErrors>$(WarningsAsErrors);NSDEPCOP01;NSDEPCOP07</WarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Cli/CreationGuide.txt" LogicalName="Merstride.CreationGuide.txt" />
     <PackageReference Include="System.CommandLine" Version="3.0.0" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
     <PackageReference Include="NsDepCop" Version="3.3.0" PrivateAssets="all" ExcludeAssets="compile;runtime" />

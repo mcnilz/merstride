@@ -134,6 +134,7 @@ Every command supports `--json`: exactly one JSON object on stdout; incidental d
 | `resolve <run-id> --fail` | Only interrupted: finish failed without actions. |
 | `logs <run-id> --activation <id> --stream stdout\|stderr [--tail-bytes <n>]` | Read selected log; default/maximum 65536 bytes; n is positive. |
 | `guide` | Offline compact agent usage guide, no run required; JSON has a guide string. |
+| `creation-guide` | Offline self-contained workflow authoring instructions and a complete copyable example; embedded in the native binary. No arguments or workflow/state access; JSON has a guide string. |
 | `version` | Tool and protocol version. |
 
 `-h` / `--help` is available at the root and for every command. Help exits 0 without
@@ -146,9 +147,15 @@ unknown/missing/extra/conflicting arguments return usage exit 2 and a help hint.
 Response files, directives, abbreviations and option bundles are disabled.
 See [CLI usage](CLI.md) for examples and exact discovery semantics.
 
+`creation-guide` follows `guide` output conventions: with or without `--json`,
+return one protocol-version-1 object with a nonempty `guide`, null status/error and
+exit 0. It needs no workspace, workflow, run or external content file; even an
+unusable state path is ignored. Retrieval creates/mutates no state, launches no
+child process, makes no network request and never executes its example.
+
 Global `--state-dir <absolute-path>` selects storage. Default is `.merstride/runs` beneath the calling cwd. Start returns the absolute state root; later calls MUST reuse it. Opaque run IDs cannot be used as arbitrary filesystem paths. No delete/publish command in the MVP.
 
-CLI exit codes: 0 successful operation (including ready/waiting/completed); 2 usage; 3 document validation; 4 state/lock/completion conflict; 5 advance ending failed/interrupted or resolve --fail; 6 I/O/corrupt storage/internal error; 130 user interruption. Read-only status succeeds with 0 even when the run failed. Child exit codes are not CLI exit codes. Advance on terminal runs returns their existing result without executing anything; failed returns 5. Guide, version, validate, status, and logs never launch child processes.
+CLI exit codes: 0 successful operation (including ready/waiting/completed); 2 usage; 3 document validation; 4 state/lock/completion conflict; 5 advance ending failed/interrupted or resolve --fail; 6 I/O/corrupt storage/internal error; 130 user interruption. Read-only status succeeds with 0 even when the run failed. Child exit codes are not CLI exit codes. Advance on terminal runs returns their existing result without executing anything; failed returns 5. Guide, creation-guide, version, validate, status, and logs never launch child processes.
 
 ## 8. Persistence and concurrency
 

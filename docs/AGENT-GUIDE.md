@@ -3,6 +3,9 @@
 Use the operating loop below for selected context, completion receipts and
 explicit recovery. `merstride guide` ships a concise offline description of the
 protocol. See [current status](STATUS.md) for verification scope and limitations.
+To create a workflow, use `merstride creation-guide --json`: its embedded text
+contains authoring rules, a complete example and a validation checklist, without
+requiring this repository or running any process from the example.
 
 ## Operating loop
 

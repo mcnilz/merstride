@@ -40,11 +40,19 @@ internal static class Program
         var positional = parsed.Positional;
         var retry = options.ContainsKey("--retry");
         if (command == "version") return Output(new(Version: Version));
+        if (command == "creation-guide")
+        {
+            using var content = typeof(Program).Assembly.GetManifestResourceStream("Merstride.CreationGuide.txt")
+                ?? throw new InvalidOperationException("Missing embedded creation guide.");
+            using var reader = new StreamReader(content);
+            return Output(new(Guide: reader.ReadToEnd()));
+        }
         var root = options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : Path.GetFullPath(".merstride/runs");
         var store = new RunStore(root);
         if (command == "guide") return Output(new(Guide: """
             Merstride protocol 1. P01-P06 support process chains, agent handoffs, end nodes, and explicit recovery.
-            Implemented commands: validate, start, advance, status, complete, resolve, logs, guide, version.
+            Implemented commands: validate, start, advance, status, complete, resolve, logs, guide, creation-guide, version.
+            Use creation-guide for self-contained workflow authoring instructions and a complete example.
             Validate a marked Markdown workflow; use --workflow <id> when a document contains multiple pairs.
             Executable fences use column-one backticks; YAML metadata and a marked Mermaid diagram pair by ID.
             Documents are limited to 1 MiB, graphs to 100 nodes and 250 edges. Use start <file> --workspace <absolute-path>

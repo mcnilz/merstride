@@ -69,7 +69,7 @@ workspace; review their commands before running them.
 
 | Task | Reference |
 | --- | --- |
-| Write and validate workflows | [Authoring guide](docs/AUTHORING.md) and [examples](examples/) |
+| Write and validate workflows | `merstride creation-guide --json`, [authoring guide](docs/AUTHORING.md) and [examples](examples/) |
 | Discover commands and exit codes | `merstride --help`, `merstride <command> --help`, [CLI usage](docs/CLI.md) |
 | Integrate an existing agent or resume a run | `merstride guide --json`, [agent guide](docs/AGENT-GUIDE.md) |
 | Handle interrupted execution | [Recovery example](examples/recovery.md) |

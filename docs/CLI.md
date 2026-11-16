@@ -1,8 +1,8 @@
 # Command-line usage
 
 Use `merstride --help` or `merstride <command> -h` for English syntax, required
-arguments/options, defaults, examples and exit codes. All nine commands have help.
-Help and version read no workflow or state and launch no child process. They work
+arguments/options, defaults, examples and exit codes. All ten commands have help.
+Help, version and creation-guide read no workflow or state and launch no child process. They work
 without a workspace, even with an unusable state path.
 
 Help normally prints text. With `--json`, it returns one protocol-version-1 JSON
@@ -10,6 +10,14 @@ object with the help in `guide`, null `error` and exit 0. `version` and the root
 `--version` option always return the existing JSON version response. Operational
 commands and errors continue to return one JSON object with or without `--json`;
 there are no banners, ANSI sequences, progress messages or stack traces on stdout.
+
+Use `merstride creation-guide --json` for self-contained authoring instructions,
+a complete Markdown workflow and a validation checklist. The text is embedded in
+the native executable and needs no checkout, external content file or network.
+The argument-free command returns a nonempty `guide` in protocol JSON even without
+`--json`, with null status/error and exit 0; it creates no state and ignores an
+unusable state path. Use `merstride guide --json` for the operational agent loop.
+Both commands support `-h` / `--help` and the global options described below.
 
 `--json` and `--state-dir <absolute-path>` are global: put them before or after the
 command, before any `--` delimiter. Command-specific options stay with their

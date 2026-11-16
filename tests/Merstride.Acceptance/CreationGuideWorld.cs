@@ -9,13 +9,16 @@ internal sealed class CreationGuideWorld : IDisposable
 {
     private readonly CliWorld world = new();
     private byte[] binaryHash = [];
+    private bool json;
 
     internal void Execute(string step)
     {
         const string invocation = "I invoke the creation guide with arguments ";
         if (step.StartsWith(invocation, StringComparison.Ordinal))
         {
-            world.Raw(step[invocation.Length..].Replace("{binary}", world.Binary, StringComparison.Ordinal).Split(';'));
+            var args = step[invocation.Length..].Replace("{binary}", world.Binary, StringComparison.Ordinal).Split(';');
+            json = args.TakeWhile(a => a != "--").Any(a => a is "--json" or "--json=false");
+            world.Raw(args);
             return;
         }
         switch (step)
@@ -52,18 +55,35 @@ internal sealed class CreationGuideWorld : IDisposable
                     Assert.That(help, Does.Contain(term));
                 Assert.That(world.Stderr, Is.Empty);
                 break;
-            case "a protocol usage error includes a help hint":
+            case "a usage error includes a help hint":
                 Assert.That(world.ExitCode, Is.EqualTo(2));
-                var error = Protocol().GetProperty("error");
-                Assert.That(error.GetProperty("code").GetString(), Is.EqualTo("USAGE"));
-                Assert.That(error.GetProperty("message").GetString(), Does.Contain("--help"));
+                if (json)
+                {
+                    var error = Protocol().GetProperty("error");
+                    Assert.That(error.GetProperty("code").GetString(), Is.EqualTo("USAGE"));
+                    Assert.That(error.GetProperty("message").GetString(), Does.Contain("--help"));
+                }
+                else
+                {
+                    Assert.That(world.Stdout, Is.Empty);
+                    Assert.That(world.Stderr, Does.Contain("Error USAGE").And.Contain("--help"));
+                }
                 break;
-            case "one successful protocol response contains self-contained authoring instructions":
+            case "one successful response contains self-contained authoring instructions":
                 Assert.That(world.ExitCode, Is.Zero);
-                var response = Protocol();
-                Assert.That(response.GetProperty("status").ValueKind, Is.EqualTo(JsonValueKind.Null));
-                Assert.That(response.GetProperty("error").ValueKind, Is.EqualTo(JsonValueKind.Null));
-                var guide = response.GetProperty("guide").GetString()!;
+                var guide = world.Stdout;
+                if (json)
+                {
+                    var response = Protocol();
+                    Assert.That(response.GetProperty("status").ValueKind, Is.EqualTo(JsonValueKind.Null));
+                    Assert.That(response.GetProperty("error").ValueKind, Is.EqualTo(JsonValueKind.Null));
+                    guide = response.GetProperty("guide").GetString()!;
+                }
+                else
+                {
+                    Assert.That(guide, Does.StartWith("Merstride workflow creation guide"));
+                    Assert.That(world.Stderr, Is.Empty);
+                }
                 Assert.That(guide, Is.Not.Empty);
                 foreach (var term in new[] { "yaml merstride", "flowchart TD", "--workflow", "schemaVersion", "maxTransitions", "timeoutSeconds", "spawn_error", "output_limit", "signal", "default", "nodes.", "validate", "guide" })
                     Assert.That(guide, Does.Contain(term));

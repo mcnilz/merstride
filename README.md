@@ -12,6 +12,11 @@ selected context and allowed outcomes. It performs the task with its own tools
 and returns an outcome. Merstride has no built-in LLM integration, API key or
 model session; you or your agent explicitly call `advance` to continue.
 
+Commands print readable English text by default, including redirected output.
+For example, `merstride creation-guide` prints a copyable authoring guide directly.
+Agents and scripts must pass `--json` explicitly for the unchanged protocol-1
+response; existing callers that relied on default JSON must add that flag.
+
 ## Quick start
 
 Build from source using the [development prerequisites](CONTRIBUTING.md#prerequisites)

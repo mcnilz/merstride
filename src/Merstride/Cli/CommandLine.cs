@@ -21,8 +21,8 @@ internal sealed class CommandLine
         root.Directives.Clear();
         root.SetAction(_ => 0);
         var help = new HelpOption("--help", "-h") { Recursive = true };
-        var version = new Option<bool>("--version") { Description = "Return tool and protocol version as JSON.", Arity = ArgumentArity.Zero };
-        var json = new Option<bool>("--json") { Description = "One protocol JSON object on stdout (also the operational default). Help returns a guide string.", Arity = ArgumentArity.Zero, Recursive = true };
+        var version = new Option<bool>("--version") { Description = "Return tool and protocol version; add --json for protocol output.", Arity = ArgumentArity.Zero };
+        var json = new Option<bool>("--json") { Description = "One protocol JSON object on stdout; default: readable English text. Help returns a guide string.", Arity = ArgumentArity.Zero, Recursive = true };
         var state = new Option<string>("--state-dir") { Description = "Absolute state root; default: .merstride/runs beneath the current directory.", Arity = ArgumentArity.ExactlyOne, Recursive = true };
         root.Options.Add(help); root.Options.Add(version); root.Options.Add(json); root.Options.Add(state);
         Add(root, "validate", "Validate a marked workflow without executing or creating state.", "file", "merstride validate 'workflow with spaces.md'", ("--workflow", "Select a workflow ID; default: the single pair."));
@@ -32,9 +32,9 @@ internal sealed class CommandLine
         Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "run-id", "merstride complete r_example --request q_example --outcome approved --json", ("--request", "Required request ID from waiting_agent."), ("--outcome", "Preferred: allowed outcome from waiting_agent; mutually exclusive with --result-file."), ("--data", "Optional inline JSON object with --outcome; default: {}."), ("--result-file", "Alternative UTF-8 JSON completion file: outcome and optional object data."));
         Add(root, "resolve", "Resolve interrupted work explicitly; inspect external effects first. Exactly one of --retry or --fail is required.", "run-id", "merstride resolve r_example --retry --json", ("--retry", "Return ready without execution; a later advance attempts again."), ("--fail", "Finish failed without execution; exits 5."));
         Add(root, "logs", "Read an activation's UTF-8 log tail without executing or changing state.", "run-id", "merstride logs r_example --activation a_example --stream stdout --tail-bytes 1024", ("--activation", "Required activation ID."), ("--stream", "Required: stdout or stderr."), ("--tail-bytes", "Tail length in bytes, 1..65536; default: 65536."));
-        Add(root, "guide", "Read the offline existing-agent protocol guide as JSON.", null, "merstride guide --json");
-        Add(root, "creation-guide", "Read the offline workflow authoring instructions and a complete example as JSON.", null, "merstride creation-guide --json");
-        Add(root, "version", "Read tool and protocol version as JSON.", null, "merstride version --json");
+        Add(root, "guide", "Read the offline existing-agent protocol guide; add --json for a guide string.", null, "merstride guide");
+        Add(root, "creation-guide", "Read the offline workflow authoring instructions and a complete example.", null, "merstride creation-guide");
+        Add(root, "version", "Read tool and protocol version; add --json for protocol output.", null, "merstride version");
         var configuration = new ParserConfiguration { ResponseFileTokenReplacer = null, EnablePosixBundling = false };
         var parsed = root.Parse(args, configuration);
         var selected = parsed.CommandResult.Command;
@@ -134,7 +134,9 @@ internal sealed class CommandLine
         Option values beginning with - use '=': --input-file=--result.json.
         Response files, directives and abbreviated/bundled options are disabled.
         Help is English text; with --json it is one protocol object with a guide string.
-        Operational output and version always use protocol JSON. No workflow/state is read for help/version.
+        All commands use readable English text by default, including redirected output.
+        Scripts/agents must pass --json; text errors/warnings use stderr, text results use stdout.
+        No workflow/state is read for help/version/guides.
         """;
 
     private const string ExitCodes = "Exit codes: 0 success/inspection/help/version; 2 usage; 3 document validation; 4 state/lock/completion conflict; 5 failed/interrupted execution or resolve --fail; 6 I/O/corrupt storage/internal; 130 user interruption.";

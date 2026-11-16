@@ -4,7 +4,7 @@ Feature: Author workflows using the installed offline creation guide
   Scenario Outline: Retrieve the creation guide from a standalone native binary
     Given only the published native executable in an isolated directory
     When I invoke the creation guide with arguments <arguments>
-    Then one successful protocol response contains self-contained authoring instructions
+    Then one successful response contains self-contained authoring instructions
     And the isolated directory contains only the unchanged executable
 
     Examples:
@@ -20,7 +20,7 @@ Feature: Author workflows using the installed offline creation guide
   Scenario: Validate the complete example extracted from the actual embedded guide
     Given only the published native executable in an isolated directory
     When I invoke the creation guide with arguments creation-guide;--json
-    Then one successful protocol response contains self-contained authoring instructions
+    Then one successful response contains self-contained authoring instructions
     When I extract and validate the complete example from that response
     Then the example validates without running its process or creating state
 
@@ -44,7 +44,7 @@ Feature: Author workflows using the installed offline creation guide
   Scenario Outline: Reject invalid authoring-guide arguments without effects
     Given only the published native executable in an isolated directory
     When I invoke the creation guide with arguments <arguments>
-    Then a protocol usage error includes a help hint
+    Then a usage error includes a help hint
     And the isolated directory contains only the unchanged executable
 
     Examples:

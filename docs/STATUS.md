@@ -12,6 +12,9 @@ workflow and validation checklist without external content files.
 Process authoring also supports shebang-selected inline scripts over UTF-8 stdin
 and disjoint Windows/macOS/Linux execution variants, with no script-file transport
 or interpreter provisioning. Direct command/args execution remains available.
+All commands now default to readable English text, including redirected output;
+agents/scripts explicitly request the unchanged protocol-1 JSON with `--json`.
+Text errors/warnings use stderr; results, offline guides and bounded log tails use stdout.
 
 The product uses .NET 11 Native AOT and stable C# 15. Windows x64 and Linux x64
 have local development-host verification. **Release qualification is incomplete
@@ -20,10 +23,21 @@ from a local build.
 
 ## Verification
 
-On 2026-11-16, P12 passed the complete Windows x64 local gate: 434 tests /
-265 local feature cases, no failures or skips, native publish with no
+On 2026-11-16, P13 passed the complete Windows x64 local gate: 467 tests /
+298 local feature cases, no failures or skips, native publish with no
 warnings/errors, architecture/dependency/distribution/privacy checks and Mermaid
-compatibility including the new inline example. The 45 dedicated P12 cases cover
+compatibility including the new inline example. The 33 dedicated P13 cases verify
+redirected text defaults, explicit JSON, offline discovery, located diagnostics,
+errors/exit codes, waiting-agent context, completion idempotency, terminal state,
+bounded log tails/raw-byte preservation and retry/fail recovery. A native red/green
+case also proves supplementary Unicode format characters are visibly escaped
+without changing JSON prompt content. Standards/spec reviews have no remaining
+findings. The release inventory now lists 298 local / 283 runtime identities with
+all 14 current feature hashes; stale-hash publication fixtures failed before the
+inventory update and pass in the final gate. This is controlled local testing,
+not actual publication.
+
+The 45 dedicated P12 cases remain passing and cover
 frozen scripts/variants, multiline Unicode, literal shebang arguments, absolute/
 relative/PATH resolution, env forms, malformed definitions, overlap rejection,
 missing interpreter/platform coverage, streams, exit routing, bounded input/output,
@@ -33,13 +47,13 @@ Actual installed interpreters were PowerShell 7.6.10, Python 3.12.10 and Git Bas
 example validated and executed on Windows. Both standards/spec reviews had no
 outstanding findings. P11's 28 offline-guide cases and all prior local regressions
 remain in the passing suite.
-The executable measured 5.957 MiB; warm `status` P95 was 19.180 ms, within the
+The executable measured 5.972 MiB; warm `status` P95 was 24.814 ms, within the
 25 MiB / 150 ms gates.
 
 The most recent prior full Linux x64 (WSL2) verification passed 361 tests / 192
 local feature cases with no failures/skips and met size/status gates. Linux was
-not rerun for P11 or P12; neither slice has new Linux execution evidence. No macOS
-environment was available and no macOS execution is claimed. P12's macOS/Linux
+not rerun for P11, P12 or P13; these slices have no new Linux execution evidence.
+No macOS environment was available and no macOS execution is claimed. P12's macOS/Linux
 variant names and shared code do not qualify those targets. These are
 development-host results, not clean-target or cold-boot qualification.
 
@@ -53,7 +67,7 @@ audits and timing records stay under ignored `artifacts/`. See
 - Implement the independent native clean-target suite driver. The NUnit host
   requires .NET and cannot serve as the no-runtime driver.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 250 runtime cases, plus the separately
+  candidate commit and binary hashes: all 283 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.

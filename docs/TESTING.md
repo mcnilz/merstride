@@ -136,7 +136,7 @@ streams and exit routing; unread large stdin checks feeder cancellation. Platfor
 conditions are tested on the actual host, without simulating another OS.
 
 The creation-guide suite executes 11-creation-guide.feature using only a copied
-published executable in each isolated directory. It checks default/JSON protocol,
+published executable in each isolated directory. It checks default text/explicit JSON,
 unusable state paths, root/command help, aliases, global placement and invalid
 arguments, with unchanged executable bytes and external no-child accounting.
 It extracts the actual embedded example's YAML and Mermaid fences and validates
@@ -192,3 +192,12 @@ observation: unrelated syscalls no longer incur a ptrace stop when supported.
 This reduces interference with real process timeouts; neither product deadlines
 nor externally asserted process counts are relaxed. The tracer can fall back to
 ordinary observation if kernel filtering is unavailable; required tests still run.
+
+P13 executes `13-readable-output.feature` through redirected native CLI streams,
+proving the readable default without terminal detection. Discovery, validation,
+usage/state errors, waiting-agent prompts/outcomes, selected truncated/unavailable
+context, completion receipts, terminal inspection, log tails/control bytes and
+explicit recovery are checked alongside JSON compatibility. Raw log/state bytes
+are compared before/after read-only output. The existing CliWorld/benchmark,
+release and clean-Linux JSON consumers request --json explicitly; mixed-mode P11
+checks retain their scenario tags. No renderer-internal test seam is introduced.

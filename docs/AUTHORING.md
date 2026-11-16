@@ -1,8 +1,9 @@
 # Workflow authoring guide
 
-Run `merstride creation-guide --json` for compact offline authoring instructions,
+Run `merstride creation-guide` for directly readable offline authoring instructions,
 a complete copyable workflow and a validation checklist embedded in the binary.
 It executes nothing and needs no workflow, workspace, state or external files.
+Use `--json` explicitly when consuming its `guide` string from an agent or script.
 Use [the complete example](../examples/review.md) as another starting point. The [contract](CONTRACT.md) is normative.
 
 ## Where behavior belongs

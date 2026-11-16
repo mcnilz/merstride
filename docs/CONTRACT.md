@@ -178,7 +178,39 @@ Required fields: `kind: end`, `result: success|failure`. No other fields. `advan
 
 ## 7. CLI
 
+Without `--json`, every command returns readable English text, including redirected
+stdout. This is an intentional default-output change: existing scripts must add
+`--json` explicitly. Terminal detection never selects a different format. Results,
+help, guides, run summaries and selected log text go to stdout. Errors and validation
+diagnostics (including warnings) go to stderr, with severity, stable code, message
+and 1-based line/column when available. A failed run's read-only status still exits
+0: its summary goes to stdout and its failure reason to stderr. Usage errors retain
+a help hint. Stack traces are hidden. No colors, ANSI formatting or progress output.
+
+Text run summaries include run ID, state root, status, cursor, transition count
+and the latest activation summary when present. Waiting-agent results additionally
+show request ID, node, literal prompt, allowed outcomes and selected context with
+availability, source activation and truncation/observed-byte information. Completion
+includes the accepted request/outcome/activation receipt summary. Do not expand
+full activation history or full logs in ordinary status. Unavailable context and
+available empty/null values remain distinct.
+
+Text preserves Unicode, LF newlines and tabs; CRLF becomes LF. Other control and
+Unicode format characters (including ESC and lone CR) become visible `\uXXXX`
+escapes, so embedded terminal controls cannot execute. This applies to prompts,
+context, diagnostics, paths and logs, without changing stored raw data. `logs`
+includes run, activation, stream and a tail-truncation flag, followed by the selected
+decoded content, with the same 65536-byte maximum input tail as JSON. Escaping can
+expand each UTF-16 code unit to at most six visible characters. These presentation
+rules never change effects, exit codes, state transitions, persistence or limits.
+
 Every command supports `--json`: exactly one JSON object on stdout; incidental diagnostics on stderr. No banner, ANSI, or progress text on stdout. Responses contain `protocolVersion`, optional `runId`, `status`, and `error` (null or object with stable `code`, `message`, optional `location`). Source locations use 1-based lines and columns. Pre-run responses have null status. Default errors omit stack traces. Additive response fields are allowed; incompatible changes increment protocolVersion.
+Explicit JSON retains the existing version-1 response fields, values and escaping;
+errors/validation diagnostics are inside that object, without duplicate text on
+stderr. The presentation-default change does not increment protocolVersion.
+An explicit `--json` or malformed `--json=...` before `--` also selects JSON for
+argument errors, including duplicate options. A `--json` token after the delimiter
+is literal and does not select output format.
 
 | Command | Behavior |
 | --- | --- |
@@ -204,9 +236,10 @@ unknown/missing/extra/conflicting arguments return usage exit 2 and a help hint.
 Response files, directives, abbreviations and option bundles are disabled.
 See [CLI usage](CLI.md) for examples and exact discovery semantics.
 
-`creation-guide` follows `guide` output conventions: with or without `--json`,
-return one protocol-version-1 object with a nonempty `guide`, null status/error and
-exit 0. It needs no workspace, workflow, run or external content file; even an
+`creation-guide` follows `guide` output conventions: directly readable instructions
+with real line breaks and a copyable example by default; with `--json`, one
+protocol-version-1 object with a nonempty `guide`, null status/error and exit 0.
+Both guides need no workspace, workflow, run or external content file; even an
 unusable state path is ignored. Retrieval creates/mutates no state, launches no
 child process, makes no network request and never executes its example.
 

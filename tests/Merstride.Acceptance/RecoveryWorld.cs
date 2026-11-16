@@ -300,6 +300,20 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
 
     private void AssertEffects(int count) => Assert.That(File.ReadAllLines(PathFor("effects.txt")), Has.Length.EqualTo(count));
 
+    internal void AssertReadableResolution(bool retry)
+    {
+        StartBarrier(); Crash();
+        cli.Raw("resolve", runId, retry ? "--retry" : "--fail", "--state-dir", cli.State);
+        Assert.That(cli.ExitCode, Is.EqualTo(retry ? 0 : 5));
+        Assert.That(cli.Stdout, Does.Contain("Run: " + runId).And.Contain("Status: " + (retry ? "ready" : "failed")));
+        AssertEffects(1);
+        cli.Call("status", runId);
+        Assert.That(cli.ExitCode, Is.Zero);
+        Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(retry ? "ready" : "failed"));
+        Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("outcome").GetString(), Is.EqualTo("interrupted"));
+        AssertEffects(1);
+    }
+
     internal void RejectCorruptSnapshot(string defect)
     {
         CreateWorkflow();

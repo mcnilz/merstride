@@ -73,7 +73,7 @@ Feature: Discover and invoke the CLI predictably
 
     Examples:
       | arguments |
-      | --version |
+      | --version;--json |
       | --json;--state-dir;not-absolute;--version |
       | version;--state-dir;not-absolute;--json |
 

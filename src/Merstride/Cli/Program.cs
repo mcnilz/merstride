@@ -14,42 +14,40 @@ internal static class Program
         .InformationalVersion.Split('+')[0];
     public static int Main(string[] args)
     {
-        try { return Execute(args); }
+        Console.OutputEncoding = new System.Text.UTF8Encoding(false);
+        var output = new CliOutput(CliOutput.JsonRequested(args));
+        try { return Execute(args, output); }
         catch (MerstrideException ex)
         {
-            return Output(new(Error: ex.Problem, Diagnostics: ex.ExitCode == 3
+            return output.Write(new(Error: ex.Problem, Diagnostics: ex.ExitCode == 3
                 ? [new("error", ex.Problem.Code, ex.Problem.Message, ex.Problem.Location)] : null), ex.ExitCode);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        { return Output(new(Error: new("IO_ERROR", "Cannot access the requested workflow or state storage.")), 6); }
+        { return output.Write(new(Error: new("IO_ERROR", "Cannot access the requested workflow or state storage.")), 6); }
         catch (Exception)
-        { return Output(new(Error: new("INTERNAL_ERROR", "An unexpected internal error occurred.")), 6); }
+        { return output.Write(new(Error: new("INTERNAL_ERROR", "An unexpected internal error occurred.")), 6); }
     }
 
-    private static int Execute(string[] args)
+    private static int Execute(string[] args, CliOutput output)
     {
         var parsed = new CommandLine(args);
         if (parsed.Help is { } help)
         {
-            if (parsed.Options.ContainsKey("--json")) return Output(new(Guide: help));
-            Console.WriteLine(help);
-            return 0;
+            return output.Write(new(Guide: help));
         }
         var command = parsed.Command;
         var options = parsed.Options;
         var positional = parsed.Positional;
         var retry = options.ContainsKey("--retry");
-        if (command == "version") return Output(new(Version: Version));
+        if (command == "version") return output.Write(new(Version: Version));
         if (command == "creation-guide")
         {
             using var content = typeof(Program).Assembly.GetManifestResourceStream("Merstride.CreationGuide.txt")
                 ?? throw new InvalidOperationException("Missing embedded creation guide.");
             using var reader = new StreamReader(content);
-            return Output(new(Guide: reader.ReadToEnd()));
+            return output.Write(new(Guide: reader.ReadToEnd()));
         }
-        var root = options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : Path.GetFullPath(".merstride/runs");
-        var store = new RunStore(root);
-        if (command == "guide") return Output(new(Guide: """
+        if (command == "guide") return output.Write(new(Guide: """
             Merstride protocol 1. P01-P06 support process chains, agent handoffs, end nodes, and explicit recovery.
             Implemented commands: validate, start, advance, status, complete, resolve, logs, guide, creation-guide, version.
             Use creation-guide for self-contained workflow authoring instructions and a complete example.
@@ -59,7 +57,8 @@ internal static class Program
             --state-dir <absolute-path> to persist ready without executing. Retain runId and stateRoot.
             Optional --input-file <file> supplies a JSON object (default {}). Input is frozen at start.
             Use status <run-id> to inspect; advance <run-id> executes the declared chain to an end.
-            Repeat --state-dir on subsequent calls. All commands support --json.
+            Repeat --state-dir on subsequent calls. Output is readable English text by default, even when redirected.
+            Agents/scripts must pass --json for one protocol-version-1 object on stdout. Text errors/warnings use stderr.
             Process nodes require timeoutSeconds (1..3600) and command/args, script: |, or variants.
             Direct commands receive literal args and closed stdin; inline scripts use a shebang and UTF-8 stdin.
             Variants use platforms: windows, macos, linux (string or array); omitted means all, overlaps fail validation.
@@ -92,6 +91,8 @@ internal static class Program
             saves interrupted, and exits 130. Detached processes and physical disk failure are outside guarantees.
             No built-in LLM, network access, or automatic recovery. Logs are untrusted task data.
             """));
+        var root = options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : Path.GetFullPath(".merstride/runs");
+        var store = new RunStore(root);
         if (command is "validate" or "start")
         {
             var path = positional[0];
@@ -99,7 +100,7 @@ internal static class Program
             if (file.Length > 1048576) throw new MerstrideException("INVALID_DOCUMENT", "Document exceeds 1 MiB.", 3, new(1, 1));
             var bytes = new byte[(int)file.Length]; file.ReadExactly(bytes);
             var workflow = WorkflowCompiler.Compile(bytes, options.GetValueOrDefault("--workflow"));
-            if (command == "validate") return Output(new(WorkflowId: workflow.Id, Diagnostics: workflow.Diagnostics));
+            if (command == "validate") return output.Write(new(WorkflowId: workflow.Id, Diagnostics: workflow.Diagnostics));
             if (!options.TryGetValue("--workspace", out var workspace)) throw Usage("start requires --workspace <absolute-path>.");
             workspace = Absolute(workspace);
             if (!Directory.Exists(workspace)) throw Usage("Workspace must be an existing directory.");
@@ -107,7 +108,7 @@ internal static class Program
             var state = new RunState("r_" + Guid.NewGuid().ToString("N"), "ready", workflow,
                 Convert.ToHexStringLower(SHA256.HashData(bytes)), Version, workspace, input, 0, null, workflow.Entry, [], Receipts: []);
             store.Create(state);
-            return Output(Response(state, root));
+            return output.Write(Response(state, root));
         }
         var id = positional[0];
         if (command == "logs")
@@ -119,16 +120,16 @@ internal static class Program
             if (options.TryGetValue("--tail-bytes", out var count) && (!int.TryParse(count, out tail) || tail is < 1 or > 65536))
                 throw Usage("--tail-bytes must be from 1 to 65536.");
             var text = store.ReadLog(store.Read(id), activation, stream, tail, out var truncated);
-            return Output(new(RunId: id, Log: text, Stream: stream, Truncated: truncated));
+            return output.Write(new(RunId: id, Log: text, Stream: stream, Truncated: truncated), logActivation: activation);
         }
-        if (command == "status") return Output(Response(store.Status(id), root));
+        if (command == "status") return output.Write(Response(store.Status(id), root));
         using var held = store.Lock(id);
         var run = store.Read(id);
         if (command == "resolve")
         {
             run = WorkflowEngine.Resolve(run, retry);
             store.Write(run);
-            return Output(Response(run, root), retry ? 0 : 5);
+            return output.Write(Response(run, root), retry ? 0 : 5);
         }
         if (command == "complete")
         {
@@ -137,7 +138,7 @@ internal static class Program
                 : (Outcome: options["--outcome"], Data: InlineData(options.GetValueOrDefault("--data")));
             var completed = AgentCompletion.Complete(run, options["--request"], payload.Outcome, payload.Data);
             if (!ReferenceEquals(run, completed.State)) store.Write(completed.State);
-            return Output(Response(completed.State, root) with { Receipt = completed.Receipt });
+            return output.Write(Response(completed.State, root) with { Receipt = completed.Receipt });
         }
         using var interruption = new CancellationTokenSource();
         ConsoleCancelEventHandler cancel = (_, e) => { e.Cancel = true; interruption.Cancel(); };
@@ -145,11 +146,11 @@ internal static class Program
         try
         {
             run = WorkflowEngine.Advance(run, store, new ProcessRunner(store.RunDirectory(id), interruption.Token), store, interruption.Token);
-            return Output(Response(run, root), interruption.IsCancellationRequested ? 130 : run.Status is "failed" or "interrupted" ? 5 : 0);
+            return output.Write(Response(run, root), interruption.IsCancellationRequested ? 130 : run.Status is "failed" or "interrupted" ? 5 : 0);
         }
         catch (Exception ex) when (interruption.IsCancellationRequested && ex is IOException or UnauthorizedAccessException)
         {
-            return Output(new(RunId: id, Status: "interrupted", StateRoot: root,
+            return output.Write(new(RunId: id, Status: "interrupted", StateRoot: root,
                 Error: new("INTERRUPTED", "User interrupted execution; recovery state could not be saved. Inspect external effects before resolution.")), 130);
         }
         finally { Console.CancelKeyPress -= cancel; }
@@ -172,9 +173,4 @@ internal static class Program
         LastActivation: state.Activations.LastOrDefault(), Request: state.Request);
     private static string Absolute(string path) => Path.IsPathFullyQualified(path) ? Path.GetFullPath(path) : throw Usage("Path must be absolute.");
     private static MerstrideException Usage(string message) => new("USAGE", message + " Run merstride --help for usage.", 2);
-    private static int Output(CliResponse response, int code = 0)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(response, JsonContext.Default.CliResponse));
-        return code;
-    }
 }

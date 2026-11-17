@@ -44,6 +44,22 @@ internal sealed class CliOutput(bool json)
             Line("Tail truncated", response.Truncated == true ? "yes" : "no");
             Console.WriteLine(); Console.WriteLine(Readable(log));
         }
+        else if (response.Runs is { } runs)
+        {
+            Line("State root", response.StateRoot);
+            if (runs.Length == 0) Console.WriteLine("No retained runs match. Start a workflow to create one.");
+            foreach (var run in runs)
+                Console.WriteLine(Readable($"{run.RunId}  {run.Status}{(run.Current ? "  (current)" : "")}  {run.WorkflowId ?? "unknown workflow"}  {run.SourcePath ?? "source unavailable (legacy or unreadable state)"}"));
+            Console.WriteLine("Select: merstride use <run-id>. Remove one run deliberately: merstride discard <run-id>.");
+        }
+        else if (response.Discarded == true)
+        {
+            Line("Discarded run", response.RunId);
+            Line("Workflow", response.WorkflowId);
+            Line("Source", response.SourcePath);
+            Line("State root", response.StateRoot);
+            Console.WriteLine("Removed this run's state, logs and receipts. Other runs were retained.");
+        }
         else if (response.RunId is not null) WriteRun(response);
         else if (response.WorkflowId is { } workflow) Line("Valid workflow", workflow);
 
@@ -57,7 +73,8 @@ internal sealed class CliOutput(bool json)
     private static void WriteRun(CliResponse response)
     {
         Line("Run", response.RunId);
-        if (response.RunId is { Length: 34 } runId) Line("Run prefix", runId[..10]);
+        Line("Workflow", response.WorkflowId);
+        Line("Source", response.SourcePath);
         Line("Status", response.Status);
         Line("Cursor", response.Cursor);
         Line("State root", response.StateRoot);
@@ -70,7 +87,6 @@ internal sealed class CliOutput(bool json)
         if (response.Request is not { } request) return;
         Console.WriteLine();
         Line("Request", request.Id);
-        if (request.Id.Length == 34) Line("Request prefix", request.Id[..10]);
         Line("Node", request.NodeId);
         Console.WriteLine("Prompt:"); Console.WriteLine(Readable(request.Prompt));
         Line("Allowed outcomes", string.Join(", ", request.AllowedOutcomes));

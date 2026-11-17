@@ -1,7 +1,7 @@
 # Command-line usage
 
 Use `merstride --help` or `merstride <command> -h` for English syntax, required
-arguments/options, defaults, examples and exit codes. All ten commands have help.
+arguments/options, defaults, examples and exit codes. Every command has help.
 Help, version and creation-guide read no workflow or state and launch no child process. They work
 without a workspace, even with an unusable state path.
 
@@ -70,8 +70,8 @@ Merstride 0.1.0 (protocol 1)
 merstride validate examples/single-end.md
 Valid workflow: smoke
 
-merstride status bad-id
-Error INVALID_RUN_ID: Invalid run identifier.
+merstride status r_bad-id
+Error INVALID_RUN_ID: Use a run ID from runs: r_ followed by 6..32 lowercase hexadecimal digits.
 ```
 
 The last example writes its error to stderr and exits 4; the first two write
@@ -84,9 +84,9 @@ must precede it. For an option value beginning with `-`, use the equals form:
 abbreviations and single-character option bundles are disabled. An at-sign path
 is an ordinary filename. Nothing implicitly launches a shell.
 
-Bash walkthrough with `merstride` on PATH, no earlier project runs, and a reviewed workflow named
+Bash walkthrough with `merstride` on PATH, earlier runs allowed, and a reviewed workflow named
 `workflow with spaces.md`. Read standard output directly
-and paste the short request prefix when prompted. No JSON utility is required.
+and paste the request ID when prompted. No JSON utility is required.
 
 ```bash
 set -euo pipefail
@@ -94,8 +94,8 @@ merstride --help
 merstride start --help
 merstride validate -- 'workflow with spaces.md'
 merstride start 'workflow with spaces.md'
-merstride advance
-merstride status
+merstride advance 'workflow with spaces.md'
+merstride status 'workflow with spaces.md'
 ```
 
 Only if the output shows `Status: waiting_agent`, read `Request`, `Prompt`,
@@ -104,9 +104,9 @@ agent. After completing the review, if `approved` is the appropriate allowed
 outcome, submit it (using the same Bash session):
 
 ```bash
-read -r -p 'Paste the short Request prefix shown above: ' request
-merstride complete --request "$request" --outcome approved
-merstride advance
+read -r -p 'Paste the Request ID shown above: ' request
+merstride complete 'workflow with spaces.md' --request "$request" --outcome approved
+merstride advance 'workflow with spaces.md'
 ```
 
 Use `resolve --fail` instead of `--retry` to finish failed without executing.
@@ -137,29 +137,85 @@ occurs. Outside a project, start in the intended root first: before first use,
 a markerless child is an independent cwd. If an older run lives elsewhere, use
 its original absolute `--state-dir`. Summaries show the actual absolute root.
 
-Run commands accept full IDs, or unique `r_` prefixes of 8..32 lowercase hex
-digits. An omitted run selects exactly one full-ID run directory, including
-terminal, corrupt and incomplete runs. Multiple matches yield AMBIGUOUS_RUN,
-missing convenience matches RUN_NOT_FOUND, invalid syntax INVALID_RUN_ID (exit 4).
-Full-ID calls retain their direct I/O errors (exit 6 for missing state). No newest
-run or active-only fallback exists. Text prints a suggested eight-hex `Run prefix`
-beside the full ID. Lengthen a prefix if it collides, or use the full ID.
+Start creates and selects a distinct ready run, retaining every earlier run.
+Ordinary `status`, `advance`, `resolve` and `logs` use that selection, including
+terminal runs. `status <file>` and `advance <file> [--workflow <id>]` continue the remembered run for
+that source/workflow without changing project selection or rereading its source.
+Multiple workflows in one file require --workflow. Paths are normalized absolute
+paths with native case comparison; identical IDs in different files remain
+distinct. Changed/missing files keep their frozen run; renamed paths are new
+associations. `runs` lists source paths, workflow IDs, statuses and current or
+discarding markers. `use <run-id>` switches selection deliberately. Explicit run
+IDs override context; --file is an alternative spelling and cannot be combined with a positional selector. Ordinary explicit calls
+do not change selection. Subdirectories and callers sharing a state root share
+its context; explicit roots have independent context.
 
-`--request` is always mandatory; full IDs and `q_` prefixes of 8..32 lowercase
-hex digits work. Selection under the run lock includes both current requests and
-all historical receipts. Ambiguity yields AMBIGUOUS_REQUEST, invalid/missing
-matches INVALID_REQUEST (exit 4). The short `Request prefix` never means
-"whatever is waiting now": a historical retry returns only its original receipt,
-or COMPLETION_CONFLICT for different data, and leaves newer requests waiting.
-Automation can retain full IDs and explicit roots with unchanged protocol-1 JSON.
+The optional positional selector is shared by status, advance, complete, resolve
+and logs. It is interpreted lexically: bare r_ tokens without path separators
+select run IDs; every other token is a source path, including extensionless names.
+The source need not still exist. Malformed r_ IDs return INVALID_RUN_ID (4);
+unknown source associations STALE_CONTEXT (4); invalid path syntax USAGE (2).
+Use ./r_000001 or --file r_000001 for a filename that looks like an ID. Quote
+paths containing spaces; -- permits dash-prefixed literal paths. No filesystem
+existence guessing changes the meaning. --workflow requires a source path.
+Extra positionals or positional/--file combinations return USAGE (2).
+runs [file] [--workflow <id>] filters inventory by source; --file is equivalent.
+use/discard require explicit run IDs and never infer a workflow deletion target.
 
-Missing state is not created by inspection or selection; use start for first
-use. A missing snapshot, corrupt selected run, file/directory conflict or
-unusable root returns exit 6 and never falls back to another root. A `.merstride`
-file is a storage conflict; preserve it and choose an explicit root. Failed start
-preparation can leave an empty marker/ignore rule, but never resets saved runs.
-Concurrent starts can encounter exclusive ignore-file access; retry explicitly.
-Discovery/help/guides remain independent of workflow and storage.
+New run/request IDs have eight characters: `r_`/`q_` plus six lowercase hex
+digits. IDs are predictable, opaque, not secrets, and permanently reserved within
+their root even after discard. At 0xffffff allocations they lengthen (maximum
+sixteen hex digits). Collisions skip occupied reservations/directories without
+overwriting state; crashes can consume IDs. Activation/log IDs remain full.
+Legacy full IDs and unique prefixes with six or more hex digits remain accepted.
+Exact stored IDs win over prefix convenience even if longer IDs begin with them.
+Ambiguous prefixes return AMBIGUOUS_RUN/AMBIGUOUS_REQUEST (4); use exact IDs in
+automation. Protocol-1 JSON keeps opaque IDs and gains additive source/inventory/
+discard fields. Do not assume UUID length. Existing saved snapshots/full IDs work;
+older binaries cannot read newly adopted P19 roots. No automatic relocation.
+
+--request remains mandatory. Without a run/file selector, completion finds that
+request across current requests and historical receipts in this root, regardless
+of changing current-run context. Unreadable states fail the search closed; an
+explicit run ID bounds it. Historical retries return only their original receipt
+or COMPLETION_CONFLICT; they never complete newer requests. There is no latest
+request selector. Keep exact run/request IDs and explicit roots in automation.
+
+Missing/stale/cleared selection returns STALE_CONTEXT (4), corrupt context
+CORRUPT_CONTEXT (6), with recovery guidance and no fallback. `runs` remains usable
+for inventory; `use` can repair corrupt selection. Only legacy roots with no
+context file retain exactly-one-run fallback. Multiple runs without context return
+AMBIGUOUS_RUN (4); missing convenience matches RUN_NOT_FOUND (4). Missing selected
+snapshots/corrupt state/storage conflicts fail closed. Direct full-ID missing
+snapshots retain I/O exit 6. A .merstride file is an I/O conflict; preserve it and
+choose an explicit root. Inspection never creates state or launches children.
+
+Start/use/discard serialize context changes; competing writers return
+CONTEXT_LOCKED (4). Request allocation may return IDENTITY_LOCKED (4); retry
+explicitly. A command resolves one run before locking it; later context changes
+cannot redirect it. Atomic context-save failure can leave a new ready run visible
+in runs; recover with use. For simultaneous workflows, prefer --file or exact IDs.
+
+### Deliberate cleanup
+
+Start retains earlier runs. Inspect `runs [file]`, then permanently
+remove one chosen ID with `discard <run-id>`. This removes only that run's state,
+logs and receipts. It does not kill processes or undo workspace effects; inspect
+uncertain/interrupted work first. Ready/waiting/interrupted/terminal runs can be
+discarded deliberately. Held locks return RUN_LOCKED (4). Corrupt/unreadable state,
+unexpected files/directories and symlinks/reparse points are refused (6).
+
+Discard marks the validated run under its lock, preventing new execution with
+DISCARD_PENDING (4), then stages it under this root's .trash. Successful removal
+clears only its context references, retaining other runs and identity reservations.
+Missing current selection requires start/use; no survivor is silently selected.
+Failure is reported (6), with no success claim; runs shows staged discards and
+the same explicit discard ID retries them. Unknown content remains for
+investigation. Authoritative state is removed last; a minimal ownership record
+allows retries even if only the empty stage or record remains. It contains no
+logs or completion data and is removed after cleanup. Inventory warns about
+corrupt context/staging conflicts while retaining readable live rows.
+See [the decision](adr/0015-p19.md).
 
 Prefer `complete <run-id> --request <id> --outcome <allowed-outcome>` for agent
 feedback. Add `--data <json-object>` only when result data is needed. Pass the JSON

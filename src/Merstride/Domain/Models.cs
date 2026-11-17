@@ -27,4 +27,4 @@ public sealed class MerstrideException(string code, string message, int exitCode
 public sealed record RunState(
     string RunId, string Status, Workflow Definition, string SourceHash, string ToolVersion,
     string Workspace, string Input, int TransitionCount, Problem? Error, string Cursor, Activation[] Activations,
-    AgentRequest? Request = null, CompletionReceipt[]? Receipts = null);
+    AgentRequest? Request = null, CompletionReceipt[]? Receipts = null, string? SourcePath = null);

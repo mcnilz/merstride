@@ -156,10 +156,10 @@ Referenced nodes and selector/kind combinations MUST be valid. Each selector rea
 
 Return selector, availability, value, source activation ID where applicable, and truncation information where applicable. Keep context separate from instructions. Prompts are literal strings with no template evaluation. Prompt plus serialized context MUST fit 32 KiB UTF-8; otherwise fail with `CONTEXT_LIMIT`. Input and agent data are JSON objects, each at most 16 KiB and depth 16. The root object has depth 1; each nested object or array adds 1. No per-node custom JSON Schema in the MVP. Size checks use compact UTF-8 JSON serialization of parsed values.
 
-Every entry into an agent node creates a fresh random request ID and `waiting_agent`. `status` and repeated `advance` return the same request without changing progress. Allowed outcomes are returned in ordinal sort order.
+Every entry into an agent node creates a fresh reserved request ID and `waiting_agent`. `status` and repeated `advance` return the same request without changing progress. Allowed outcomes are returned in ordinal sort order.
 
 ```json
-{"protocolVersion":1,"runId":"r_01","status":"waiting_agent","request":{"id":"q_01","nodeId":"review","prompt":"Review changes.","allowedOutcomes":["approved","recheck"],"context":[]},"error":null}
+{"protocolVersion":1,"runId":"r_000001","status":"waiting_agent","request":{"id":"q_000002","nodeId":"review","prompt":"Review changes.","allowedOutcomes":["approved","recheck"],"context":[]},"error":null}
 ```
 
 `complete <run-id> --request <id> --outcome <outcome>` is the preferred
@@ -240,12 +240,15 @@ is literal and does not select output format.
 | --- | --- |
 | `validate <file> [--workflow <id>]` | Validate only; return diagnostics with severity and source locations. |
 | `start <file> [--workspace <absolute-path>] [--workflow <id>] [--input-file <file>]` | Validate, snapshot, persist a new run, return ready; execute nothing. Workspace defaults to the project boundary below. |
-| `advance [run-id]` | Execute synchronously until waiting_agent, terminal state, or error. |
-| `status [run-id]` | Read compact state, cursor, and current request. |
-| `complete [run-id] --request <id> --outcome <outcome> [--data <json-object>]` | Preferred file-free completion; save receipt and transition only. Alternative: `--result-file <file>`. |
-| `resolve [run-id] --retry` | Only interrupted: explicitly allow a new attempt, return ready. |
-| `resolve [run-id] --fail` | Only interrupted: finish failed without actions. |
-| `logs [run-id] --activation <id> --stream stdout\|stderr [--tail-bytes <n>]` | Read selected log; default/maximum 65536 bytes; n is positive. |
+| `advance [run-id|file] [--file <path> [--workflow <id>]]` | Execute synchronously until waiting_agent, terminal state, or error. |
+| `status [run-id|file] [--file <path> [--workflow <id>]]` | Read compact state, cursor, and current request. |
+| `complete [run-id|file] --request <id> --outcome <outcome> [--data <json-object>]` | Preferred file-free completion; save receipt and transition only. Alternative: `--result-file <file>`. |
+| `resolve [run-id|file] --retry` | Only interrupted: explicitly allow a new attempt, return ready. |
+| `resolve [run-id|file] --fail` | Only interrupted: finish failed without actions. |
+| `logs [run-id|file] --activation <id> --stream stdout\|stderr [--tail-bytes <n>]` | Read selected log; default/maximum 65536 bytes; n is positive. |
+| `runs [file] [--workflow <id>]` | List retained runs with source, workflow, status and current/discarding markers; unreadable entries stay visible. |
+| `use <run-id>` | Deliberately select this run as current and for its source/workflow association. |
+| `discard <run-id>` | Permanently remove only this explicitly selected run, its logs and receipts. No implicit selector or bulk deletion. |
 | `guide` | Offline compact agent usage guide, no run required; JSON has a guide string. |
 | `creation-guide` | Offline self-contained workflow authoring instructions and a complete copyable example; embedded in the native binary. No arguments or workflow/state access; JSON has a guide string. |
 | `version` | Tool and protocol version. |
@@ -279,38 +282,111 @@ report the resolved absolute state root. Help/version/guides ignore storage.
 Existing cwd-relative `.merstride` directories remain boundaries and are found
 from their subdirectories. Outside a project, first start establishes a cwd
 boundary. A markerless child before first use is independent. Never relocate,
-merge, overwrite or delete existing state. Start appends `/runs/` if absent to
+merge, overwrite or silently delete existing state. Explicit discard is defined
+below. Start appends `/runs/` if absent to
 `.merstride/.gitignore`, retaining existing bytes and parent ignore/config files;
 only start creates it. Explicit roots receive no automatic ignore changes.
 A failed preparation may leave an empty directory/ignore rule. Mutable run state
 is durable, regardless of directory naming. A `.merstride` file is an actionable
 I/O conflict, never permission to fall back to a parent or different root.
 
-For run commands the positional run ID is optional only when exactly one full-ID
-run directory exists in the selected root, including terminal/corrupt/incomplete
-runs. Otherwise provide a full ID or a unique `r_` prefix of 8..32 lowercase hex
-digits. Missing convenience matches return RUN_NOT_FOUND (exit 4); full-ID
-missing-state calls retain their direct I/O error (exit 6). Multiple matches return
-AMBIGUOUS_RUN (4); invalid syntax returns INVALID_RUN_ID (4). Never silently select
-the newest/active run. Full IDs retain stable identity and direct targeting.
-Selected missing snapshots, corruption and unusable/conflicting storage fail
-with exit 6 without mutation or fallback. No selection creates storage.
+Start always creates a distinct ready run, retains earlier runs and selects the
+new run both as this state root's current run and for its source-file/workflow
+association. The association is the lexically normalized absolute source path
+(native case comparison) plus selected workflow ID. Different files remain
+distinct even with identical content/IDs. Symlink aliases are distinct. Content
+changes do not change the association or frozen definition; renames create new
+associations. Continuing never requires rereading an existing source file.
 
-`--request` remains required and accepts a full ID or unique `q_` prefix of 8..32
-lowercase hex digits. Under the writer lock, match both current request and all
-historical receipts, deduplicated. Invalid/unmatched selections return
-INVALID_REQUEST (4); collisions return AMBIGUOUS_REQUEST (4). Historical prefixes
-target only the original receipt and cannot complete a newer request. Existing
-completion equivalence/conflict rules apply. Text suggests eight-hex run/request
-prefixes alongside full IDs; lengthen ambiguous prefixes. Protocol-1 JSON keeps
-full IDs and existing fields. Opaque IDs/selectors cannot become arbitrary paths.
-No delete/publish command in the MVP. See [ADR 0014](adr/0014-p18.md).
+For status/advance/complete/resolve/logs, select an optional positional run ID or
+workflow source path; --file <path> is an alternative to the positional selector.
+Add --workflow <id> for a source path, never an explicit run ID. Exactly one
+positional selector OR --file is allowed. Without either use the remembered
+current run, including terminal runs. The file selector uses that association's
+remembered run; multiple workflows at a path require --workflow. Relative selector
+paths use the caller's cwd. Only roots with no context file retain exactly-one-run
+fallback, including corrupt/incomplete/terminal directories. Multiple matches
+return AMBIGUOUS_RUN (4); no match RUN_NOT_FOUND (4). Stale/cleared context returns
+STALE_CONTEXT (4), never a survivor/newest-run fallback; corrupt context returns
+CORRUPT_CONTEXT (6). Explicit run selectors bypass context. `use` deliberately
+switches both selections; ordinary explicit commands do not switch them.
+
+Bare positional tokens beginning r_ (without a path separator) are reserved for
+run IDs; malformed such IDs return INVALID_RUN_ID (4). All other tokens are
+workflow source paths, including extensionless names. No existence probe decides
+the interpretation. Quote paths with spaces; absolute/relative paths use native
+rules. Use ./r_000001 or --file r_000001 for an ID-shaped filename. The -- delimiter
+makes remaining tokens literal paths/IDs; output flags after it are literal too.
+Invalid path syntax returns USAGE (2); a missing source association STALE_CONTEXT
+(4). This deliberately reinterprets formerly invalid non-r_ run tokens as source
+paths. runs [file] filters inventory; use/discard always require explicit run IDs.
+
+Context is shared within the resolved state root, including subdirectories and
+explicit-root callers. Start/use/discard serialize under an OS context lock;
+competing changes fail with CONTEXT_LOCKED (4). Selection is resolved once per
+invocation before taking the per-run writer lock. Subsequent changes cannot
+retarget that operation. Context writes are atomic; a failed start context write
+can leave its new ready run for explicit recovery through runs/use. There is no
+global newest-state heuristic. Concurrent workflows can use --file or exact IDs.
+
+New canonical run/request IDs are eight characters: r_/q_ plus six lowercase hex
+digits. They are predictable opaque identities, not secrets. A durable allocator
+reserves each ID under an exclusive identity lock before use. Competing allocations
+fail IDENTITY_LOCKED (4); collisions skip occupied reservations/live directories
+without overwriting anything. Reservations survive discard and crashes may burn
+IDs. After 0xffffff allocations IDs lengthen, up to sixteen hex digits; exhaustion
+fails without reuse. Activation IDs remain full random IDs for logs/history.
+
+Existing 34-character run/request IDs and state snapshots remain supported. Run
+and request selectors accept six through 32 lowercase hex digits after their type
+prefix. Exact stored IDs take precedence over prefix matches, including matching
+longer IDs. A prefix with multiple matches returns AMBIGUOUS_RUN/AMBIGUOUS_REQUEST
+(4); invalid run syntax returns INVALID_RUN_ID (4). Missing full-ID direct targets
+retain exit-6 I/O errors. Prefix convenience is not a stable automation identity:
+retain exact IDs. JSON remains protocol 1 with opaque canonical IDs and additive
+sourcePath/inventory/discard fields. Clients must not require UUID-length IDs.
+Legacy snapshots have no source association and work through explicit IDs/use.
+Older binaries do not understand the new short-ID directories/additive state
+fields; use this version for roots adopting P19. No automatic relocation/rewrite.
+
+--request is always required; context-only completion is forbidden. Without a
+run/file selector, complete finds that exact request across current requests and
+historical receipts in this root, independent of current-run changes. Exact
+identities win over prefix matches across runs too. Multiple matching runs return
+AMBIGUOUS_REQUEST (4); missing/invalid requests return INVALID_REQUEST (4).
+Unreadable snapshots fail the search closed; an explicit run/file selector bounds
+it. Under the selected writer lock, request resolution is repeated against current
+requests AND historical receipts. Historical retries return their original receipt
+or COMPLETION_CONFLICT and cannot complete a newer loop request. No selector
+can become an arbitrary filesystem path.
+
+Start never deletes earlier state. `runs` lists retained workflows/statuses,
+including unreadable and staged-discard entries. `discard <run-id>` deliberately
+removes one selected run, including logs and receipts, regardless of terminal
+status. A held writer lock returns RUN_LOCKED (4). Corrupt/unreadable snapshots,
+unknown files/directories, or symlinks/reparse points in the deletion path are
+refused (6); directory naming alone never authorizes deletion. Discard never kills
+processes or reverses external effects; inspect interrupted effects first.
+
+Discard validates owned contents under context/run locks, saves a durable discard
+marker, then releases the run lock. New run writers check the marker under their
+lock and fail DISCARD_PENDING (4). This permits Windows directory moves without
+open child handles. Move into this root's .trash atomically, clear only this run's
+context references, and remove validated files without following links; delete
+authoritative state last. Retain a minimal run/source/workflow ownership record
+until the empty stage directory is removed, allowing same-ID retries after the
+snapshot or directory has already gone. It contains no logs or receipts.
+Other workflows, identity reservations and arbitrary
+contents remain untouched. Failure returns DISCARD_INCOMPLETE/IO_ERROR (6), never
+success; staged runs are visible in runs and retryable by the same explicit ID.
+A cleared selection requires start/use, never automatic selection of a survivor.
+See [ADR 0015](adr/0015-p19.md) for compatibility and failure ordering.
 
 CLI exit codes: 0 successful operation (including ready/waiting/completed); 2 usage; 3 document validation; 4 state/lock/completion conflict; 5 advance ending failed/interrupted or resolve --fail; 6 I/O/corrupt storage/internal error; 130 user interruption. Read-only status succeeds with 0 even when the run failed. Child exit codes are not CLI exit codes. Advance on terminal runs returns their existing result without executing anything; failed returns 5. Guide, creation-guide, version, validate, status, and logs never launch child processes.
 
 ## 8. Persistence and concurrency
 
-States: ready, executing, waiting_agent, completed, failed, interrupted. Completed and failed are terminal. Each start creates a new run ID. Persist definition snapshot, SHA-256 source hash, tool version, workspace, input, cursor, transition count, activation summaries, latest node results, and completion receipts. Activations have IDs, timestamps, outcomes, and log paths. Do not expose the whole history in default status.
+States: ready, executing, waiting_agent, completed, failed, interrupted. Completed and failed are terminal. Each start creates a new run ID. Persist definition snapshot, absolute source path, SHA-256 source hash, tool version, workspace, input, cursor, transition count, activation summaries, latest node results, and completion receipts. Activations have IDs, timestamps, outcomes, and log paths. Do not expose the whole history in default status.
 
 One OS-backed per-run exclusive writer lock covers each mutating operation and the entire advance chain. A concurrent writer fails immediately with `RUN_LOCKED`. Different runs remain independent. Lock-file existence is not proof of a held lock. Readers observe complete atomic snapshots; status can report executing while a live writer holds the lock.
 

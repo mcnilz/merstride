@@ -115,9 +115,11 @@ internal sealed class InlineScriptWorld : IDisposable
                         .Select(p => Path.GetRelativePath(cli.DirectoryPath, p)))));
                 break;
             case "an inline PowerShell workflow with Unicode output and workspace effects":
+                // Explicitly decode UTF-8 stdin instead of inheriting Windows' console
+                // input code page. This is an author-selected interpreter invocation.
                 Write("""
                     script: |
-                      #!pwsh -NoLogo -NoProfile -NonInteractive -Command -
+                      #!pwsh -NoLogo -NoProfile -NonInteractive -Command '[Console]::InputEncoding = [Text.UTF8Encoding]::new($false); Invoke-Expression ([Console]::In.ReadToEnd())'
                       [Console]::WriteLine('Grüße 🌍')
                       [Console]::Error.WriteLine('separate error')
                       [IO.File]::WriteAllText((Join-Path (Get-Location) 'cwd.txt'), (Get-Location).Path)
@@ -135,7 +137,8 @@ internal sealed class InlineScriptWorld : IDisposable
                 Assert.That(Log("stderr"), Is.EqualTo("separate error" + Environment.NewLine));
                 Assert.That(File.ReadAllText(Path.Combine(cli.DirectoryPath, "cwd.txt")), Is.EqualTo(cli.DirectoryPath));
                 var files = AcceptanceJson.DeserializeStrings(File.ReadAllText(Path.Combine(cli.DirectoryPath, "files.json")))!;
-                Assert.That(files, Is.EquivalentTo(new[] { "workflow.md", "cwd.txt", "state.json", "writer.lock" }
+                Assert.That(files, Is.EquivalentTo(new[] { "workflow.md", "cwd.txt", "state.json", "writer.lock",
+                    "context.json", "context.lock", "allocator.lock", "sequence", runId }
                     .Concat(Directory.GetFiles(Path.Combine(cli.State, runId, "logs")).Select(Path.GetFileName))));
                 cli.ExpectedChildren = 0;
                 cli.Call("advance", runId);

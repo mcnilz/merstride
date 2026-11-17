@@ -17,6 +17,11 @@ public interface IProcessRunner
     Activation Execute(Node node, string workspace, Activation activation);
 }
 
+public interface IRequestIds
+{
+    string Request();
+}
+
 public static class WorkflowEngine
 {
     public static RunState Interrupted(RunState run) => run with
@@ -36,7 +41,7 @@ public static class WorkflowEngine
     }
 
     public static RunState Advance(RunState run, IRunPersistence store, IProcessRunner processes, IContextLogs logs,
-        CancellationToken interruption = default)
+        IRequestIds ids, CancellationToken interruption = default)
     {
         if (run.Status == "executing")
         {
@@ -71,7 +76,7 @@ public static class WorkflowEngine
                 var activation = new Activation("a_" + Guid.NewGuid().ToString("N"), node.Id, DateTimeOffset.UtcNow,
                     null, null, null, "", "");
                 run = run with { Status = "waiting_agent", Activations = [.. run.Activations, activation],
-                    Request = new("q_" + Guid.NewGuid().ToString("N"), activation.Id, node.Id, node.Agent.Prompt,
+                    Request = new(ids.Request(), activation.Id, node.Id, node.Agent.Prompt,
                         run.Definition.Edges.Where(e => e.Source == node.Id).Select(e => e.Outcome!).Order(StringComparer.Ordinal).ToArray(), context) };
             }
             else

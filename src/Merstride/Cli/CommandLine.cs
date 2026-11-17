@@ -27,11 +27,19 @@ internal sealed class CommandLine
         root.Options.Add(help); root.Options.Add(version); root.Options.Add(json); root.Options.Add(state);
         Add(root, "validate", "Validate a marked workflow without executing or creating state.", "file", "merstride validate 'workflow with spaces.md'", ("--workflow", "Select a workflow ID; default: the single pair."));
         Add(root, "start", "Snapshot a workflow and persist a ready run without executing it.", "file", "merstride start 'workflow with spaces.md'", ("--workspace", "Existing absolute workspace override; default: project boundary or cwd."), ("--workflow", "Select a workflow ID; default: the single pair."), ("--input-file", "JSON object input file; default: {}."));
-        Add(root, "advance", "Execute sequentially until waiting_agent, terminal state, or error. Text activity is live on stderr; --json suppresses it.", "run-id", "merstride advance r_example --state-dir 'C:\\work tree\\state'");
-        Add(root, "status", "Inspect a run without executing; failed-run inspection exits 0.", "run-id", "merstride status r_example --state-dir 'C:\\work tree\\state' --json");
-        Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "run-id", "merstride complete r_example --request q_example --outcome approved --json", ("--request", "Required request ID from waiting_agent."), ("--outcome", "Preferred: allowed outcome from waiting_agent; mutually exclusive with --result-file."), ("--data", "Optional inline JSON object with --outcome; default: {}."), ("--result-file", "Alternative UTF-8 JSON completion file: outcome and optional object data."));
-        Add(root, "resolve", "Resolve interrupted work explicitly; inspect external effects first. Exactly one of --retry or --fail is required.", "run-id", "merstride resolve r_example --retry --json", ("--retry", "Return ready without execution; a later advance attempts again."), ("--fail", "Finish failed without execution; exits 5."));
-        Add(root, "logs", "Read an activation's UTF-8 log tail without executing or changing state.", "run-id", "merstride logs r_example --activation a_example --stream stdout --tail-bytes 1024", ("--activation", "Required activation ID."), ("--stream", "Required: stdout or stderr."), ("--tail-bytes", "Tail length in bytes, 1..65536; default: 65536."));
+        Add(root, "advance", "Execute sequentially until waiting_agent, terminal state, or error. Text activity is live on stderr; --json suppresses it.", "selection", "merstride advance workflow.md");
+        Add(root, "status", "Inspect a run without executing; failed-run inspection exits 0.", "selection", "merstride status 'workflow with spaces.md'");
+        Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "selection", "merstride complete workflow.md --request q_000002 --outcome approved", ("--request", "Required request ID from waiting_agent."), ("--outcome", "Preferred: allowed outcome from waiting_agent; mutually exclusive with --result-file."), ("--data", "Optional inline JSON object with --outcome; default: {}."), ("--result-file", "Alternative UTF-8 JSON completion file: outcome and optional object data."));
+        Add(root, "resolve", "Resolve interrupted work explicitly; inspect external effects first. Exactly one of --retry or --fail is required.", "selection", "merstride resolve workflow.md --retry", ("--retry", "Return ready without execution; a later advance attempts again."), ("--fail", "Finish failed without execution; exits 5."));
+        Add(root, "logs", "Read an activation's UTF-8 log tail without executing or changing state.", "selection", "merstride logs workflow.md --activation a_example --stream stdout --tail-bytes 1024", ("--activation", "Required activation ID."), ("--stream", "Required: stdout or stderr."), ("--tail-bytes", "Tail length in bytes, 1..65536; default: 65536."));
+        Add(root, "runs", "List retained runs with their source workflow and status.", "workflow-file", "merstride runs workflow.md");
+        Add(root, "use", "Select a retained run as current, including its workflow context.", "run-id", "merstride use r_000001");
+        Add(root, "discard", "Permanently remove one explicitly selected run, its logs and receipts. Never kills a process or reverses external effects. Locked/corrupt/unknown content is refused.", "run-id", "merstride discard r_000001");
+        foreach (var scoped in root.Subcommands.Where(c => c.Name is "advance" or "status" or "complete" or "resolve" or "logs" or "runs"))
+        {
+            scoped.Options.Add(new Option<string>("--file") { Description = "Select the remembered run for this workflow source path; does not reread the file.", Arity = ArgumentArity.ExactlyOne });
+            scoped.Options.Add(new Option<string>("--workflow") { Description = "Workflow ID within the selected source path; required when that file has multiple selected workflows.", Arity = ArgumentArity.ExactlyOne });
+        }
         Add(root, "guide", "Read the offline existing-agent protocol guide; add --json for a guide string.", null, "merstride guide");
         Add(root, "creation-guide", "Read the offline workflow authoring instructions and a complete example.", null, "merstride creation-guide");
         Add(root, "version", "Read tool and protocol version; add --json for protocol output.", null, "merstride version");
@@ -77,7 +85,14 @@ internal sealed class CommandLine
             if (Command == "resolve" && Options.ContainsKey("--retry") == Options.ContainsKey("--fail"))
                 throw Usage("resolve requires exactly one of --retry or --fail.");
         }
-        Positional = Help is not null ? [] : selected.Arguments.Select(a => parsed.GetValue((Argument<string>)a)!).ToArray();
+        var supplied = selected.Arguments.Select(a => parsed.GetResult(a)?.Tokens.Count > 0
+            ? parsed.GetValue((Argument<string>)a)! : null!).ToArray();
+        Positional = Help is not null ? [] : supplied;
+        if (Options.ContainsKey("--file") && supplied.FirstOrDefault() is not null ||
+            Command is not ("start" or "validate") && Options.ContainsKey("--workflow") && !Options.ContainsKey("--file") &&
+                (Help is null || supplied.FirstOrDefault() is not null) &&
+                (supplied.FirstOrDefault() is not { } selection || Command != "runs" && ResourceSelection.IsRunToken(selection)))
+            throw Usage("Choose one positional workflow path or run ID, or --file <path>. --workflow requires a workflow path for run commands.");
     }
 
     private static void ValidateHelp(RootCommand root, HelpOption help, string[] args, ParserConfiguration configuration)
@@ -108,7 +123,7 @@ internal sealed class CommandLine
     private static void Add(RootCommand root, string name, string description, string? argument, string example, params (string Name, string Description)[] options)
     {
         var command = new Command(name, description + "\nExample: " + example);
-        if (argument is not null) command.Arguments.Add(new Argument<string>(argument) { Description = argument == "file" ? "Required Markdown workflow path; quote paths containing spaces." : "Full run ID or unique r_ prefix (at least 8 hex digits); omit only for exactly one stored run.", Arity = argument == "file" ? ArgumentArity.ExactlyOne : ArgumentArity.ZeroOrOne });
+        if (argument is not null) command.Arguments.Add(new Argument<string>(argument) { Description = argument == "file" ? "Required Markdown workflow path; quote paths containing spaces." : argument == "workflow-file" ? "Optional workflow source path filter; quote paths containing spaces." : argument == "selection" ? "Workflow path or run ID; omit for selected context. Bare r_ tokens are IDs; ./ or --file selects ID-shaped filenames." : "Required explicit run ID or unique r_ prefix (6+ hex digits).", Arity = argument == "file" || name is "use" or "discard" ? ArgumentArity.ExactlyOne : ArgumentArity.ZeroOrOne });
         foreach (var (optionName, optionDescription) in options)
         {
             Option option = optionName is "--retry" or "--fail"
@@ -128,21 +143,43 @@ internal sealed class CommandLine
           merstride complete r_example --request q_example --outcome approved --data '{"summary":"Review completed"}' --json
           merstride resolve r_example --retry --json
         PowerShell: use & 'C:\tools\merstride.exe' followed by the arguments above.
-        Simple project path (exactly one stored run):
+        Simple project path (start selects its new run, retaining earlier runs):
           merstride start workflow.md
           merstride status
           merstride advance
-          merstride complete --request q_12345678 --outcome approved
+          merstride complete --request q_000002 --outcome approved
           merstride advance
-        Read and perform the waiting request before completing; use its displayed prefix.
-        Omit the run only for exactly one stored run, including completed runs.
-        Otherwise supply a full ID or unique r_ prefix with at least 8 lowercase hex digits.
-        --request is required: full ID or unique q_ prefix with at least 8 hex digits.
-        Prefixes match historical receipts too; retries never target a newer request.
-        Ambiguous prefixes fail; lengthen the prefix or use the full ID.
+        Read and perform the waiting request before completing; use its displayed ID.
+        Run commands use start/use selection, or a positional workflow path:
+          merstride status workflow.md
+          merstride advance 'workflow with spaces.md' --workflow review
+        complete, resolve and logs accept the same workflow-path/run-ID selection.
+        Bare tokens beginning r_ are run IDs, even if malformed (INVALID_RUN_ID).
+        All other tokens are workflow paths, including extensionless names.
+        Use ./r_000001 or --file r_000001 for an ID-shaped filename; no existence guessing.
+        Relative/absolute paths select frozen runs even if the source has disappeared.
+        Explicit selectors override context without switching it. Choose one positional
+        selector or --file, never both. --workflow requires a workflow path.
+        Context is shared within the selected state root, including subdirectories.
+        Missing/stale/corrupt context fails closed; use runs, then use <run-id>.
+        Without a context file only, the legacy exactly-one-run fallback remains.
+        New run/request IDs are 8 characters: r_/q_ plus 6 lowercase hex digits.
+        After 0xffffff allocations IDs lengthen; they are predictable, not secrets.
+        Legacy full IDs and unique prefixes (6+ hex digits) remain accepted.
+        Exact stored IDs win over prefixes, even when longer IDs begin with them.
+        --request is required. Without a run/file selector, it locates its original
+        run across current/historical requests, independent of changing context.
+        Historical retries never target newer requests; automation keeps exact IDs.
+        runs [<file>] [--workflow <id>] lists retained workflows/statuses without executing.
+        --file remains an unambiguous alternative spelling, including for runs.
+        use <run-id> selects deliberately; ordinary explicit calls do not switch.
+        discard <run-id> permanently removes only that run, logs and receipts.
+        Locked, corrupt, linked or unexpected contents are refused. No process is killed.
+        Failed staged discards remain visible in runs; retry the same explicit ID.
+        IDs remain reserved after discard. Start never deletes earlier runs.
         Default workspace/state: nearest ancestor .merstride or .git boundary, else cwd.
         State lives in .merstride/runs; start preserves ignore/config files and adds a local /runs/ ignore rule.
-        There is no configuration file, migration, cleanup or implicit latest selection.
+        There is no configuration file, automatic deletion or implicit latest selection.
         --workspace overrides only workspace; --state-dir overrides only storage.
         For explicit roots, reuse start's absolute stateRoot as --state-dir on later calls.
         Globals --json and --state-dir work before or after the command, before --.

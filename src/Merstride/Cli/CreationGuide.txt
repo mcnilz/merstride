@@ -16,12 +16,26 @@ Simple project execution
   boundary (otherwise cwd), and state to .merstride/runs there. Subdirectories
   share it; nested Git projects stop discovery. No config file or migration.
   Only start adds /runs/ to .merstride/.gitignore, preserving existing content.
-- merstride status and merstride advance may omit the run only for exactly one
-  stored run, including completed runs. Otherwise use full IDs or unique r_ prefixes
-  with at least 8 lowercase hex digits. Summaries show the absolute state root.
-- Read and perform the waiting prompt, then merstride complete --request <q_prefix>
+- start always creates and selects a new nonexecuting run; earlier runs are retained.
+  merstride status and merstride advance use that selection across invocations.
+  Use merstride status <file> or merstride advance <file> for another workflow's
+  remembered run. complete/resolve/logs share that path-or-run-ID selector.
+  Add --workflow <id> for multiple workflows at the same file; quote spaced paths.
+  Bare r_ tokens select run IDs; other tokens are source paths, even extensionless.
+  Select ID-shaped filenames with ./r_000001 or --file r_000001. --file remains
+  an alternative, but cannot be combined with a positional selector. -- ends options.
+  runs lists sources/statuses; use <run-id> switches selection deliberately.
+  Missing/stale context fails without choosing another run. With no context file,
+  legacy exactly-one-run selection remains available, including terminal runs.
+- Read and perform the waiting prompt, then merstride complete --request <request-id>
   --outcome <allowed-outcome> and merstride advance. The request remains required:
-  its full ID or unique q_ prefix (8+ hex digits) targets current/historical IDs.
+  its exact ID targets current/historical requests even after current-run changes.
+  New run/request IDs have eight characters (r_/q_ plus six hex digits); legacy
+  full IDs and unique prefixes still work, with exact identities taking precedence.
+  IDs are opaque, predictable, not secrets, and permanently reserved within the root.
+  Activation/log IDs remain full. Automation retains exact run/request IDs.
+  discard <run-id> deliberately removes only that run, its logs and receipts;
+  locked/corrupt/linked/unexpected contents are refused. Start never deletes runs.
   Ambiguity fails; a receipt retry never completes a newer request.
 - Absolute --workspace and --state-dir override workspace and storage separately.
   Reuse explicit storage roots; existing cwd-relative state is never moved/deleted.

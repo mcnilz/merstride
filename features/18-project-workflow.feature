@@ -10,7 +10,7 @@ Feature: Simple project workflow selection
     When I perform a looping handoff with short run and request prefixes
     Then retries return the original receipt without completing a newer request
 
-  Scenario: Refuse to choose between multiple runs including completed runs
+  Scenario: Refuse to choose between multiple runs without context including completed runs
     Given an isolated project with a workflow
     When I create two runs and attempt an implicit selection
     Then selection fails without changing either run
@@ -45,7 +45,7 @@ Feature: Simple project workflow selection
       | missing-snapshot | IO_ERROR          | 6    |
       | root-file        | IO_ERROR          | 6    |
       | marker-file      | IO_ERROR          | 6    |
-      | run-path         | INVALID_RUN_ID    | 4    |
+      | run-path         | STALE_CONTEXT     | 4    |
       | short-run        | INVALID_RUN_ID    | 4    |
       | stale-prefix     | RUN_NOT_FOUND     | 4    |
       | request-path     | INVALID_REQUEST   | 4    |

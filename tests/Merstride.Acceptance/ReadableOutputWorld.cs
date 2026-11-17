@@ -83,7 +83,7 @@ internal sealed class ReadableOutputWorld : IDisposable
                 Text("start", cli.FilePath, "--workspace", cli.DirectoryPath); break;
             case "start displays the run ID and state root without executing":
                 Assert.That(cli.ExitCode, Is.Zero, cli.Stderr);
-                runId = Regex.Match(cli.Stdout, "Run: (r_[0-9a-f]{32})").Groups[1].Value;
+                runId = Regex.Match(cli.Stdout, "Run: (r_[0-9a-f]{6,32})").Groups[1].Value;
                 Assert.That(runId, Is.Not.Empty);
                 Assert.That(cli.Stdout, Does.Contain("State root: " + cli.State).And.Contain("Status: ready").And.Contain("Cursor: work"));
                 cli.Call("status", runId);
@@ -96,7 +96,7 @@ internal sealed class ReadableOutputWorld : IDisposable
                     .And.Contain("First line\nSecond Grüße\\u001B[31m\\uDB40\\uDC01").And.Contain("Allowed outcomes: approved")
                     .And.Contain("nodes.work.stdoutTail").And.Contain("truncated: yes")
                     .And.Contain("nodes.later.stdoutTail: unavailable").And.Not.Contain("SECRET").And.Not.Contain('\u001b'));
-                requestId = Regex.Match(cli.Stdout, "Request: (q_[0-9a-f]{32})").Groups[1].Value;
+                requestId = Regex.Match(cli.Stdout, "Request: (q_[0-9a-f]{6,32})").Groups[1].Value;
                 Assert.That(requestId, Is.Not.Empty);
                 cli.Call("status", runId); before = cli.Response;
                 Assert.That(before.GetProperty("request").GetProperty("prompt").GetString(), Is.EqualTo("First line\nSecond Grüße\u001b[31m\U000E0001"));
@@ -156,7 +156,7 @@ internal sealed class ReadableOutputWorld : IDisposable
         {
             "usage" => ["unknown"],
             "validation" => ["validate", cli.FilePath],
-            "state" => ["status", "bad-id"],
+            "state" => ["status", "r_bad-id"],
             "io" => ["validate", cli.FilePath],
             "duplicate-json" => ["version", "--json", "--json"],
             "malformed-json" => ["version", "--json=false"],

@@ -267,7 +267,7 @@ inventory is copied into those public notices.
 The separate hosted macOS clean-target Release job runs `scripts/qualify-macos.py` using
 only the downloaded native suite, helper and extracted product. It verifies actual
 absence of standalone .NET installations, exact arm64/source/run/version/hash
-identities, all 323 runtime scenario identities/statuses and current feature hashes.
+identities, all inventoried runtime scenario identities/statuses and current feature hashes.
 It retains raw runtime inventories/traces in job artifacts and emits compact proof
 for release assembly. Reference-machine budgets remain separate mandatory evidence.
 
@@ -290,3 +290,21 @@ loops, invalid/stale selectors, missing/corrupt/conflicting storage, offline
 discovery and preservation of existing ignore/config content. Existing full-ID
 callers retain direct I/O errors; convenience selectors fail closed on ambiguity.
 README Bash blocks are also exercised against the actual native binary.
+
+P19 executes `19-contextual-selection.feature` through the published native CLI.
+It covers multiple files and pairs, repeated starts, source changes/renames,
+subdirectories/explicit roots, context loss/corruption/locks, legacy full IDs,
+exact short IDs alongside longer matching identities, reserved collisions and
+identity length extension. Delayed replies and receipt retries cross current-run
+changes without targeting newer requests. Discard cases cover retained workflow
+isolation, real concurrent process locks, staged retry/failure, process logs,
+corrupt/unknown/read-only contents and links to protected data. Human text and
+protocol JSON paths use the same public boundary. Raw evidence stays in artifacts;
+new platform/release qualification is independently required.
+
+The adjacent P12 filesystem assertion includes the new context/identity
+bookkeeping while still rejecting script-file creation. Its Unicode PowerShell
+fixture explicitly selects UTF-8 stdin decoding in the interpreter arguments;
+plain `-Command -` can otherwise inherit a Windows console input code page.
+This makes the fixture independent of prior console activity without changing
+product transport or rewriting interpreter input/output.

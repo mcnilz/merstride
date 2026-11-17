@@ -61,6 +61,9 @@ internal sealed class ProjectWorld : IDisposable
                 var first = Json("start", cli.FilePath).GetProperty("runId").GetString()!;
                 Json("advance", first);
                 var second = Json("start", cli.FilePath).GetProperty("runId").GetString()!;
+                // P19 remembers successful starts. A legacy root without context still
+                // fails closed instead of inferring a newest run.
+                File.Delete(Path.Combine(Root, "context.json"));
                 original = File.ReadAllText(Path.Combine(Root, first, "state.json"));
                 checkedPath = Path.Combine(Root, second, "state.json");
                 var secondState = File.ReadAllText(checkedPath);
@@ -68,7 +71,7 @@ internal sealed class ProjectWorld : IDisposable
                 {
                     string[] extra = command switch { "resolve" => ["--retry"], "complete" => ["--request", "q_12345678", "--outcome", "approved"], "logs" => ["--activation", "a_12345678", "--stream", "stdout"], _ => [] };
                     cli.Raw([command, .. extra, "--json"]);
-                    Error("AMBIGUOUS_RUN", 4);
+                    Error(command == "complete" ? "INVALID_REQUEST" : "AMBIGUOUS_RUN", 4);
                 }
                 Assert.That(File.ReadAllText(checkedPath), Is.EqualTo(secondState));
                 checkedPath = Path.Combine(Root, first, "state.json"); break;
@@ -183,18 +186,17 @@ internal sealed class ProjectWorld : IDisposable
     {
         AgentWorkflow();
         runId = Json("start", cli.FilePath).GetProperty("runId").GetString()!;
-        var prefix = runId[..10];
-        var first = Json("advance", prefix).GetProperty("request").GetProperty("id").GetString()!;
-        var accepted = Json("complete", prefix, "--request", first[..10], "--outcome", "again");
+        var first = Json("advance", runId).GetProperty("request").GetProperty("id").GetString()!;
+        var accepted = Json("complete", runId, "--request", first, "--outcome", "again");
         Assert.That(accepted.GetProperty("status").GetString(), Is.EqualTo("ready"));
         var second = Json("advance").GetProperty("request").GetProperty("id").GetString()!;
         Assert.That(second, Is.Not.EqualTo(first));
-        var retry = Json("complete", "--request", first[..10], "--outcome", "again");
+        var retry = Json("complete", "--request", first, "--outcome", "again");
         Assert.That(retry.GetProperty("request").GetProperty("id").GetString(), Is.EqualTo(second));
         Assert.That(retry.GetProperty("receipt").GetRawText(), Is.EqualTo(accepted.GetProperty("receipt").GetRawText()));
-        cli.Raw("complete", "--request", first[..10], "--outcome", "approved", "--json"); Error("COMPLETION_CONFLICT", 4);
+        cli.Raw("complete", "--request", first, "--outcome", "approved", "--json"); Error("COMPLETION_CONFLICT", 4);
         Assert.That(Json("status").GetProperty("request").GetProperty("id").GetString(), Is.EqualTo(second));
-        Json("complete", "--request", second[..10], "--outcome", "approved");
+        Json("complete", "--request", second, "--outcome", "approved");
         Assert.That(Json("status").GetProperty("status").GetString(), Is.EqualTo("ready"));
         Assert.That(Json("advance").GetProperty("status").GetString(), Is.EqualTo("completed"));
         verified = true;
@@ -275,7 +277,7 @@ internal sealed class ProjectWorld : IDisposable
             AgentWorkflow(); runId = Json("start", cli.FilePath).GetProperty("runId").GetString()!;
             Json("advance"); checkedPath = Path.Combine(Root, runId, "state.json");
             if (kind == "corrupt-run") File.WriteAllText(checkedPath, "{corrupt");
-            if (kind == "missing-snapshot") { File.Delete(checkedPath); checkedPath = ""; }
+            if (kind == "missing-snapshot") { File.Delete(checkedPath); checkedPath = ""; args = ["status", runId]; }
             if (kind.Contains("request", StringComparison.Ordinal))
                 args = ["complete", "--request", kind switch { "request-path" => "../outside", "short-request" => "q_123", _ => "q_00000000" }, "--outcome", "approved"];
         }

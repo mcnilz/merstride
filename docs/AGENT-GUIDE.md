@@ -33,13 +33,34 @@ and configuration content while adding its local `/runs/` ignore rule. There is
 no configuration source or automatic migration/cleanup. Explicit absolute
 workspace and state overrides remain independent. See [project rules](CLI.md#project-storage-and-selection).
 
-With exactly one stored run, commands can omit the run ID. All runs count,
-including terminal/corrupt runs; ambiguity fails. Otherwise use a full ID or
-unique `r_` prefix (8..32 lowercase hex digits). `--request` remains required,
-accepting a full ID or unique `q_` prefix across current AND historical requests.
-Use the same saved request selector for a retry: a historical receipt cannot
-complete a newer request. Text suggests eight-hex prefixes; lengthen collisions.
-Full-ID/explicit-root JSON automation below remains supported unchanged.
+Start selects its new run for later ID-free commands, even with other stored
+runs. `status <file>` or `advance <file> [--workflow <id>]` continues that workflow's remembered run;
+it does not recompile the file or change project selection. `runs` lists retained
+state; `use <run-id>` switches selection deliberately. Explicit run IDs override
+context. Missing/stale/corrupt context fails closed; only roots with no context
+file retain the legacy exactly-one-run fallback. Terminal runs stay selected.
+
+complete/resolve/logs share the optional positional workflow-path/run-ID selector.
+Bare tokens beginning `r_` are IDs (malformed IDs fail); other tokens are paths,
+including extensionless names. Quote paths containing spaces and use `--` before
+dash-prefixed literal paths. `./r_000001` or `--file r_000001` selects an ID-shaped
+filename. --file is an alternative spelling; never combine it with a positional
+selector. `--workflow` requires a source path. `runs [<file>]` filters inventory;
+use/discard require explicit run IDs.
+
+New run/request IDs are eight characters including `r_`/`q_`; after 0xffffff
+allocations they lengthen. IDs are predictable, not secrets, and never reused in
+this root after discard. Exact IDs take precedence over unique prefix convenience
+(six or more lowercase hex digits). Legacy full IDs remain supported; JSON IDs
+are opaque and callers must not assume a UUID shape. Activation IDs stay full.
+
+`--request` remains required. Without a run/file selector, completion finds that
+exact request across current AND historical requests in this root, independent
+of current selection. Unreadable runs fail the search; an explicit run ID bounds
+it. Retain exact run/request IDs and the state root in integrations below.
+Historical retries cannot complete a newer request. `discard <run-id>` deliberately
+removes only one run and its logs/receipts, refuses held locks/corruption/unknown
+contents, and never undoes external effects. No automatic retention policy runs.
 
 The current request contains `id`, `activationId`, `nodeId`, literal `prompt`, ordinally
 sorted `allowedOutcomes`, and `context`. Each context item contains `selector`,

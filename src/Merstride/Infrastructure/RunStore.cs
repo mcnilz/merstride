@@ -11,18 +11,31 @@ public sealed partial class RunStore(string root) : IRunPersistence, IContextLog
 
     public void Create(RunState state)
     {
+        if (Directory.Exists(RunDirectory(state.RunId)))
+            throw new MerstrideException("ID_COLLISION", "This run identity already exists; it was not overwritten.", 4);
         Directory.CreateDirectory(RunDirectory(state.RunId));
         using var held = Lock(state.RunId);
         Write(state);
     }
 
-    public FileStream Lock(string id)
+    public FileStream Lock(string id, bool forDiscard = false)
     {
-        try { return new FileStream(Path.Combine(RunDirectory(id), "writer.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+        var held = Exclusive(Path.Combine(RunDirectory(id), "writer.lock"), "RUN_LOCKED", "Another writer holds the run lock.");
+        if (!forDiscard && File.Exists(Path.Combine(RunDirectory(id), "discard.pending")))
+        {
+            held.Dispose();
+            throw new MerstrideException("DISCARD_PENDING", "This run is being discarded. Inspect runs and retry its explicit discard; it cannot execute again.", 4);
+        }
+        return held;
+    }
+
+    public static FileStream Exclusive(string path, string code, string message)
+    {
+        try { return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
         // FileShare.None exposes raw EWOULDBLOCK: 11 on Linux, 35 on macOS.
         catch (IOException ex) when ((ex.HResult & 0xffff) is 32 or 33 or 11 ||
             OperatingSystem.IsMacOS() && ex.HResult == 35)
-        { throw new MerstrideException("RUN_LOCKED", "Another writer holds the run lock.", 4); }
+        { throw new MerstrideException(code, message, 4); }
     }
 
     public RunState Read(string id)
@@ -63,6 +76,8 @@ public sealed partial class RunStore(string root) : IRunPersistence, IContextLog
 
     public RunState Status(string id)
     {
+        if (File.Exists(Path.Combine(RunDirectory(id), "discard.pending")))
+            throw new MerstrideException("DISCARD_PENDING", "This run is being discarded. Inspect runs and retry its explicit discard; it cannot execute again.", 4);
         var state = Read(id);
         if (state.Status != "executing") return state;
         FileStream held;
@@ -78,16 +93,20 @@ public sealed partial class RunStore(string root) : IRunPersistence, IContextLog
 
     public void Write(RunState state)
     {
-        var dir = RunDirectory(state.RunId);
+        AtomicWrite(Path.Combine(RunDirectory(state.RunId), "state.json"), stream => JsonSerializer.Serialize(stream, state, JsonContext.Default.RunState));
+    }
+
+    public static void AtomicWrite(string target, Action<FileStream> write)
+    {
+        var dir = Path.GetDirectoryName(target)!;
         var temp = Path.Combine(dir, Guid.NewGuid().ToString("N") + ".tmp");
         try
         {
             using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
-                JsonSerializer.Serialize(stream, state, JsonContext.Default.RunState);
+                write(stream);
                 stream.Flush(true);
             }
-            var target = Path.Combine(dir, "state.json");
             if (File.Exists(target)) File.Replace(temp, target, null);
             else File.Move(temp, target);
         }
@@ -117,7 +136,7 @@ public sealed partial class RunStore(string root) : IRunPersistence, IContextLog
         return Path.Combine(Root, id);
     }
 
-    [GeneratedRegex("^r_[0-9a-f]{32}$", RegexOptions.CultureInvariant)] private static partial Regex RunId();
+    [GeneratedRegex("^r_[0-9a-f]{6,32}$", RegexOptions.CultureInvariant)] private static partial Regex RunId();
     [GeneratedRegex("^a_[0-9a-f]{32}$", RegexOptions.CultureInvariant)] private static partial Regex ActivationId();
     [GeneratedRegex("^[a-z][a-z0-9_]{0,63}$", RegexOptions.CultureInvariant)] private static partial Regex Identifier();
 }

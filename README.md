@@ -68,16 +68,24 @@ set -euo pipefail
 merstride --help
 merstride validate workflow.md
 merstride start workflow.md
-merstride status
-merstride advance
+merstride status workflow.md
+merstride advance workflow.md
 ```
 
-This path assumes a project with no earlier runs. `start` saves a ready run and
-executes nothing; `status` inspects it. `advance` reaches the
-agent task shown above. With exactly one stored run, later commands
-can omit its ID. All stored runs count, including completed ones. If you have
-multiple runs, supply the displayed `Run prefix` after each run command, or use
-the full `Run` ID. Merstride refuses ambiguity instead of choosing the latest run.
+`start` always creates a new ready run, executes nothing, and selects it for
+later commands. Earlier runs, including runs from other files, are retained.
+`status` inspects the selected run; `advance` reaches the agent task above.
+Omit the file on later commands to use the current run selected by start/use.
+Project subdirectories share this selection. To continue a different workflow,
+use `merstride advance other-workflow.md`; it selects that file's remembered
+run without changing the project selection. To switch deliberately, inspect
+`merstride runs` and call `merstride use <run-id>`.
+
+`status workflow.md`, `advance workflow.md` and the other run commands accept
+the same positional file spelling as start. Add `--workflow <id>` for a file with
+multiple workflows and quote paths containing spaces. Bare `r_…` tokens select
+run IDs; for a filename that looks like an ID, use `./r_…` or `--file <path>`.
+Selection uses the frozen run even when the original file has changed or vanished.
 
 The output shows `Status: waiting_agent`, followed by `Request`, `Prompt`,
 `Allowed outcomes` and `Context`. Read them and perform the requested review.
@@ -85,9 +93,9 @@ Once the review is complete
 and `approved` is the appropriate allowed outcome, return it directly:
 
 ```bash
-read -r -p 'Paste the short Request prefix (q_ plus 8 hex digits): ' request
-merstride complete --request "$request" --outcome approved
-merstride advance
+read -r -p 'Paste the Request ID (q_ plus 6 hex digits): ' request
+merstride complete workflow.md --request "$request" --outcome approved
+merstride advance workflow.md
 ```
 
 Optional result data goes in one JSON argument, for example
@@ -95,9 +103,11 @@ Optional result data goes in one JSON argument, for example
 saves a receipt and moves the cursor; the subsequent `advance` executes it.
 This example finishes with `Status: completed`. No output capture, JSON utility,
 completion file, workspace variable or repeated state argument is needed.
-Request prefixes always identify a particular request, including historical
-receipts. Lengthen an ambiguous prefix or use its full ID. Never substitute a
-new request when retrying an earlier completion.
+New run/request IDs have eight characters, including `r_` or `q_`. Completion
+finds the supplied request across this state root even if the current run has
+changed. Historical retries return their original receipt, preserving newer
+requests. Keep the same request ID when retrying. Automation can still retain
+the exact run ID and pass it explicitly.
 
 Storage is `.merstride/runs` at the nearest ancestor containing `.merstride` or
 `.git`, otherwise in the current directory. The default workspace is that same
@@ -105,8 +115,22 @@ project boundary. Subdirectory calls find the same runs; nested Git projects are
 independent. Relative workflow paths still use your current directory. First
 start outside any project establishes a boundary there. Start adds a `/runs/`
 rule to `.merstride/.gitignore` while preserving existing files. Runs are durable:
-there is no automatic cleanup or relocation. No configuration file is required.
+there is no automatic deletion or relocation. No configuration file is required.
 Every run summary displays the resolved `State root`.
+
+To remove an obsolete run, inspect its workflow and status, then discard that
+specific ID. This removes its state, logs and completion receipts. It preserves
+other runs and refuses locked, corrupt, linked or unexpected contents.
+
+```bash
+merstride runs
+read -r -p 'Run ID to remove permanently: ' obsolete_run
+merstride discard "$obsolete_run"
+```
+
+Discarding the selected run clears its selection; start or use another run
+explicitly. IDs are reserved permanently within the state root and never reused
+after discard. Inspect external effects before discarding interrupted work.
 
 Before, ordinary calls required arguments like
 `merstride start workflow.md --workspace "$workspace" --state-dir "$state_root"`

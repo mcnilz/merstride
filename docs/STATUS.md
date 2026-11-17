@@ -18,9 +18,12 @@ Text errors/warnings use stderr; results, offline guides and bounded log tails u
 Text advance now also shows live activity on stderr after successful state writes;
 explicit JSON suppresses activity and keeps the existing protocol response.
 Project commands now discover the nearest `.merstride`/`.git` boundary, default
-workspace/storage there and allow omitting the run for exactly one stored run.
-Stable run/request prefixes reduce copying while retaining full IDs and explicit
-roots. Ambiguous selections fail; historical receipts cannot complete new requests.
+workspace/storage there and remember current and per-source/workflow runs.
+Start always creates and selects a new ready run, retaining earlier state.
+Commands accept positional workflow paths or exact run IDs; ID-shaped filenames
+use ./ or --file. New canonical run/request IDs have eight characters, and durable
+reservations prevent reuse after explicit single-run discard. Legacy IDs/roots
+remain usable. Ambiguous selections fail; historical receipts cannot complete new requests.
 
 The product uses .NET 11 Native AOT and stable C# 15. Windows x64 and Linux x64
 have local development-host verification. **Release qualification is incomplete
@@ -28,6 +31,59 @@ and publication fails closed.** No clean-target or token-saving claim follows
 from a local build.
 
 ## Verification
+
+P19 adds workflow context, canonical short identities and deliberate single-run
+discard. ADR 0015 defines lexical absolute source-file/workflow associations,
+per-root selection, positional workflow paths, explicit overrides, terminal/stale
+context behavior, concurrency and compatibility. A bare r_ token selects an ID;
+other tokens are source paths, without existence guessing. `--file` remains an
+escape/alternative. Source changes or disappearance do not change frozen runs.
+Completion still requires a stable request ID and can find its original run
+independently of changing current context. Exact IDs win over longer prefix
+matches. Predictable r_/q_ plus six hex digits are eight characters total; durable
+reservations prevent reuse, with documented length extension after 0xffffff.
+Activation IDs remain full log/history identities. Legacy full IDs/snapshots work;
+older binaries cannot operate on newly adopted short-ID/additive-state roots.
+
+Retention is explicit. Start never deletes earlier runs. `runs [file]` identifies
+sources/statuses; `use` switches deliberately; `discard <run-id>` removes one
+selected run's state, logs and receipts. OS locks, validated owned paths, a durable
+pending marker, staging and minimal ownership evidence protect cleanup/retries.
+Corrupt, linked or unexpected contents are refused. Final empty-stage/record-only
+retries work without manual directory management; unrelated runs are preserved.
+
+On 2026-11-17 the final reviewed Windows x64 gate passed 602 tests / 381 local
+feature cases and all 366 independent native runtime cases, with no failures or
+skips. Its 43 P19 cases cover repeated starts, multiple files/pairs, frozen paths,
+subdirectories/explicit roots, legacy state, stale/corrupt/locked context, delayed
+completion/loop receipts, exact short/long-prefix collisions, reserved collisions,
+length extension, positional paths/ID-shaped files/delimiters/conflicts, real
+concurrent process locks and discard isolation/failure/recovery. Required unknown
+steps and public build/policy checks remain enforced. Native builds/publishes had
+no compiler/linker warnings or errors. Architecture, dependency, distribution,
+privacy, native budgets and Mermaid checks passed. Native size was 6.240 MiB;
+warm status P95 was 23.850 ms.
+
+The actual README and CLI-guide Bash blocks passed with prior terminal state, positional source
+selection, readable request completion and scoped discard. Both independent review
+axes have no outstanding findings. Review fixes covered corrupt-context recovery,
+inventory under staging conflicts, exact identity precedence, durable final-discard
+recovery and refusal of staged file/link conflicts. An adjacent P12 assertion now
+allows the new bookkeeping while still rejecting script files; its interpreter
+arguments explicitly decode UTF-8 stdin, avoiding inherited Windows code-page
+dependence. Product process transport/encoding and dependency inventories are unchanged.
+
+Earlier development gates exposed the old filesystem expectation, help retrieval
+of absent arguments, evolving feature hashes and overlapping Windows output-file
+locks. All were resolved before the final sequential gate on unchanged source.
+Raw logs remain under ignored artifacts. The coordinator accepted P19 on
+2026-11-17 after independent inspection and authorized its scoped local commit.
+Implementation is complete. No push, publication or new release qualification is claimed.
+Final commit preparation removed only a surplus feature-file EOF blank line and
+refreshed its inventory hash; all 43 P19 native cases passed again. Product
+behavior is unchanged.
+No Linux/macOS, hosted or independent clean-target execution was performed for P19.
+
 
 P18 adds CLI-only project discovery and resource selection without changing the
 engine, saved-state schema or dependencies. ADR 0014 specifies boundaries,
@@ -282,7 +338,7 @@ audits and timing records stay under ignored `artifacts/`. See
 - Re-run the verified macOS native and clean-target gates for each exact release
   candidate; NUnit remains a separate .NET-hosted gate.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 323 runtime cases, plus the separately
+  candidate commit and binary hashes: all 366 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.

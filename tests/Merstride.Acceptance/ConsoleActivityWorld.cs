@@ -20,7 +20,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
 
     private void Text(params string[] args) => cli.Raw([.. args, "--state-dir", cli.State]);
     private static string[] Lines(string text) => text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-    private string[] ActivityLines => Lines(cli.Stderr).Where(l => l.StartsWith("Activity [", StringComparison.Ordinal)).ToArray();
+    private string[] ActivityLines => Lines(cli.Stderr).Where(l => l.StartsWith("[" + runId + "] ", StringComparison.Ordinal)).ToArray();
 
     internal void Execute(string step)
     {
@@ -31,11 +31,11 @@ internal sealed class ConsoleActivityWorld : IDisposable
         {
             var values = step[result.Length..].Split(" and ");
             Assert.That(cli.ExitCode, Is.EqualTo(values[1] == "routed" ? 0 : 5));
-            Assert.That(ActivityLines, Has.Length.EqualTo(3));
+            Assert.That(ActivityLines, Has.Length.EqualTo(4));
             Assert.That(ActivityLines[0], Does.Contain("launch pending"));
-            Assert.That(ActivityLines[1], Does.Contain("Process outcome saved: " + values[0]));
-            Assert.That(ActivityLines[1], Does.Contain(values[1] == "NO_MATCHING_EDGE" ? "No route taken" : "-> done"));
-            Assert.That(ActivityLines[2], Does.Contain(values[1] == "routed" ? "completed" : values[1]));
+            Assert.That(ActivityLines[1], Does.Contain("saved ").And.Contain(values[0]));
+            Assert.That(ActivityLines[2], Does.Contain(values[1] == "NO_MATCHING_EDGE" ? "no route taken" : "-> done"));
+            Assert.That(ActivityLines[3], Does.Contain(values[1] == "routed" ? "completed" : values[1]));
             Assert.That(cli.Stderr, Does.Not.Contain("Process started").And.Not.Contain("Process running"));
             return;
         }
@@ -46,12 +46,14 @@ internal sealed class ConsoleActivityWorld : IDisposable
                 cli.ExpectedChildren = 2; Text("advance", runId); cli.ExpectedChildren = 0; break;
             case "both outcomes and routes precede the agent waiting message":
                 Assert.That(cli.ExitCode, Is.Zero, cli.Stderr);
-                Assert.That(ActivityLines, Has.Length.EqualTo(5));
-                Assert.That(ActivityLines[0], Does.Contain("node first").And.Contain("Activating process"));
-                Assert.That(ActivityLines[1], Does.Contain("exit_0").And.Contain("first -> second"));
-                Assert.That(ActivityLines[2], Does.Contain("node second").And.Contain("Activating process"));
-                Assert.That(ActivityLines[3], Does.Contain("exit_7").And.Contain("second -> review"));
-                Assert.That(ActivityLines[4], Does.Contain("Waiting for agent; request q_"));
+                Assert.That(ActivityLines, Has.Length.EqualTo(7));
+                Assert.That(ActivityLines[0], Does.Contain("Process first (visit 1)").And.Contain("activating"));
+                Assert.That(ActivityLines[1], Does.Contain("exit_0"));
+                Assert.That(ActivityLines[2], Does.Contain("first -> second"));
+                Assert.That(ActivityLines[3], Does.Contain("Process second (visit 1)").And.Contain("activating"));
+                Assert.That(ActivityLines[4], Does.Contain("exit_7"));
+                Assert.That(ActivityLines[5], Does.Contain("second -> review"));
+                Assert.That(ActivityLines[6], Does.Contain("waiting for agent; request q_"));
                 Assert.That(cli.Stdout, Does.Contain("Next: perform").And.Contain("Status: waiting_agent"));
                 Assert.That(cli.Stdout, Does.Contain("Grüße\\u001B[31m\\u0000\\u202E").And.Not.Contain('\u001b').And.Not.Contain('\0'));
                 break;
@@ -75,7 +77,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
                 var saved = File.ReadAllBytes(stateFile);
                 Text("complete", runId, "--request", request, "--outcome", "rejected");
                 Assert.That(cli.ExitCode, Is.EqualTo(4));
-                Assert.That(cli.Stderr, Does.Contain("INVALID_OUTCOME").And.Not.Contain("accepted").And.Not.Contain("Activity ["));
+                Assert.That(cli.Stderr, Does.Contain("INVALID_OUTCOME").And.Not.Contain("accepted and saved").And.Not.Contain("[" + runId + "]"));
                 Assert.That(File.ReadAllBytes(stateFile), Is.EqualTo(saved));
                 cli.Call("status", runId);
                 Assert.That(cli.Stdout, Is.EqualTo(before));
@@ -85,8 +87,8 @@ internal sealed class ConsoleActivityWorld : IDisposable
                 var requestId = cli.Response.GetProperty("request").GetProperty("id").GetString()!;
                 Text("complete", runId, "--request", requestId, "--outcome", "approved");
                 Assert.That(cli.ExitCode, Is.Zero);
-                Assert.That(ActivityLines, Has.Length.EqualTo(1));
-                Assert.That(cli.Stderr, Does.Contain("Completion accepted and saved").And.Contain(requestId).And.Contain("Call advance"));
+                Assert.That(ActivityLines, Has.Length.EqualTo(2));
+                Assert.That(cli.Stderr, Does.Contain("accepted and saved").And.Contain(requestId).And.Contain("Next: merstride advance"));
                 Assert.That(cli.Stdout, Does.Contain("Status: ready").And.Contain("Cursor: done"));
                 var accepted = cli.Stdout;
                 Text("complete", runId, "--request", requestId, "--outcome", "approved");
@@ -96,7 +98,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
             case "final advance reports completion only once":
                 Text("advance", runId);
                 Assert.That(ActivityLines, Has.Length.EqualTo(1));
-                Assert.That(cli.Stderr, Does.Contain("Run completed"));
+                Assert.That(cli.Stderr, Does.Contain("Run ready -> completed"));
                 Text("advance", runId);
                 Assert.That(cli.Stderr, Is.Empty);
                 Assert.That(cli.Stdout, Does.Contain("Status: completed"));
@@ -135,7 +137,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
             case "the activity consumer closes its pipe before process completion":
                 writer = LaunchAdvance();
                 var firstLine = writer.StandardError.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
-                Assert.That(firstLine, Does.Contain("Activating process"));
+                Assert.That(firstLine, Does.Contain("activating (launch pending)"));
                 writer.StandardError.Close();
                 File.WriteAllText(Path.Combine(cli.DirectoryPath, "activity.release"), "release");
                 Assert.That(writer.WaitForExit(10000), Is.True);
@@ -147,9 +149,9 @@ internal sealed class ConsoleActivityWorld : IDisposable
                 break;
             case "the budget error follows one saved outcome without another activation":
                 Assert.That(cli.ExitCode, Is.EqualTo(5));
-                Assert.That(ActivityLines, Has.Length.EqualTo(3));
-                Assert.That(ActivityLines[1], Does.Contain("work -> work"));
-                Assert.That(ActivityLines[2], Does.Contain("TRANSITION_LIMIT"));
+                Assert.That(ActivityLines, Has.Length.EqualTo(4));
+                Assert.That(ActivityLines[2], Does.Contain("work -> work"));
+                Assert.That(ActivityLines[3], Does.Contain("TRANSITION_LIMIT"));
                 break;
             case "a console activity workflow with a controlled process":
                 File.WriteAllText(cli.FilePath, $$"""
@@ -188,29 +190,36 @@ internal sealed class ConsoleActivityWorld : IDisposable
                 });
                 break;
             case "its activation is visible before the process is released":
-                Assert.That(SpinWait.SpinUntil(() =>
-                {
-                    lock (activity) return activity.Any(l => l.Contains("Activating process", StringComparison.Ordinal));
-                }, 5000), Is.True, "Activation feedback must arrive while the helper is still blocked.");
-                Assert.That(writer!.HasExited, Is.False);
-                Assert.That(File.Exists(Path.Combine(cli.DirectoryPath, "activity.release")), Is.False);
-                Assert.That(SpinWait.SpinUntil(() => File.Exists(Path.Combine(cli.DirectoryPath, "activity.ready")), 5000), Is.True);
-                cli.Call("status", runId);
-                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("executing"));
+                AssertLiveActivation();
                 File.WriteAllText(Path.Combine(cli.DirectoryPath, "activity.release"), "release");
                 break;
+            case "its activation is visible before a rejected save": AssertLiveActivation(); break;
             case "its saved outcome and terminal transition appear in order":
                 Assert.That(writer!.WaitForExit(10000), Is.True);
                 stderr!.GetAwaiter().GetResult();
                 Assert.That(writer.ExitCode, Is.Zero);
                 Assert.That(stdout!.Result, Does.Contain("Status: completed"));
-                Assert.That(activity.Count, Is.EqualTo(3));
-                Assert.That(activity[0], Does.Contain(runId).And.Contain("node work").And.Contain("Activating process"));
-                Assert.That(activity[1], Does.Contain("exit_0").And.Contain("-> done"));
-                Assert.That(activity[2], Does.Contain("completed"));
+                Assert.That(activity.Count, Is.EqualTo(4));
+                Assert.That(activity[0], Does.Contain(runId).And.Contain("Process work").And.Contain("launch pending"));
+                Assert.That(activity[1], Does.Contain("exit_0"));
+                Assert.That(activity[2], Does.Contain("-> done"));
+                Assert.That(activity[3], Does.Contain("completed"));
                 break;
             default: throw new AssertionException($"Undefined required step: {step}");
         }
+    }
+
+    private void AssertLiveActivation()
+    {
+        Assert.That(SpinWait.SpinUntil(() =>
+        {
+            lock (activity) return activity.Any(l => l.Contains("activating (launch pending)", StringComparison.Ordinal));
+        }, 5000), Is.True, "Activation feedback must arrive while the helper is still blocked.");
+        Assert.That(writer!.HasExited, Is.False);
+        Assert.That(File.Exists(Path.Combine(cli.DirectoryPath, "activity.release")), Is.False);
+        Assert.That(SpinWait.SpinUntil(() => File.Exists(Path.Combine(cli.DirectoryPath, "activity.ready")), 5000), Is.True);
+        cli.Call("status", runId);
+        Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("executing"));
     }
 
     private Process LaunchAdvance()
@@ -324,25 +333,15 @@ internal sealed class ConsoleActivityWorld : IDisposable
         Assert.That(SpinWait.SpinUntil(() => File.Exists(Path.Combine(cli.DirectoryPath, "activity.ready")), 5000), Is.True);
         var stateFile = Path.Combine(cli.State, runId, "state.json");
         var snapshot = File.ReadAllBytes(stateFile);
-        var attributes = File.GetAttributes(stateFile);
-        var directory = Path.GetDirectoryName(stateFile)!;
-        var mode = OperatingSystem.IsWindows() ? default : File.GetUnixFileMode(directory);
-        try
+        using (new RejectedStateSave(stateFile))
         {
-            File.SetAttributes(stateFile, attributes | FileAttributes.ReadOnly);
-            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserExecute);
             File.WriteAllText(Path.Combine(cli.DirectoryPath, "activity.release"), "release");
             Assert.That(writer!.WaitForExit(10000), Is.True);
             stderr!.GetAwaiter().GetResult();
             Assert.That(writer.ExitCode, Is.EqualTo(6));
-            Assert.That(string.Join('\n', activity), Does.Contain("Activating process").And.Contain("IO_ERROR")
-                .And.Not.Contain("outcome saved").And.Not.Contain("Run completed"));
+            Assert.That(string.Join('\n', activity), Does.Contain("activating (launch pending)").And.Contain("IO_ERROR")
+                .And.Not.Contain("saved exit").And.Not.Contain("Flow #").And.Not.Contain("overall result: success"));
             Assert.That(File.ReadAllBytes(stateFile), Is.EqualTo(snapshot));
-        }
-        finally
-        {
-            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(directory, mode);
-            File.SetAttributes(stateFile, attributes);
         }
         Text("status", runId);
         Assert.That(cli.Stdout, Does.Contain("Status: interrupted").And.Contain("Next: inspect external effects"));
@@ -357,5 +356,33 @@ internal sealed class ConsoleActivityWorld : IDisposable
         stderr?.GetAwaiter().GetResult();
         writer?.Dispose();
         cli.Dispose();
+    }
+}
+
+// Public filesystem failure fixture shared by native save-truthfulness scenarios.
+internal sealed class RejectedStateSave : IDisposable
+{
+    private readonly string path, directory;
+    private readonly FileAttributes attributes;
+    private readonly UnixFileMode mode;
+
+    internal RejectedStateSave(string path)
+    {
+        this.path = path;
+        directory = Path.GetDirectoryName(path)!;
+        attributes = File.GetAttributes(path);
+        mode = OperatingSystem.IsWindows() ? default : File.GetUnixFileMode(directory);
+        try
+        {
+            File.SetAttributes(path, attributes | FileAttributes.ReadOnly);
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        }
+        catch { Dispose(); throw; }
+    }
+
+    public void Dispose()
+    {
+        try { if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(directory, mode); }
+        finally { File.SetAttributes(path, attributes); }
     }
 }

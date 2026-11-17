@@ -17,6 +17,9 @@ agents/scripts explicitly request the unchanged protocol-1 JSON with `--json`.
 Text errors/warnings use stderr; results, offline guides and bounded log tails use stdout.
 Text advance now also shows live activity on stderr after successful state writes;
 explicit JSON suppresses activity and keeps the existing protocol response.
+Human activity separates process results, numbered source/destination movements
+with route reasons and repeated visits, and run status/overall results. Summaries
+explain the next explicit action; full activation IDs are secondary log selectors.
 Project commands now discover the nearest `.merstride`/`.git` boundary, default
 workspace/storage there and remember current and per-source/workflow runs.
 Start always creates and selects a new ready run, retaining earlier state.
@@ -31,6 +34,42 @@ and publication fails closed.** No clean-target or token-saving claim follows
 from a local build.
 
 ## Verification
+
+P20 makes the executed path and result readable without changing execution.
+ADR 0016 deliberately replaces the human layout with ASCII `[run-id]` process,
+numbered `Flow #...` and run-status lines. Exact/default/unlabeled route reasons,
+visits/revisits, waiting/completion and unchanged-cursor recovery are explicit.
+Overall results and next actions are separate from process exit codes. Agent
+choices named exit_0, timeout, spawn_error, signal or output_limit remain agent
+outcomes. Saves precede all durable claims; inspection and equivalent receipt
+retries add no activity. Protocol 1, structured response types, engine/process
+effects, locks, limits, state schema and dependency/license inventories are unchanged.
+
+On 2026-11-17 the complete reviewed Windows x64 gate passed 623 tests / 402 local
+feature cases and all 387 independent native runtime cases, with zero failures
+or skips and no build/publish warnings or errors. All 21 dedicated P20 cases and
+P17's live-before-release barrier passed. Coverage includes ordered branch reasons,
+loop visits/handoffs, historical receipt retries, outcome/result distinctions,
+failure/limit explanations, real interruption, explicit retry/fail and rejected
+result/completion/resolution saves, redirected escaping and single-response JSON.
+Architecture, dependency, distribution, privacy, budgets and Mermaid checks passed.
+Native size was 6.255 MiB; warm status P95 was 23.351 ms.
+
+The actual README and CLI Bash blocks passed in isolated projects, including
+readable handoff/completion and scoped discard. Process-chain/review examples,
+branch transcript and both embedded guides/help passed against the native binary.
+The versioned before/after walkthrough omits secondary storage/log details and
+normalizes identities. Independent Standards and Spec reviews have no remaining
+findings; the review identified process-like agent outcome names, now covered by
+five native regressions, and consolidated save-rejection fixture setup.
+Initial red tests, a restricted test-host connection, an obsolete P17 wording
+assertion and the walkthrough driver's newline handling were resolved before the
+final gate. Raw logs and environment data remain under ignored artifacts.
+The coordinator accepted P20 on 2026-11-17 after independent inspection and
+authorized its single scoped local commit. Implementation is complete. Final
+acceptance/evidence edits do not change the verified behavior. No push,
+publication or new release qualification is claimed. No new Linux/macOS, hosted
+or independent clean-target execution was performed for this slice.
 
 P19 adds workflow context, canonical short identities and deliberate single-run
 discard. ADR 0015 defines lexical absolute source-file/workflow associations,
@@ -338,7 +377,7 @@ audits and timing records stay under ignored `artifacts/`. See
 - Re-run the verified macOS native and clean-target gates for each exact release
   candidate; NUnit remains a separate .NET-hosted gate.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 366 runtime cases, plus the separately
+  candidate commit and binary hashes: all 387 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.

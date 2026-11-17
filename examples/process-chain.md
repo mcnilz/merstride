@@ -2,6 +2,9 @@
 
 Run `start` with an existing Git repository as the absolute workspace, then `advance`.
 Both commands use Git explicitly; their output is available through separate logs.
+Live text shows each saved process result and a numbered `status -> diff -> done`
+path with exact/default route reasons. The final `Result` describes the whole run,
+separately from the last command's exit code. See [flow output](../docs/FLOW-OUTPUT.md).
 
 ```yaml merstride
 schemaVersion: 1

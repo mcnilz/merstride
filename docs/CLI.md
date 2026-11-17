@@ -12,11 +12,18 @@ usage errors; stack traces are hidden. A failed run's `status` still exits 0 and
 shows its summary on stdout and failure reason on stderr.
 
 Text `advance` also writes flushed live activity lines to stderr, including when
-redirected. Each identifies the run/node and, when applicable, activation. It shows
-activation (launch pending), saved outcome/route, agent waiting and terminal or
-interrupted state. A saved completion announces acceptance once; retries show the
+redirected. Each starts with the short run ID. Process lines identify the node and
+visit, explain activation (launch pending) and the saved outcome. Separate numbered
+`Flow #1: old -> new via ...` lines explain exact/default/unlabeled routing and
+revisited destinations. Run-status changes and overall results are separate from
+process exit codes. A saved completion announces acceptance and cursor movement once; retries show the
 receipt without new activity. Inspection and repeated waiting/terminal advances
 never replay transitions. Waiting/interrupted summaries explain the next action.
+No-route results say the flow stays at the cursor. Explicit resolution describes
+an unchanged cursor and no execution; retry requires a later advance and may repeat
+external effects. Final summaries explain the status and overall result before
+source/root details. Full activation IDs are secondary log selectors. See the
+[before/after walkthrough](FLOW-OUTPUT.md) for branches, loops and recovery.
 
 Use `merstride advance "$run_id" --state-dir "$state_root" >summary.txt 2>activity.txt`
 in Bash to separate the final summary from activity/errors. Ordering is preserved

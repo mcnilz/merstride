@@ -10,13 +10,12 @@ internal sealed class CliOutput(bool json)
 {
     private bool activityUnavailable;
 
-    internal void Activity(RunState run, string message, Activation? activation = null)
+    internal void Activity(RunState run, string message)
     {
         if (json || activityUnavailable) return;
         try
         {
-            Console.Error.WriteLine(Readable($"Activity [{run.RunId}, node {activation?.NodeId ?? run.Cursor}" +
-                (activation is null ? "" : $", activation {activation.Id}") + $"]: {message}"));
+            Console.Error.WriteLine(Readable($"[{run.RunId}] {message}"));
             Console.Error.Flush();
         }
         // A closed progress pipe must not turn a saved transition into an execution failure.
@@ -67,23 +66,60 @@ internal sealed class CliOutput(bool json)
             Console.Error.WriteLine($"{(diagnostic.Severity == "warning" ? "Warning" : "Error")} {Readable(diagnostic.Code)}{Location(diagnostic.Location)}: {Readable(diagnostic.Message)}");
         if (response.Error is { } error && !(response.Diagnostics ?? []).Any(d =>
                 d.Code == error.Code && d.Message == error.Message && d.Location == error.Location))
+        {
             Console.Error.WriteLine($"Error {Readable(error.Code)}{Location(error.Location)}: {Readable(error.Message)}");
+            var next = error.Code switch
+            {
+                "INVALID_OUTCOME" or "INVALID_REQUEST" => "Next: inspect status and use the original request ID and an allowed outcome; no new completion was accepted.",
+                "COMPLETION_CONFLICT" => "Next: inspect status and the original receipt; retry its accepted payload or handle the newer request separately.",
+                "RUN_NOT_FOUND" or "AMBIGUOUS_RUN" or "STALE_CONTEXT" or "CORRUPT_CONTEXT" or "INVALID_RUN_ID" =>
+                    "Next: inspect merstride runs in the original state root; use an exact run ID or merstride use <run-id>, or start the intended workflow.",
+                "IO_ERROR" => "Next: check the original workflow/state path and permissions, then inspect status before retrying; external effects may already have happened.",
+                _ => null
+            };
+            if (next is not null) Console.Error.WriteLine(next);
+        }
     }
 
     private static void WriteRun(CliResponse response)
     {
         Line("Run", response.RunId);
         Line("Workflow", response.WorkflowId);
-        Line("Source", response.SourcePath);
-        Line("Status", response.Status);
+        Line("Status", response.Status + (response.Status switch
+        {
+            "ready" => " (ready to advance; next node has not executed)",
+            "executing" => " (process activation in progress)",
+            "waiting_agent" => " (waiting for your agent's completion)",
+            "completed" => " (finished successfully)",
+            "failed" => " (finished with failure)",
+            "interrupted" => " (external effects uncertain; explicit decision required)",
+            _ => ""
+        }));
         Line("Cursor", response.Cursor);
-        Line("State root", response.StateRoot);
+        Line("Result", response.Status switch
+        {
+            "completed" => "success", "failed" => "failure", "interrupted" => "unresolved",
+            _ => "not finished"
+        });
         if (response.TransitionCount is { } transitions) Line("Transitions", transitions.ToString(CultureInfo.InvariantCulture));
         if (response.LastActivation is { } activation)
-            Line("Last activation", $"{activation.Id} (node: {activation.NodeId}, outcome: {activation.Outcome ?? "pending"})");
-        if (response.Receipt is { } receipt) Line("Completion", $"{receipt.RequestId} -> {receipt.Outcome} (activation: {receipt.ActivationId})");
+            Line(activation.StdoutPath.Length == 0 ? "Last agent visit" : "Last process", $"{activation.NodeId} - {Outcome(activation)}");
+        if (response.Receipt is { } receipt) Line("Completion", $"{receipt.RequestId} - {receipt.Outcome} (saved receipt; retries do not move the flow)");
         if (response.Status == "interrupted")
             Console.WriteLine("Next: inspect external effects, then explicitly resolve --retry or --fail. Advance never replays interrupted work.");
+        else if (response.Status == "ready")
+            Console.WriteLine($"Next: merstride advance {Readable(response.RunId!)}. Completion and retry resolution never execute the next node.");
+        else if (response.Status == "completed")
+            Console.WriteLine("Next: no further execution for this run. Start a new run to execute again.");
+        else if (response.Status == "failed")
+            Console.WriteLine("Next: inspect the failure reason and logs; correct the cause and start a new run. Only interrupted runs support resolve.");
+        else if (response.Status == "executing")
+            Console.WriteLine("Next: wait for the current advance to finish; status can inspect it without executing work.");
+        Console.WriteLine();
+        Line("Source", response.SourcePath);
+        Line("State root", response.StateRoot);
+        if (response.LastActivation is { } last && last.StdoutPath.Length > 0)
+            Line("Log activation", last.Id);
         if (response.Request is not { } request) return;
         Console.WriteLine();
         Line("Request", request.Id);
@@ -104,6 +140,25 @@ internal sealed class CliOutput(bool json)
             var value = item.Value.ValueKind == JsonValueKind.String ? item.Value.GetString()! : item.Value.GetRawText();
             Console.WriteLine(Readable(value));
         }
+    }
+
+    internal static string Outcome(Activation activation)
+    {
+        // Agent outcomes may legally use process tokens such as timeout or exit_0.
+        // Process activations always own log paths; agent visits never do.
+        if (activation.StdoutPath.Length == 0)
+            return activation.Outcome is { } choice ? "agent outcome " + choice : "pending";
+        return activation.Outcome switch
+        {
+            null => "pending",
+            "spawn_error" => "process could not be launched (spawn_error)",
+            "timeout" => "process time limit reached (timeout)",
+            "output_limit" => "process output limit reached (output_limit)",
+            "signal" => "process ended by signal (signal)",
+            "interrupted" => "execution interrupted; effects uncertain (interrupted)",
+            var outcome when outcome.StartsWith("exit_", StringComparison.Ordinal) => $"exit code {activation.ExitCode} ({outcome})",
+            var outcome => outcome
+        };
     }
 
     private static void Line(string label, string? value)

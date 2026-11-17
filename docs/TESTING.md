@@ -302,6 +302,18 @@ corrupt/unknown/read-only contents and links to protected data. Human text and
 protocol JSON paths use the same public boundary. Raw evidence stays in artifacts;
 new platform/release qualification is independently required.
 
+P20 executes `20-flow-progression.feature` through redirected published-native
+CLI streams. Literal ordered expectations distinguish process results, numbered
+source/destination movements and exact/default/unlabeled reasons from overall
+run results. Loop/handoff cases verify visits, new request identity, accepted
+completion with no execution and historical retries without progression. Failures,
+limits, English outcome explanations, terminal inspection, prompt escaping and
+single protocol-1 JSON integration are covered. P17's controlled live barrier,
+failed-result-save fixture and actual native interruption proof remain required;
+P20 reuses these public-boundary fixtures and additionally rejects completion
+saves and checks explicit retry/fail output, unchanged cursor and actual effects.
+Raw logs stay in ignored artifacts. No clean-target/release qualification is implied.
+
 The adjacent P12 filesystem assertion includes the new context/identity
 bookkeeping while still rejecting script-file creation. Its Unicode PowerShell
 fixture explicitly selects UTF-8 stdin decoding in the interpreter arguments;

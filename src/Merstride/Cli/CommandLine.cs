@@ -189,7 +189,11 @@ internal sealed class CommandLine
         Help is English text; with --json it is one protocol object with a guide string.
         All commands use readable English text by default, including redirected output.
         Scripts/agents must pass --json; text errors/warnings use stderr, text results use stdout.
-        Text advance reports live activation, saved outcomes/routes and handoffs on stderr.
+        Text advance reports process outcomes, numbered Flow #...: source -> destination
+        with exact/default/unlabeled route reasons, repeated visits and handoffs on stderr.
+        Run status and overall Result are separate from process exit codes.
+        Waiting/no-route means staying at a node; completion moves only the cursor.
+        Explicit resolution executes nothing; retry requires advance and may repeat effects.
         Activation is saved before launch; it does not claim a process has started.
         Redirect stdout for summaries, stderr for activity/errors; --json suppresses activity.
         No workflow/state is read for help/version/guides.

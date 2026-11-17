@@ -380,7 +380,28 @@
     "features/19-contextual-selection.feature:86 Discard protects locked unreadable and unowned data [conflicting-staged-file]",
     "features/19-contextual-selection.feature:87 Discard protects locked unreadable and unowned data [unowned-empty-stage]",
     "features/19-contextual-selection.feature:88 Discard protects locked unreadable and unowned data [process-logs]",
-    "features/19-contextual-selection.feature:9 Use canonical short identities without collision reuse"
+    "features/19-contextual-selection.feature:9 Use canonical short identities without collision reuse",
+    "features/20-flow-progression.feature:10 Follow an agent loop and retry the original receipt",
+    "features/20-flow-progression.feature:31 Explain a process outcome separately from a failed run [no-match, No route matches exit_7 at work]",
+    "features/20-flow-progression.feature:32 Explain a process outcome separately from a failed run [failure-end, Workflow reached a failure end]",
+    "features/20-flow-progression.feature:33 Explain a process outcome separately from a failed run [loop-limit, Transition budget exhausted]",
+    "features/20-flow-progression.feature:4 Follow exact and default branches to a successful end",
+    "features/20-flow-progression.feature:42 Explain a non-exit process outcome in plain English [spawn_error, process could not be launched (spawn_error)]",
+    "features/20-flow-progression.feature:43 Explain a non-exit process outcome in plain English [timeout, process time limit reached (timeout)]",
+    "features/20-flow-progression.feature:44 Explain a non-exit process outcome in plain English [output_limit, process output limit reached (output_limit)]",
+    "features/20-flow-progression.feature:46 Explain an unlabeled edge without treating an exit code as success",
+    "features/20-flow-progression.feature:51 Reject completions and failed saves without claiming movement",
+    "features/20-flow-progression.feature:56 Keep progress separate from escaped task data under redirection",
+    "features/20-flow-progression.feature:61 Preserve structured integration across a loop and receipt retry",
+    "features/20-flow-progression.feature:66 Retain live visibility and truthful failed result saves",
+    "features/20-flow-progression.feature:71 Explain real interruption with no invented movement",
+    "features/20-flow-progression.feature:81 Explain an explicit interrupted-run decision [retry]",
+    "features/20-flow-progression.feature:82 Explain an explicit interrupted-run decision [fail]",
+    "features/20-flow-progression.feature:91 Preserve process-like names as agent choices [exit_0]",
+    "features/20-flow-progression.feature:92 Preserve process-like names as agent choices [timeout]",
+    "features/20-flow-progression.feature:93 Preserve process-like names as agent choices [spawn_error]",
+    "features/20-flow-progression.feature:94 Preserve process-like names as agent choices [signal]",
+    "features/20-flow-progression.feature:95 Preserve process-like names as agent choices [output_limit]"
   ],
   "schemaVersion": 1,
   "featureHashes": {
@@ -401,7 +422,8 @@
     "features/15-macos-release.feature": "e224390cb50c691141959868f0e9d3fd98c53c0cc4d95b36ae627e21158221c9",
     "features/17-console-activity.feature": "2d846f03fbbcc60c236ce15ca0bcfcb87504bdfd722e5e18efc8b5df67dd9872",
     "features/18-project-workflow.feature": "dd3f559b8f7d09610b75452d0379bc0218d204369393fdf3c81b946f3291f62f",
-    "features/19-contextual-selection.feature": "917d5aec8275827a2cd2a0d3aac551a76b0e7c078b12a2a6fa1fecfa84b28a03"
+    "features/19-contextual-selection.feature": "917d5aec8275827a2cd2a0d3aac551a76b0e7c078b12a2a6fa1fecfa84b28a03",
+    "features/20-flow-progression.feature": "1f8154cbafbdcc9f7086456d9b593c601d7b30941330667d015cb291bc9d23c5"
   },
   "generator": "Official Cucumber Gherkin 43.0.0 via FeatureTests.Cases; excludes only the three recursive ReleaseEnvironment orchestration cases",
   "cleanScenarios": [
@@ -770,6 +792,27 @@
     "features/19-contextual-selection.feature:86 Discard protects locked unreadable and unowned data [conflicting-staged-file]",
     "features/19-contextual-selection.feature:87 Discard protects locked unreadable and unowned data [unowned-empty-stage]",
     "features/19-contextual-selection.feature:88 Discard protects locked unreadable and unowned data [process-logs]",
-    "features/19-contextual-selection.feature:9 Use canonical short identities without collision reuse"
+    "features/19-contextual-selection.feature:9 Use canonical short identities without collision reuse",
+    "features/20-flow-progression.feature:10 Follow an agent loop and retry the original receipt",
+    "features/20-flow-progression.feature:31 Explain a process outcome separately from a failed run [no-match, No route matches exit_7 at work]",
+    "features/20-flow-progression.feature:32 Explain a process outcome separately from a failed run [failure-end, Workflow reached a failure end]",
+    "features/20-flow-progression.feature:33 Explain a process outcome separately from a failed run [loop-limit, Transition budget exhausted]",
+    "features/20-flow-progression.feature:4 Follow exact and default branches to a successful end",
+    "features/20-flow-progression.feature:42 Explain a non-exit process outcome in plain English [spawn_error, process could not be launched (spawn_error)]",
+    "features/20-flow-progression.feature:43 Explain a non-exit process outcome in plain English [timeout, process time limit reached (timeout)]",
+    "features/20-flow-progression.feature:44 Explain a non-exit process outcome in plain English [output_limit, process output limit reached (output_limit)]",
+    "features/20-flow-progression.feature:46 Explain an unlabeled edge without treating an exit code as success",
+    "features/20-flow-progression.feature:51 Reject completions and failed saves without claiming movement",
+    "features/20-flow-progression.feature:56 Keep progress separate from escaped task data under redirection",
+    "features/20-flow-progression.feature:61 Preserve structured integration across a loop and receipt retry",
+    "features/20-flow-progression.feature:66 Retain live visibility and truthful failed result saves",
+    "features/20-flow-progression.feature:71 Explain real interruption with no invented movement",
+    "features/20-flow-progression.feature:81 Explain an explicit interrupted-run decision [retry]",
+    "features/20-flow-progression.feature:82 Explain an explicit interrupted-run decision [fail]",
+    "features/20-flow-progression.feature:91 Preserve process-like names as agent choices [exit_0]",
+    "features/20-flow-progression.feature:92 Preserve process-like names as agent choices [timeout]",
+    "features/20-flow-progression.feature:93 Preserve process-like names as agent choices [spawn_error]",
+    "features/20-flow-progression.feature:94 Preserve process-like names as agent choices [signal]",
+    "features/20-flow-progression.feature:95 Preserve process-like names as agent choices [output_limit]"
   ]
 }

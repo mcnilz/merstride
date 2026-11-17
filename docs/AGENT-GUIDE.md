@@ -14,6 +14,14 @@ equivalent retries do not announce new work. Use `--json` for automation: it
 suppresses all activity and retains exactly one protocol-1 response. Activity is
 presentation, not a durable event history or a substitute for status/receipts.
 
+Human output separates saved process outcomes from numbered `Flow #...: old -> new`
+movements with route reasons, visit counts, and run-status/overall results. Waiting
+and no-route messages say the cursor stays; completion moves it without execution.
+Explicit resolution also executes nothing. Full activation IDs are secondary log
+selectors. See [flow output](FLOW-OUTPUT.md) for branch, loop and recovery transcripts.
+Agents must use explicit --json and opaque resource IDs for structured integration;
+human text is deliberately redesigned without changing protocol 1.
+
 ## Operating loop
 
 1. Read `merstride guide` when unfamiliar with the installed version. Check `version` if protocol compatibility is uncertain. Scripts add `--json` for structured responses.

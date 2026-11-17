@@ -100,6 +100,11 @@ internal static class Program
               Without --json, live activity goes to stderr and final summaries to stdout,
               even when redirected. Activation is saved before launch (launch pending).
               Saved outcomes/routes and agent/terminal transitions follow successful writes.
+              Process results are separate from Flow #<n>: source -> destination via
+              exact/default/unlabeled routing, and from run status and overall Result.
+              Visits identify loops; no-route/waiting means staying at the cursor.
+              Completion moves only the cursor. Resolution changes only run status.
+              Full activation IDs are secondary log selectors, not repeated on live lines.
               --json suppresses activity; no child output or periodic noise is streamed.
 
             Agent handoffs
@@ -255,6 +260,7 @@ internal static class Program
         {
             run = WorkflowEngine.Resolve(run, retry);
             store.Write(run);
+            ConsoleActivity.Resolution(output, run, retry);
             return output.Write(Response(run, root), retry ? 0 : 5);
         }
         if (command == "complete")
@@ -266,7 +272,7 @@ internal static class Program
             if (!ReferenceEquals(run, completed.State))
             {
                 store.Write(completed.State);
-                output.Activity(completed.State, $"Completion accepted and saved: {completed.Receipt.RequestId} -> {completed.Receipt.Outcome}. Call advance to execute the next node.");
+                ConsoleActivity.Completion(output, run, completed.State, completed.Receipt);
             }
             return output.Write(Response(completed.State, root) with { Receipt = completed.Receipt });
         }

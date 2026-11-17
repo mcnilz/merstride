@@ -155,20 +155,26 @@ process/agent routing. Workflows execute with your privileges in the selected
 workspace; review their commands before running them.
 
 For example, advancing the process chain shows these messages as work proceeds
-(IDs abbreviated here; real output includes full run/activation IDs):
+(your run ID may differ):
 
 ```text
-Activity [r_…, node status, activation a_…]: Activating process (launch pending).
-Activity [r_…, node status, activation a_…]: Process outcome saved: exit_0. Route: status -> diff.
-Activity [r_…, node diff, activation a_…]: Activating process (launch pending).
-Activity [r_…, node diff, activation a_…]: Process outcome saved: exit_0. Route: diff -> done.
-Activity [r_…, node done]: Run completed.
+[r_000001] Process status (visit 1): activating (launch pending).
+[r_000001] Process status (visit 1): saved exit code 0 (exit_0).
+[r_000001] Flow #1: status -> diff via exact outcome exit_0.
+[r_000001] Process diff (visit 1): activating (launch pending).
+[r_000001] Process diff (visit 1): saved exit code 0 (exit_0).
+[r_000001] Flow #2: diff -> done via exact outcome exit_0.
+[r_000001] Run ready -> completed at done: success end; overall result: success.
 ```
 
-For the agent task, `advance` instead reports `Waiting for agent; request q_…`
+For the agent task, `advance` instead reports `waiting for agent; request q_...`
 and asks you to read the prompt and use `complete`. The stdout summary contains
 that prompt, context and allowed outcomes. A saved completion reports
-`Completion accepted and saved: q_… -> approved. Call advance to execute the next node.`
+the agent's request/outcome, then the numbered flow movement and next explicit
+advance. Process exit codes and the overall `Result` are separate. Loops show
+visit numbers and revisited destinations; no-route/interruption output says the
+flow stays at its cursor. See [flow output](docs/FLOW-OUTPUT.md) for before/after
+branch, agent-loop and failure/recovery transcripts.
 Repeating the same completion returns its receipt without new activity.
 Activation is saved before launch, so its message does not claim launch succeeded.
 Process output stays in separate raw logs; use `logs` to read a selected tail.

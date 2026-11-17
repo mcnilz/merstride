@@ -8,8 +8,13 @@ Commands print readable English text by default, including redirected output.
 Use --json explicitly for one stable protocol-version-1 object on stdout; guides
 then appear in its guide string. Text warnings/errors use stderr, results stdout.
 Text advance also reports live activity on stderr: activation (launch pending),
-saved process outcomes/routes, agent waiting and terminal/interrupted states.
+saved process outcomes, numbered Flow #...: source -> destination with exact/default/
+unlabeled route reasons, repeated visits, agent waiting and terminal/interrupted states.
 This works when redirected; --json suppresses activity. Raw child logs stay separate.
+Process exit codes are separate from the overall Result and next caller action.
+Waiting/no-route messages explain staying at a node; completion moves the cursor
+without execution. Explicit resolution also executes nothing; retry may repeat effects.
+Full activation IDs are secondary log selectors, not the human path's identity.
 
 Simple project execution
 - merstride start <file> defaults workspace to the nearest ancestor .merstride/.git

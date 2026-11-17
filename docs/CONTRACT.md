@@ -192,19 +192,31 @@ and 1-based line/column when available. A failed run's read-only status still ex
 a help hint. Stack traces are hidden. No colors or ANSI formatting.
 
 Text advance emits live, newline-delimited activity on stderr, also when redirected.
-Each line identifies the run and node, plus activation when applicable. Only after
-a successful authoritative write, report process activation (launch still pending),
-saved process outcome and selected route, agent waiting and terminal/interrupted
-state. Activation does not claim that launch succeeded. A failed save emits no
-saved-transition message. Completion reports acceptance only after saving; equivalent
+Each line starts with `[<run-id>]`. Process lines identify the node and visit number
+and explain activation (launch still pending) or the saved process outcome in English
+alongside its routing token. Separate `Flow #<transition-count>: <source> -> <destination>`
+lines explain exact outcome, default fallback or unlabeled routing. Revisited targets
+show the next visit number, including self-loops. Node IDs are the authoritative
+names; diagram labels are not displayed or newly persisted. Run-status lines separately
+explain waiting, terminal success/failure or interruption and its next action. An
+exit code or routed outcome is not an overall run result. No-route results explicitly
+say the flow stays at the cursor; interruption never invents a route.
+
+Only report saved activity after a successful authoritative write. Activation does
+not claim that launch succeeded. A failed save emits no saved-result, route or
+terminal-success message. Completion reports its saved request/outcome and numbered
+cursor movement separately, with a reminder that the next node has not executed; equivalent
 retries return the receipt without announcing new acceptance. Inspection, repeated
 waiting/terminal advance, and start do not replay activity. Waiting and interrupted
-summaries explain the next explicit caller action even on inspection.
+summaries explain the next explicit caller action even on inspection. Successful
+explicit resolution announces `interrupted -> ready|failed` with an unchanged cursor
+and no execution. Retry warns that effects may repeat and requires a later advance.
 
 Activity uses the same escaping as text summaries, contains no prompts or child
 output, and has no periodic polling noise, colors or full history. There are at
-most two lines per executing activation/result write and one per waiting/terminal
-write, bounded by the existing transition limit. Final summaries remain on stdout.
+most three lines per process-result write (result, movement or staying, optional run
+failure/interruption), one per activation/waiting/end/resolution write and two per
+accepted completion, bounded by the existing transition limit. Final summaries remain on stdout.
 Redirect stdout and stderr separately to separate results from activity/errors;
 ordering is guaranteed within the activity stream, not across two redirected
 streams. Closed activity pipes disable further activity without changing execution.
@@ -212,10 +224,15 @@ There is no persisted event format, log subsystem, automatic advance or retry.
 Explicit --json suppresses all activity on both streams.
 
 Text run summaries include run ID, state root, status, cursor, transition count
-and the latest activation summary when present. Waiting-agent results additionally
+and a distinct overall result (`not finished`, `success`, `failure`, or `unresolved`).
+Status tokens have English explanations; next actions distinguish advance, completion,
+terminal runs and explicit recovery. The latest process or agent outcome is separate
+from the overall result. Full process activation IDs appear only as secondary log
+selectors in summaries, not on each activity line. Source and state root remain
+available after the main result. Waiting-agent results additionally
 show request ID, node, literal prompt, allowed outcomes and selected context with
 availability, source activation and truncation/observed-byte information. Completion
-includes the accepted request/outcome/activation receipt summary. Do not expand
+includes the saved request/outcome receipt summary and makes retry semantics explicit. Do not expand
 full activation history or full logs in ordinary status. Unavailable context and
 available empty/null values remain distinct.
 

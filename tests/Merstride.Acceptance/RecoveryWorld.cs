@@ -318,6 +318,42 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         AssertEffects(1);
     }
 
+    internal void AssertProgressionRecovery(bool retry)
+    {
+        StartBarrier(); Crash();
+        cli.Raw("status", runId, "--state-dir", cli.State);
+        Assert.That(cli.ExitCode, Is.Zero);
+        Assert.That(cli.Stderr, Does.Not.Contain("[" + runId + "]"));
+        Assert.That(cli.Stdout, Does.Contain("Result: unresolved").And.Contain("external effects uncertain").And.Contain("Next: inspect external effects"));
+        cli.Raw("advance", runId, "--state-dir", cli.State);
+        Assert.That(cli.ExitCode, Is.EqualTo(5));
+        Assert.That(cli.Stderr, Does.Contain("Flow stays at work; no route taken").And.Contain("Run executing -> interrupted").And.Not.Contain("activating"));
+        using (new RejectedStateSave(StateFile))
+        {
+            cli.Raw("resolve", runId, retry ? "--retry" : "--fail", "--state-dir", cli.State);
+            Assert.That(cli.ExitCode, Is.EqualTo(6));
+            Assert.That(cli.Stderr, Does.Contain("IO_ERROR").And.Not.Contain("[" + runId + "]"));
+        }
+        cli.Call("status", runId);
+        Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
+        cli.Raw("resolve", runId, retry ? "--retry" : "--fail", "--state-dir", cli.State);
+        Assert.That(cli.ExitCode, Is.EqualTo(retry ? 0 : 5));
+        Assert.That(cli.Stderr, Does.Contain("Run interrupted -> " + (retry ? "ready" : "failed") + " at work")
+            .And.Contain("flow stays here; no process executed").And.Contain("Next:").And.Not.Contain("Flow #"));
+        AssertEffects(1);
+        if (!retry) return;
+        Assert.That(cli.Stderr, Does.Contain("External effects may repeat").And.Contain("merstride advance " + runId));
+        File.WriteAllText(PathFor("effect.release"), "release");
+        foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
+        cli.ExpectedChildren = 1;
+        cli.Raw("advance", runId, "--state-dir", cli.State); cli.ExpectedChildren = 0;
+        Assert.That(cli.ExitCode, Is.Zero);
+        Assert.That(cli.Stderr, Does.Contain("Process work (visit 2): activating").And.Contain("Flow #1: work -> done").And.Contain("overall result: success"));
+        AssertEffects(2);
+        cli.Call("status", runId);
+        Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("id").GetString(), Is.Not.EqualTo(priorActivation));
+    }
+
     internal void AssertTextInterruption()
     {
         StartInterrupt(text: true);
@@ -326,15 +362,16 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         var text = File.ReadAllText(PathFor("signal.stdout"));
         var activity = File.ReadAllText(PathFor("signal.stderr"));
         Assert.That(text, Does.Contain("Status: interrupted").And.Contain("Next: inspect external effects"));
-        Assert.That(activity, Does.Contain("Activating process").And.Contain("Process outcome saved: interrupted")
-            .And.Contain("Run interrupted").And.Contain("resolve --retry or --fail").And.Not.Contain("Route:"));
+        Assert.That(activity, Does.Contain("activating (launch pending)").And.Contain("saved execution interrupted; effects uncertain (interrupted)")
+            .And.Contain("Run executing -> interrupted").And.Contain("Flow stays at work; no route taken")
+            .And.Contain("resolve --retry or --fail").And.Not.Contain("Flow #"));
         foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
         Assert.That(signalHost!.WaitForExit(2000), Is.True);
         if (processBaseline.HasValue)
             Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo(OperatingSystem.IsWindows() ? 5 : 4));
         cli.Raw("advance", runId, "--state-dir", cli.State);
         Assert.That(cli.ExitCode, Is.EqualTo(5));
-        Assert.That(cli.Stderr, Does.Not.Contain("Activity ["));
+        Assert.That(cli.Stderr, Does.Not.Contain("[" + runId + "]"));
         cli.Call("status", runId);
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
     }

@@ -16,4 +16,6 @@ public sealed record CliResponse(
     string? Guide = null, string? Version = null, string? WorkflowId = null, Diagnostic[]? Diagnostics = null,
     Activation? LastActivation = null, string? Log = null, string? Stream = null, bool? Truncated = null,
     AgentRequest? Request = null, CompletionReceipt? Receipt = null, string? SourcePath = null,
-    RunSummary[]? Runs = null, bool? Discarded = null);
+    RunSummary[]? Runs = null, bool? Discarded = null, StartProgress? Start = null);
+
+public sealed record StartProgress(bool Created, string Phase, string Advance);

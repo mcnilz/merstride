@@ -26,7 +26,7 @@ internal sealed class CommandLine
         var state = new Option<string>("--state-dir") { Description = "Absolute state root override; default: .merstride/runs at the nearest .merstride/.git project boundary, otherwise cwd.", Arity = ArgumentArity.ExactlyOne, Recursive = true };
         root.Options.Add(help); root.Options.Add(version); root.Options.Add(json); root.Options.Add(state);
         Add(root, "validate", "Validate a marked workflow without executing or creating state.", "file", "merstride validate 'workflow with spaces.md'", ("--workflow", "Select a workflow ID; default: the single pair."));
-        Add(root, "start", "Snapshot a workflow and persist a ready run without executing it.", "file", "merstride start 'workflow with spaces.md'", ("--workspace", "Existing absolute workspace override; default: project boundary or cwd."), ("--workflow", "Select a workflow ID; default: the single pair."), ("--input-file", "JSON object input file; default: {}."));
+        Add(root, "start", "Snapshot a workflow and persist a ready run. Execute nothing unless --advance is explicitly supplied.", "file", "merstride start 'workflow with spaces.md' --advance", ("--workspace", "Existing absolute workspace override; default: project boundary or cwd."), ("--workflow", "Select a workflow ID; default: the single pair."), ("--input-file", "JSON object input file; default: {}."), ("--advance", "Opt in: immediately advance exactly this new run until waiting_agent, terminal state or error. May execute multiple processes."));
         Add(root, "advance", "Execute sequentially until waiting_agent, terminal state, or error. Text activity is live on stderr; --json suppresses it.", "selection", "merstride advance workflow.md");
         Add(root, "status", "Inspect a run without executing; failed-run inspection exits 0.", "selection", "merstride status 'workflow with spaces.md'");
         Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "selection", "merstride complete workflow.md --request q_000002 --outcome approved", ("--request", "Required request ID from waiting_agent."), ("--outcome", "Preferred: allowed outcome from waiting_agent; mutually exclusive with --result-file."), ("--data", "Optional inline JSON object with --outcome; default: {}."), ("--result-file", "Alternative UTF-8 JSON completion file: outcome and optional object data."));
@@ -126,7 +126,7 @@ internal sealed class CommandLine
         if (argument is not null) command.Arguments.Add(new Argument<string>(argument) { Description = argument == "file" ? "Required Markdown workflow path; quote paths containing spaces." : argument == "workflow-file" ? "Optional workflow source path filter; quote paths containing spaces." : argument == "selection" ? "Workflow path or run ID; omit for selected context. Bare r_ tokens are IDs; ./ or --file selects ID-shaped filenames." : "Required explicit run ID or unique r_ prefix (6+ hex digits).", Arity = argument == "file" || name is "use" or "discard" ? ArgumentArity.ExactlyOne : ArgumentArity.ZeroOrOne });
         foreach (var (optionName, optionDescription) in options)
         {
-            Option option = optionName is "--retry" or "--fail"
+            Option option = optionName is "--retry" or "--fail" or "--advance"
                 ? new Option<bool>(optionName) { Arity = ArgumentArity.Zero }
                 : new Option<string>(optionName) { Arity = ArgumentArity.ExactlyOne, Required = optionName is "--request" or "--activation" or "--stream" };
             option.Description = optionDescription;
@@ -150,6 +150,17 @@ internal sealed class CommandLine
           merstride complete --request q_000002 --outcome approved
           merstride advance
         Read and perform the waiting request before completing; use its displayed ID.
+        Optional creation and first advance in ONE invocation:
+          merstride start workflow.md --advance
+        Plain start executes nothing. --advance may execute multiple nodes until
+        waiting_agent, terminal state or error, using exactly the created run ID.
+        After creation, failures retain that ID and saved progress; inspect status/logs
+        in the original root and recover explicitly, without automatically repeating start.
+        Cancellation checked before initial advance leaves ready (exit 130); later
+        interruption uses ordinary resolve recovery. No rollback or automatic replay.
+        --json returns one protocol-1 object with additive start {created, phase, advance};
+        other responses have null start. finished includes workflow failure; inspect status/error.
+        Text separates creation, initial advance and resulting status. One call replaces two.
         Run commands use start/use selection, or a positional workflow path:
           merstride status workflow.md
           merstride advance 'workflow with spaces.md' --workflow review

@@ -27,12 +27,23 @@ human text is deliberately redesigned without changing protocol 1.
 1. Read `merstride guide` when unfamiliar with the installed version. Check `version` if protocol compatibility is uncertain. Scripts add `--json` for structured responses.
 2. Validate the chosen file. Review the workflow and execution scope before starting; starting a workflow does not expand the user's authorization.
 3. Start in the project, or supply absolute workspace/state overrides. Retain the returned full run ID and state root for automation.
-4. Call `advance` to execute deterministic work.
+4. Call `advance` to execute deterministic work. Alternatively opt in to `start <file> --advance` to combine steps 3 and 4 in one native invocation; it may execute multiple nodes. Plain start remains nonexecuting.
 5. On `waiting_agent`, use the returned request ID, prompt, selected context, and allowed outcomes. Perform the requested work with your existing tools. Do not infer outcomes from display labels.
 6. Prefer `complete <run-id> --request <id> --outcome <allowed-outcome>`, with optional `--data <json-object>` (default `{}`). No result file is needed. It moves the cursor but runs nothing else.
 7. Call `advance` again until completed, failed, or interrupted. Report the actual terminal result.
 
 Use `status` to resume after losing conversation context. Repeated status/advance while waiting returns the same request. Do not start a new run merely because a completion response was lost: resend the same completion for the same ID. A conflicting result requires investigation, not a fresh request invented by the agent.
+
+Combined start returns one protocol-1 object, with additive `start` metadata:
+`created`, phase (`creation`, `selection`, `advance`) and initial advance
+(`not_started`, `finished`, `interrupted`, `error`). Other responses have null
+`start`; strict allowlists must accept it. `finished` includes a failed workflow:
+use the CLI exit/error/status, never treat that word as success. After creation,
+even an error retains the exact run ID/root. Read fresh status and recover that
+run; do not automatically repeat start or replay work. Status may be null when
+storage cannot be read. Cancellation before the initial-advance check leaves the
+saved run ready, with exit 130; a later signal uses ordinary interrupted recovery.
+See [phase/cancellation details and JSON example](START-AND-ADVANCE.md).
 
 For human project use, `start <file>` needs no workspace/state setup. Defaults
 use the nearest ancestor `.merstride`/`.git` boundary, otherwise cwd; state is

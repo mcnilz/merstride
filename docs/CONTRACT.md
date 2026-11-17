@@ -191,7 +191,7 @@ and 1-based line/column when available. A failed run's read-only status still ex
 0: its summary goes to stdout and its failure reason to stderr. Usage errors retain
 a help hint. Stack traces are hidden. No colors or ANSI formatting.
 
-Text advance emits live, newline-delimited activity on stderr, also when redirected.
+Text advance (including `start --advance`) emits live, newline-delimited activity on stderr, also when redirected.
 Each line starts with `[<run-id>]`. Process lines identify the node and visit number
 and explain activation (launch still pending) or the saved process outcome in English
 alongside its routing token. Separate `Flow #<transition-count>: <source> -> <destination>`
@@ -256,7 +256,7 @@ is literal and does not select output format.
 | Command | Behavior |
 | --- | --- |
 | `validate <file> [--workflow <id>]` | Validate only; return diagnostics with severity and source locations. |
-| `start <file> [--workspace <absolute-path>] [--workflow <id>] [--input-file <file>]` | Validate, snapshot, persist a new run, return ready; execute nothing. Workspace defaults to the project boundary below. |
+| `start <file> [--workspace <absolute-path>] [--workflow <id>] [--input-file <file>] [--advance]` | Validate, snapshot, persist/select a distinct ready run. Ordinary start executes nothing. Explicit --advance performs its first synchronous advance in this invocation. Workspace defaults to the project boundary below. |
 | `advance [run-id|file] [--file <path> [--workflow <id>]]` | Execute synchronously until waiting_agent, terminal state, or error. |
 | `status [run-id|file] [--file <path> [--workflow <id>]]` | Read compact state, cursor, and current request. |
 | `complete [run-id|file] --request <id> --outcome <outcome> [--data <json-object>]` | Preferred file-free completion; save receipt and transition only. Alternative: `--result-file <file>`. |
@@ -279,6 +279,61 @@ dash-prefixed option values. Duplicate options (including flags/help aliases),
 unknown/missing/extra/conflicting arguments return usage exit 2 and a help hint.
 Response files, directives, abbreviations and option bundles are disabled.
 See [CLI usage](CLI.md) for examples and exact discovery semantics.
+
+### Optional initial execution
+
+`start <file> --advance` creates and selects a new run using ordinary start's
+workflow selection, workspace, input, state-root preparation and snapshots, then
+performs exactly one ordinary synchronous advance. It can traverse multiple nodes
+until waiting_agent, terminal state or error. Plain start remains nonexecuting.
+Completion still never executes the next node. This replaces two native CLI calls
+with one; no measured token saving is established.
+
+Release the root context lock after creation/selection, before taking the new
+run's writer lock for the whole advance. Pass the created exact identity directly;
+never rediscover current/latest or a source association between phases. Reread
+that exact run under its lock. Other starts/use may change context without
+retargeting this advance; normal writer exclusion still applies.
+
+Argument, workflow/input, preparation and initial persistence failures execute no
+node. After successful creation, retain its identity and all saved progress on
+selection/advance failure. Never erase the run, roll back external effects,
+automatically retry or replay. A failed selection save leaves ready and performs
+no advance. Inspect the exact run in the original root, then use/advance/resolve
+explicitly as appropriate; repeating start creates a different run.
+
+Handle supported user interrupts from the beginning of combined preparation.
+Cancellation observed before entering creation saves no run and exits 130.
+Once creation starts, finish its durable creation/selection attempt, then check
+cancellation before acquiring the advance lock: if canceled, keep ready, return
+INTERRUPTED/130 and report that initial advance did not start. The caller may
+advance this exact ready run explicitly; resolve is unnecessary. This boundary
+ends at that cancellation check. A later signal follows ordinary advance's
+interrupted/explicit-resolution semantics, including before its first activation.
+Failure during cancellation retains identity and exit 130; a failed recovery save
+reports that it could not be saved. Forced termination may produce no response;
+use runs/status and inspect effects. There is no cross-phase atomic transaction.
+
+Combined JSON is one protocol-1 response with the normal run/request/status/error
+fields plus additive `start: {created, phase, advance}`. `created` means the initial
+ready snapshot was durably saved. `phase` is `creation`, `selection` or `advance`;
+`advance` is `not_started`, `finished`, `interrupted` or `error`. `finished` means
+the engine returned normally, including a failed workflow (exit 5); it never means
+overall success. `error` means initial advance stopped on an operational exception;
+a refusal before entering the engine is `not_started`. After a post-creation
+exception, return a fresh status projection if readable, otherwise null status
+with the created identity/root and error. Never substitute an unsaved result.
+Cancellation whose recovery save failed may project interrupted as ordinary
+advance does; its error explicitly says the recovery save failed.
+
+`start` metadata is null on other responses, including ordinary start and errors
+before the combined handler (argument parsing/project discovery). Protocol version
+stays 1; consumers with strict response allowlists must accept this additive field.
+No saved-state schema migration is needed. JSON suppresses all human activity.
+Text adds one saved-creation activity line before advance, then the usual bounded
+activity; stdout distinguishes creation, phase, initial-advance outcome and final
+run status/next action. Creation never claims selection or execution succeeded.
+See [ADR 0017](adr/0017-p21.md).
 
 `creation-guide` follows `guide` output conventions: directly readable instructions
 with real line breaks and a copyable example by default; with `--json`, one

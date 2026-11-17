@@ -320,3 +320,21 @@ fixture explicitly selects UTF-8 stdin decoding in the interpreter arguments;
 plain `-Command -` can otherwise inherit a Windows console input code page.
 This makes the fixture independent of prior console activity without changing
 product transport or rewriting interpreter input/output.
+
+P21 executes `21-start-and-advance.feature` at the same published-native CLI
+boundary in both managed and independent native suites. Separate/combined paths
+compare state/status, actual process counts/effects and stopping conditions for
+chains, agent handoffs, immediate agents, terminal success/failure, no-route
+failure and limits. Multi-pair selection, explicit input/workspace and frozen
+definitions/input remain covered. Text distinguishes creation/progression/final
+status; JSON parses as one protocol-1 object without human activity. Invalid
+arguments/workflow/input/preparation/storage, context locks/corruption and initial
+persistence conflicts execute nothing and preserve a ready seed run. A controlled
+process barrier introduces request-allocation locks and rejected result saves;
+recovery preserves progress/effects and rejects replay. Concurrent same/different
+starts change selection while the combined run remains locked and exactly targeted.
+The real isolated signal host also starts combined execution, requires exit 130
+and attached-tree termination, and checks explicit retry/fail without execution.
+No private fault hook is added. The narrow creation-to-advance cancellation window
+is defined in the contract but not precisely signal-timed; physical disk failures
+and additional platforms are not implied by these local filesystem/signal fixtures.

@@ -1,6 +1,8 @@
 # Inspect a Git workspace
 
 Run `start` with an existing Git repository as the absolute workspace, then `advance`.
+Or use `start <file> --workspace <absolute-path> --advance` to create and perform
+that first advance in one native invocation. Plain start executes nothing.
 Both commands use Git explicitly; their output is available through separate logs.
 Live text shows each saved process result and a numbered `status -> diff -> done`
 path with exact/default route reasons. The final `Result` describes the whole run,

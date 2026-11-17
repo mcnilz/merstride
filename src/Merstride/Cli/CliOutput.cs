@@ -33,6 +33,18 @@ internal sealed class CliOutput(bool json)
 
     private static void WriteText(CliResponse response, string? logActivation)
     {
+        if (response.Start is { } start)
+        {
+            Line("Creation", start.Created ? "saved new run" : "not completed; no initial advance");
+            Line("Phase", start.Phase);
+            Line("Initial advance", start.Advance switch
+            {
+                "finished" => "finished; see the resulting run status below",
+                "interrupted" => "interrupted; inspect external effects before explicit recovery",
+                "error" => "stopped by an error; saved progress was retained, without automatic retry",
+                _ => "not started; no node executed by this invocation"
+            });
+        }
         if (response.Guide is { } guide) Console.WriteLine(Readable(guide));
         else if (response.Version is { } version) Console.WriteLine($"Merstride {Readable(version)} (protocol {response.ProtocolVersion})");
         else if (response.Log is { } log)
@@ -85,7 +97,7 @@ internal sealed class CliOutput(bool json)
     {
         Line("Run", response.RunId);
         Line("Workflow", response.WorkflowId);
-        Line("Status", response.Status + (response.Status switch
+        Line("Status", (response.Status ?? "unavailable; inspect this exact run in the original state root") + (response.Status switch
         {
             "ready" => " (ready to advance; next node has not executed)",
             "executing" => " (process activation in progress)",
@@ -99,7 +111,7 @@ internal sealed class CliOutput(bool json)
         Line("Result", response.Status switch
         {
             "completed" => "success", "failed" => "failure", "interrupted" => "unresolved",
-            _ => "not finished"
+            null => "unknown", _ => "not finished"
         });
         if (response.TransitionCount is { } transitions) Line("Transitions", transitions.ToString(CultureInfo.InvariantCulture));
         if (response.LastActivation is { } activation)
@@ -115,6 +127,8 @@ internal sealed class CliOutput(bool json)
             Console.WriteLine("Next: inspect the failure reason and logs; correct the cause and start a new run. Only interrupted runs support resolve.");
         else if (response.Status == "executing")
             Console.WriteLine("Next: wait for the current advance to finish; status can inspect it without executing work.");
+        else if (response.Status is null)
+            Console.WriteLine("Next: inspect status/logs for this exact run and state root after restoring access; do not repeat start to recover it.");
         Console.WriteLine();
         Line("Source", response.SourcePath);
         Line("State root", response.StateRoot);

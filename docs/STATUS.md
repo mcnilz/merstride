@@ -13,7 +13,7 @@ Process authoring also supports shebang-selected inline scripts over UTF-8 stdin
 and disjoint Windows/macOS/Linux execution variants, with no script-file transport
 or interpreter provisioning. Direct command/args execution remains available.
 All commands now default to readable English text, including redirected output;
-agents/scripts explicitly request the unchanged protocol-1 JSON with `--json`.
+agents/scripts explicitly request protocol-1 JSON with `--json`.
 Text errors/warnings use stderr; results, offline guides and bounded log tails use stdout.
 Text advance now also shows live activity on stderr after successful state writes;
 explicit JSON suppresses activity and keeps the existing protocol response.
@@ -22,7 +22,11 @@ with route reasons and repeated visits, and run status/overall results. Summarie
 explain the next explicit action; full activation IDs are secondary log selectors.
 Project commands now discover the nearest `.merstride`/`.git` boundary, default
 workspace/storage there and remember current and per-source/workflow runs.
-Start always creates and selects a new ready run, retaining earlier state.
+Ordinary start creates and selects a new ready run, retaining earlier state.
+Explicit `start <file> --advance` optionally performs that new run's first
+synchronous advance in the same native invocation, using its exact identity.
+Post-creation errors retain identity and durable progress without automatic replay.
+Protocol 1 adds nullable start phase metadata; strict client allowlists must accept it.
 Commands accept positional workflow paths or exact run IDs; ID-shaped filenames
 use ./ or --file. New canonical run/request IDs have eight characters, and durable
 reservations prevent reuse after explicit single-run discard. Legacy IDs/roots
@@ -34,6 +38,53 @@ and publication fails closed.** No clean-target or token-saving claim follows
 from a local build.
 
 ## Verification
+
+P21 adds explicit optional `start <file> --advance`, using the same synchronous
+advance adapter as the separate command and passing exactly the newly created ID.
+Ordinary start remains ready/nonexecuting; completion still only moves the cursor.
+ADR 0017 defines cancellation before the first-advance check, phase-aware partial
+success and additive nullable protocol-1 `start` metadata. Failed creation executes
+nothing; later errors retain identity, effects and durable progress without rollback,
+automatic retry/replay or deletion. The state schema, engine, process runner,
+dependency/license inventory and retention rules are unchanged.
+
+On 2026-11-17 the settled P21 source passed the full Windows x64
+`scripts/build.ps1` gate: **654 tests / 433 local feature cases / 418 independent
+native runtime cases**, zero failures/skips and no build/publish warnings/errors.
+All 31 dedicated P21 cases pass in both managed and native hosts. They compare
+separate/combined chains, immediate/process-led handoffs, terminal success/failure,
+input/workflow/workspace selection, limits and actual effects; reject malformed,
+preparation and initial-persistence failures; preserve progress after request-lock
+and result-save failures; isolate same/different concurrent starts and frozen
+input/definitions; and prove actual supported interruption with explicit retry/fail.
+The three recursive release-environment orchestrators remain independently
+outstanding, outside the local 433 cases; they are not skipped local tests.
+Architecture, dependency, distribution, privacy, native budgets and Mermaid gates
+pass. Native size is **6.284 MiB**, warm status P95 **20.997 ms**.
+
+Actual README/CLI human Bash blocks, optional combined start, the explicit JSON
+Bash integration, separate/combined review examples and offline start help/guides
+passed in isolated projects using the exact gate binary. Completion returns ready
+before a separate advance finishes. Initial walkthrough-host restrictions and
+walkthrough-only Windows newline/trailing-newline assertions were corrected.
+Production/test code and scenario definitions stayed fixed throughout the final
+gate and walkthroughs. Final staging removed an extra blank line at the new
+feature file's EOF and refreshed its inventory hash; scenario identities and
+the verified native binary are unchanged. Other final edits record evidence/history.
+Independent Spec review found no gaps, wrong behavior or scope creep. Standards
+review found no documented-rule violations and one nonblocking duplication note
+about the CLI exception mappings. The coordinator explicitly chose to retain that
+small duplication and avoid discretionary cleanup; there is no correctness finding.
+
+Raw evidence remains in ignored `artifacts/` (P21 focused red/green TRX, full gate,
+native reports and walkthrough). The coordinator accepted P21 on 2026-11-17 after
+independent inspection and authorized its single scoped local commit. Implementation
+is complete; final acceptance/history edits do not change the verified behavior.
+No Linux/macOS, hosted or clean-target execution was added; the narrow
+creation-to-advance signal window and physical disk failure are not precisely
+fault-timed by the running-tree signal/filesystem fixtures. No measured token
+savings, release readiness, push or publication is claimed. One native invocation
+replaces two. Existing independent release qualification remains mandatory.
 
 P20 makes the executed path and result readable without changing execution.
 ADR 0016 deliberately replaces the human layout with ASCII `[run-id]` process,

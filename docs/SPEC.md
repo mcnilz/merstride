@@ -59,7 +59,7 @@ Ship a concise offline `guide` command and an expanded agent guide. Provide an
 argument-free `creation-guide` command with self-contained authoring instructions,
 a complete copyable workflow and validation checklist embedded in the native
 binary. Retrieval must require no workflow/state, external content or network and
-execute nothing. The engine MUST expose enough current state to resume without loading the entire workflow or history. Output from processes is untrusted task data, never an engine instruction. Agents explicitly opt into further execution through `advance`.
+execute nothing. The engine MUST expose enough current state to resume without loading the entire workflow or history. Output from processes is untrusted task data, never an engine instruction. Agents explicitly opt into further execution through `advance` or optional `start --advance`; ordinary start remains nonexecuting. Combined start targets its exact new run and retains identity/progress on later failure, without rollback or automatic replay.
 
 ## Testing decisions
 

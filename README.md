@@ -72,7 +72,7 @@ merstride status workflow.md
 merstride advance workflow.md
 ```
 
-`start` always creates a new ready run, executes nothing, and selects it for
+Ordinary `start` creates a new ready run, executes nothing, and selects it for
 later commands. Earlier runs, including runs from other files, are retained.
 `status` inspects the selected run; `advance` reaches the agent task above.
 Omit the file on later commands to use the current run selected by start/use.
@@ -80,6 +80,20 @@ Project subdirectories share this selection. To continue a different workflow,
 use `merstride advance other-workflow.md`; it selects that file's remembered
 run without changing the project selection. To switch deliberately, inspect
 `merstride runs` and call `merstride use <run-id>`.
+
+To create and immediately perform the first advance in **one** invocation,
+replace the separate start/advance pair with:
+
+```bash
+merstride start workflow.md --advance
+```
+
+This explicit option may run several process nodes before stopping at an agent,
+terminal result or error. Plain `start` remains nonexecuting. Creation and initial
+advance are reported separately; errors after creation retain that run and its
+saved progress. Recover using its displayed ID/root, rather than starting again.
+See [phase and cancellation rules](docs/START-AND-ADVANCE.md). One invocation replaces
+two; no measured token saving is claimed.
 
 `status workflow.md`, `advance workflow.md` and the other run commands accept
 the same positional file spelling as start. Add `--workflow <id>` for a file with

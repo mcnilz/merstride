@@ -219,18 +219,23 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         Assert.That(writer.HasExited, Is.False);
     }
 
-    private void StartInterrupt(bool text = false)
+    private void StartInterrupt(bool text = false, bool combined = false)
     {
         CreateWorkflow(mode: "interrupt_parent");
         processBaseline = ProcessObserver.TotalProcesses();
         var existing = ProcessObserver.ActiveProcessIds();
-        signalHost = WindowsInterrupt.Start(Helper, Binary, runId, cli.State, cli.DirectoryPath, text);
+        signalHost = WindowsInterrupt.Start(Helper, Binary, combined ? cli.FilePath : runId, cli.State, cli.DirectoryPath, text, combined);
         WaitFile("parent.ready"); ObserveHelper("parent.pid"); ObserveHelper("child.pid");
         writer = Process.GetProcessById(int.Parse(File.ReadAllText(PathFor("engine.pid")), System.Globalization.CultureInfo.InvariantCulture));
         _ = writer.Handle;
         Assert.That(writer.HasExited, Is.False);
         var created = ProcessObserver.ActiveProcessIds().Except(existing).ToArray();
         Assert.That(created, Has.Length.EqualTo(OperatingSystem.IsWindows() ? 5 : 4));
+        if (combined)
+        {
+            cli.Call("runs");
+            runId = cli.Response.GetProperty("runs").EnumerateArray().Single(r => r.GetProperty("runId").GetString() != runId).GetProperty("runId").GetString()!;
+        }
         if (!OperatingSystem.IsWindows()) return;
         var consoleId = created.Except(helpers.Select(p => p.Id).Concat([writer.Id, signalHost.Id])).Single();
         using var console = Process.GetProcessById(consoleId);
@@ -374,6 +379,42 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         Assert.That(cli.Stderr, Does.Not.Contain("[" + runId + "]"));
         cli.Call("status", runId);
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
+    }
+
+    internal void AssertCombinedInterruption(bool text, bool retry)
+    {
+        StartInterrupt(text, combined: true);
+        Execute("I send the platform's supported user-interrupt signal");
+        Assert.That(cli.ExitCode, Is.EqualTo(130), File.ReadAllText(PathFor("signal.stderr")));
+        foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
+        Assert.That(signalHost!.WaitForExit(2000), Is.True);
+        if (processBaseline.HasValue)
+            Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo(OperatingSystem.IsWindows() ? 6 : 5));
+        var result = File.ReadAllText(PathFor("signal.stdout"));
+        if (text)
+            Assert.That(result, Does.Contain("Run: " + runId).And.Contain("Creation: saved new run").And.Contain("Initial advance: interrupted").And.Contain("Status: interrupted"));
+        else
+        {
+            var response = JsonDocument.Parse(result).RootElement;
+            Assert.That(response.GetProperty("runId").GetString(), Is.EqualTo(runId));
+            Assert.That(response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
+            Assert.That(response.GetProperty("start").GetProperty("created").GetBoolean(), Is.True);
+            Assert.That(response.GetProperty("start").GetProperty("advance").GetString(), Is.EqualTo("interrupted"));
+            Assert.That(File.ReadAllText(PathFor("signal.stderr")), Is.Empty);
+        }
+        cli.Call("status", runId);
+        priorActivation = cli.Response.GetProperty("lastActivation").GetProperty("id").GetString()!;
+        cli.Call("advance", runId);
+        Assert.That(cli.ExitCode, Is.EqualTo(5));
+        Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("id").GetString(), Is.EqualTo(priorActivation));
+        cli.Call("resolve", runId, retry ? "--retry" : "--fail");
+        Assert.That(cli.ExitCode, Is.EqualTo(retry ? 0 : 5));
+        Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(retry ? "ready" : "failed"));
+        Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("id").GetString(), Is.EqualTo(priorActivation));
+        cli.Call("runs");
+        Assert.That(cli.Response.GetProperty("runs").GetArrayLength(), Is.EqualTo(2));
+        var seed = cli.Response.GetProperty("runs").EnumerateArray().Single(r => r.GetProperty("runId").GetString() != runId);
+        Assert.That(seed.GetProperty("status").GetString(), Is.EqualTo("ready"));
     }
 
     internal void RejectCorruptSnapshot(string defect)

@@ -33,7 +33,7 @@ transition limit and uses the same escaping as summaries. A closed activity pipe
 disables further activity without changing execution. See the
 [README transcript](../README.md#quick-start) for a process chain and handoff.
 
-**Existing scripts must add `--json` explicitly.** It returns exactly one unchanged
+**Existing scripts must add `--json` explicitly.** It returns exactly one
 protocol-version-1 JSON object on stdout, including for help, version and errors.
 Help/guides use `guide`; version/root `--version` use `version`. JSON errors remain
 inside the response, with no duplicate text on stderr. No colors, ANSI sequences,
@@ -47,6 +47,18 @@ real line breaks and a copyable workflow. With `--json`, they are in a nonempty
 `guide` string, with null status/error and exit 0. Both guides create no state and
 ignore an unusable state path. Use `merstride guide` for the agent loop.
 Both commands support `-h` / `--help` and the global options described below.
+
+`merstride start <file> --advance` optionally creates/selects a distinct run and
+performs its first synchronous advance in one native invocation. All start options
+still apply. Ordinary start executes nothing; the flag may execute multiple nodes
+until waiting_agent, terminal state or error. It passes the exact created ID
+directly, independent of concurrent context changes. Text identifies creation and
+initial-advance outcome separately, with usual live activity and final status.
+JSON stays protocol 1 and adds `start: {created, phase, advance}`; other responses
+have null `start`. Update strict client response allowlists for the new field.
+One coherent response includes the created ID even on later failure, with fresh
+status when readable or null when unknown. No rollback, retry or deletion occurs.
+See [the complete example and phase/cancellation rules](START-AND-ADVANCE.md).
 
 `--json` and `--state-dir <absolute-path>` are global: put them before or after the
 command, before any `--` delimiter. Command-specific options stay with their
@@ -118,7 +130,7 @@ merstride advance 'workflow with spaces.md'
 
 Use `resolve --fail` instead of `--retry` to finish failed without executing.
 Do not complete a run unless its response contains a waiting request, or resolve
-unless it is interrupted. `start` creates ready without executing; `complete`
+unless it is interrupted. Ordinary `start` creates ready without executing; `complete`
 moves only the cursor. If you use an explicit `--state-dir`, reuse it on subsequent calls.
 The examples stop on a nonzero CLI exit; a failed/interrupted advance must
 be inspected before continuing. See the [agent guide](AGENT-GUIDE.md#bash-example)

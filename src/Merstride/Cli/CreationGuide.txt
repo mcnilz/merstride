@@ -21,7 +21,18 @@ Simple project execution
   boundary (otherwise cwd), and state to .merstride/runs there. Subdirectories
   share it; nested Git projects stop discovery. No config file or migration.
   Only start adds /runs/ to .merstride/.gitignore, preserving existing content.
-- start always creates and selects a new nonexecuting run; earlier runs are retained.
+- Ordinary start creates and selects a new nonexecuting run; earlier runs are retained.
+  Opt in with merstride start <file> --advance to create and first advance in ONE
+  native invocation. This may execute multiple nodes until waiting_agent, terminal
+  state or error. It targets exactly the created run even if another caller starts.
+  After creation, failures keep that ID and saved progress; inspect status/logs
+  in its original state root, then recover explicitly. Never automatically repeat
+  start or replay effects. Cancellation checked before initial advance leaves
+  ready (exit 130); later interruption requires normal explicit resolution.
+  Text separates creation from initial advance and final status. Explicit --json
+  returns one protocol-1 object with additive start {created, phase, advance};
+  other responses have null start. finished means advance returned, not success.
+  Update strict response allowlists. No rollback, deletion or measured token claim.
   merstride status and merstride advance use that selection across invocations.
   Use merstride status <file> or merstride advance <file> for another workflow's
   remembered run. complete/resolve/logs share that path-or-run-ID selector.

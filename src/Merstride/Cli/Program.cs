@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 using Merstride.Compilation;
 using Merstride.Domain;
@@ -59,6 +58,23 @@ internal static class Program
               merstride start <file> --workspace <workspace> --state-dir <state-root> --json
               Save the returned runId and stateRoot. Reuse stateRoot as --state-dir below.
               Optional --input-file <file> supplies a JSON object, frozen at start; default {}.
+
+              Opt in to creation and first advance in ONE native invocation:
+              merstride start <file> --advance
+              All start options still apply. This may execute multiple nodes until
+              waiting_agent, terminal state or error. Plain start remains nonexecuting.
+              Exactly the created ID is advanced, independent of changing selection.
+              Text separates creation, initial advance and resulting status/next action.
+              --json returns one protocol-1 object with additive start metadata:
+              created; phase creation|selection|advance; advance not_started|finished|
+              interrupted|error. Other responses have null start; update strict allowlists.
+              finished includes workflow failure: inspect exit/error/status for success.
+              After creation even errors retain its ID/root and saved progress. Inspect
+              that exact run; never automatically repeat start, roll back or replay.
+              Unreadable status is null. Cancellation checked before initial advance
+              leaves ready with exit 130; advance that ID explicitly without resolve.
+              Later interruption uses ordinary interrupted/resolve semantics below.
+              One invocation replaces two; no measured token saving is established.
 
               Simple project use: merstride start <file>, then merstride status and
               merstride advance. Defaults use the nearest ancestor .merstride/.git
@@ -191,26 +207,15 @@ internal static class Program
         // validate still checks an explicitly supplied absolute state path, without accessing it.
         var root = location?.StateRoot ?? (options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : "");
         var store = new RunStore(root);
-        if (command is "validate" or "start")
+        if (command == "start") return StartCommand.Execute(positional[0], options, location!, store, Version, output);
+        if (command == "validate")
         {
             var path = positional[0];
             using var file = File.OpenRead(path);
             if (file.Length > 1048576) throw new MerstrideException("INVALID_DOCUMENT", "Document exceeds 1 MiB.", 3, new(1, 1));
             var bytes = new byte[(int)file.Length]; file.ReadExactly(bytes);
             var workflow = WorkflowCompiler.Compile(bytes, options.GetValueOrDefault("--workflow"));
-            if (command == "validate") return output.Write(new(WorkflowId: workflow.Id, Diagnostics: workflow.Diagnostics));
-            var workspace = options.TryGetValue("--workspace", out var selectedWorkspace) ? Absolute(selectedWorkspace) : location!.Workspace;
-            if (!Directory.Exists(workspace)) throw Usage("Workspace must be an existing directory.");
-            var input = options.TryGetValue("--input-file", out var inputFile) ? JsonValues.Compact(AgentFiles.Input(inputFile)) : "{}";
-            location!.Prepare();
-            var catalog = new RunCatalog(store);
-            using var selectionLock = catalog.Lock();
-            _ = catalog.Read();
-            var state = new RunState(new IdentityAllocator(store).Run(), "ready", workflow,
-                Convert.ToHexStringLower(SHA256.HashData(bytes)), Version, workspace, input, 0, null, workflow.Entry, [], Receipts: [], SourcePath: Path.GetFullPath(path));
-            store.Create(state);
-            catalog.Select(state);
-            return output.Write(Response(state, root));
+            return output.Write(new(WorkflowId: workflow.Id, Diagnostics: workflow.Diagnostics));
         }
         var selector = positional.FirstOrDefault();
         var source = options.TryGetValue("--file", out var selectedFile) ? WorkflowPath(selectedFile) :
@@ -281,13 +286,8 @@ internal static class Program
         Console.CancelKeyPress += cancel;
         try
         {
-            run = WorkflowEngine.Advance(run, new ConsoleActivity(store, output, run), new ProcessRunner(store.RunDirectory(id), interruption.Token), store, new IdentityAllocator(store), interruption.Token);
-            return output.Write(Response(run, root), interruption.IsCancellationRequested ? 130 : run.Status is "failed" or "interrupted" ? 5 : 0);
-        }
-        catch (Exception ex) when (interruption.IsCancellationRequested && ex is IOException or UnauthorizedAccessException)
-        {
-            return output.Write(new(RunId: id, Status: "interrupted", StateRoot: root,
-                Error: new("INTERRUPTED", "User interrupted execution; recovery state could not be saved. Inspect external effects before resolution.")), 130);
+            var result = RunExecution.Advance(run, store, output, interruption.Token);
+            return output.Write(result.Response, result.Code);
         }
         finally { Console.CancelKeyPress -= cancel; }
     }
@@ -304,9 +304,7 @@ internal static class Program
         { throw new MerstrideException("INVALID_PAYLOAD", "Invalid JSON completion data; expected an object.", 4); }
     }
 
-    private static CliResponse Response(RunState state, string root) => new(RunId: state.RunId, Status: state.Status,
-        Error: state.Error, StateRoot: root, Cursor: state.Cursor, TransitionCount: state.TransitionCount,
-        LastActivation: state.Activations.LastOrDefault(), Request: state.Request, SourcePath: state.SourcePath, WorkflowId: state.Definition.Id);
+    private static CliResponse Response(RunState state, string root) => RunExecution.Response(state, root);
     private static string Absolute(string path) => Path.IsPathFullyQualified(path) ? Path.GetFullPath(path) : throw Usage("Path must be absolute.");
     private static string WorkflowPath(string path)
     {

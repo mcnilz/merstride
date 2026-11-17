@@ -40,9 +40,9 @@ Feature: Discover and invoke the CLI predictably
       | unknown;--json |
       | version;--unknown;--json |
       | version;extra;--json |
-      | status;--json |
+      | status;--json;--json |
       | status;r_missing;extra;--json |
-      | start;missing.md;--json |
+      | start;--json |
       | start;missing.md;--workspace;--json |
       | version;--state-dir;--json |
       | version;--state-dir;--unknown;--json |

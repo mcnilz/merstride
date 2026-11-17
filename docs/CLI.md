@@ -84,24 +84,18 @@ must precede it. For an option value beginning with `-`, use the equals form:
 abbreviations and single-character option bundles are disabled. An at-sign path
 is an ordinary filename. Nothing implicitly launches a shell.
 
-Bash walkthrough with `merstride` on PATH and a reviewed workflow named
-`workflow with spaces.md`. For a source build, add `artifacts/native` to PATH or
-replace `merstride` below with `"$binary"` after the
-[README setup](../README.md#quick-start). Read the standard output directly and
-paste only the displayed ID when prompted. No JSON utility is required.
+Bash walkthrough with `merstride` on PATH, no earlier project runs, and a reviewed workflow named
+`workflow with spaces.md`. Read standard output directly
+and paste the short request prefix when prompted. No JSON utility is required.
 
 ```bash
 set -euo pipefail
-workspace=$(pwd -P)
-case "$OSTYPE" in msys*|cygwin*) workspace=$(cygpath -am "$workspace") ;; esac
-state_root="$workspace/.merstride/runs"
 merstride --help
 merstride start --help
 merstride validate -- 'workflow with spaces.md'
-merstride start 'workflow with spaces.md' --workspace "$workspace" --state-dir "$state_root"
-read -r -p 'Paste the Run ID (r_...) shown above: ' run_id
-merstride advance "$run_id" --state-dir "$state_root"
-merstride status "$run_id" --state-dir "$state_root"
+merstride start 'workflow with spaces.md'
+merstride advance
+merstride status
 ```
 
 Only if the output shows `Status: waiting_agent`, read `Request`, `Prompt`,
@@ -110,20 +104,62 @@ agent. After completing the review, if `approved` is the appropriate allowed
 outcome, submit it (using the same Bash session):
 
 ```bash
-read -r -p 'Paste the Request ID shown above: ' request_id
-merstride complete "$run_id" --request "$request_id" --outcome approved --state-dir "$state_root"
-merstride advance "$run_id" --state-dir "$state_root"
+read -r -p 'Paste the short Request prefix shown above: ' request
+merstride complete --request "$request" --outcome approved
+merstride advance
 ```
 
 Use `resolve --fail` instead of `--retry` to finish failed without executing.
 Do not complete a run unless its response contains a waiting request, or resolve
 unless it is interrupted. `start` creates ready without executing; `complete`
-moves only the cursor. Reuse the returned absolute `stateRoot` on subsequent calls.
+moves only the cursor. If you use an explicit `--state-dir`, reuse it on subsequent calls.
 The examples stop on a nonzero CLI exit; a failed/interrupted advance must
 be inspected before continuing. See the [agent guide](AGENT-GUIDE.md#bash-example)
 for automatic JSON extraction and error/status handling, and [recovery](../examples/recovery.md) for
 the separate interruption decision. Use native absolute paths on each OS;
 Git Bash/Cygwin's `cygpath -am` supplies Windows paths. Workflow process arguments remain literal.
+
+## Project storage and selection
+
+Default workspace and storage use the nearest directory, walking upward from
+cwd, with a `.merstride` or `.git` entry. A Git worktree/submodule `.git` file
+counts; nested Git boundaries stop discovery. With no marker, use cwd. State
+lives under `.merstride/runs`. A first start creates the project marker and adds
+`/runs/` to `.merstride/.gitignore` if absent, retaining all existing bytes and
+leaving parent ignore/config files alone. There is no configuration/environment
+source. Explicit absolute `--workspace` overrides process cwd only; explicit
+absolute `--state-dir` overrides storage only. Explicit external storage needs
+its own ignore policy. Relative workflow paths remain relative to the caller.
+
+Existing cwd-relative `.merstride` roots keep their state, and calls from child
+directories find that boundary. No automatic move, merge, deletion or cleanup
+occurs. Outside a project, start in the intended root first: before first use,
+a markerless child is an independent cwd. If an older run lives elsewhere, use
+its original absolute `--state-dir`. Summaries show the actual absolute root.
+
+Run commands accept full IDs, or unique `r_` prefixes of 8..32 lowercase hex
+digits. An omitted run selects exactly one full-ID run directory, including
+terminal, corrupt and incomplete runs. Multiple matches yield AMBIGUOUS_RUN,
+missing convenience matches RUN_NOT_FOUND, invalid syntax INVALID_RUN_ID (exit 4).
+Full-ID calls retain their direct I/O errors (exit 6 for missing state). No newest
+run or active-only fallback exists. Text prints a suggested eight-hex `Run prefix`
+beside the full ID. Lengthen a prefix if it collides, or use the full ID.
+
+`--request` is always mandatory; full IDs and `q_` prefixes of 8..32 lowercase
+hex digits work. Selection under the run lock includes both current requests and
+all historical receipts. Ambiguity yields AMBIGUOUS_REQUEST, invalid/missing
+matches INVALID_REQUEST (exit 4). The short `Request prefix` never means
+"whatever is waiting now": a historical retry returns only its original receipt,
+or COMPLETION_CONFLICT for different data, and leaves newer requests waiting.
+Automation can retain full IDs and explicit roots with unchanged protocol-1 JSON.
+
+Missing state is not created by inspection or selection; use start for first
+use. A missing snapshot, corrupt selected run, file/directory conflict or
+unusable root returns exit 6 and never falls back to another root. A `.merstride`
+file is a storage conflict; preserve it and choose an explicit root. Failed start
+preparation can leave an empty marker/ignore rule, but never resets saved runs.
+Concurrent starts can encounter exclusive ignore-file access; retry explicitly.
+Discovery/help/guides remain independent of workflow and storage.
 
 Prefer `complete <run-id> --request <id> --outcome <allowed-outcome>` for agent
 feedback. Add `--data <json-object>` only when result data is needed. Pass the JSON

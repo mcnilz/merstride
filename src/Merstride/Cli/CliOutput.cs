@@ -57,6 +57,7 @@ internal sealed class CliOutput(bool json)
     private static void WriteRun(CliResponse response)
     {
         Line("Run", response.RunId);
+        if (response.RunId is { Length: 34 } runId) Line("Run prefix", runId[..10]);
         Line("Status", response.Status);
         Line("Cursor", response.Cursor);
         Line("State root", response.StateRoot);
@@ -69,6 +70,7 @@ internal sealed class CliOutput(bool json)
         if (response.Request is not { } request) return;
         Console.WriteLine();
         Line("Request", request.Id);
+        if (request.Id.Length == 34) Line("Request prefix", request.Id[..10]);
         Line("Node", request.NodeId);
         Console.WriteLine("Prompt:"); Console.WriteLine(Readable(request.Prompt));
         Line("Allowed outcomes", string.Join(", ", request.AllowedOutcomes));

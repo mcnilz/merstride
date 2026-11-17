@@ -17,6 +17,10 @@ agents/scripts explicitly request the unchanged protocol-1 JSON with `--json`.
 Text errors/warnings use stderr; results, offline guides and bounded log tails use stdout.
 Text advance now also shows live activity on stderr after successful state writes;
 explicit JSON suppresses activity and keeps the existing protocol response.
+Project commands now discover the nearest `.merstride`/`.git` boundary, default
+workspace/storage there and allow omitting the run for exactly one stored run.
+Stable run/request prefixes reduce copying while retaining full IDs and explicit
+roots. Ambiguous selections fail; historical receipts cannot complete new requests.
 
 The product uses .NET 11 Native AOT and stable C# 15. Windows x64 and Linux x64
 have local development-host verification. **Release qualification is incomplete
@@ -24,6 +28,37 @@ and publication fails closed.** No clean-target or token-saving claim follows
 from a local build.
 
 ## Verification
+
+P18 adds CLI-only project discovery and resource selection without changing the
+engine, saved-state schema or dependencies. ADR 0014 specifies boundaries,
+independent absolute overrides, legacy cwd-relative storage, durable state and
+preserved ignore/config content. Start maintains a final local `/runs/` ignore
+rule, including when existing rules negate an earlier one. Text suggests short
+prefixes alongside full IDs; protocol-1 JSON retains full resource identities.
+
+On 2026-11-17 the reviewed Windows x64 gate passed 559 tests / 338 local feature
+cases and all 323 independent native runtime cases without failures or skips.
+The 26 P18 cases cover project/subdirectory/Git-file boundaries, explicit and
+legacy roots, spaces, actual process cwd/logs, multi-run/prefix ambiguity,
+current/historical request collisions, loop receipt retries, invalid/stale
+selections, missing/corrupt/conflicting state, offline discovery and existing
+ignore/config preservation. Architecture, dependency, distribution, privacy,
+budgets and Mermaid checks passed, with no native build/publish warnings/errors.
+Native size was 6.026 MiB; warm status P95 was 25.828 ms.
+
+The actual simplified README Bash blocks passed against the native binary,
+including inline completion by short request prefix in a project path with
+spaces. The user's follow-up removes PATH instructions and shows a small
+executable Mermaid/YAML pair directly. The revised commands, native validation
+of README.md and the added README diagram render all passed separately after
+the full gate. Standards and Spec reviews have no remaining findings.
+
+The initial restricted test host could not connect; native tests passed with
+local process permissions. An earlier full run was invalidated when review
+changes altered feature hashes during execution; the final run used unchanged
+feature sources and refreshed inventory. Raw evidence remains under ignored
+artifacts. No Linux/macOS, hosted or clean-target execution, local commit, push,
+publication or new release qualification is claimed for this slice.
 
 P17 adds live text activity on stderr while retaining final stdout summaries and
 the explicit protocol-1 JSON response. A CLI persistence decorator reports only
@@ -247,7 +282,7 @@ audits and timing records stay under ignored `artifacts/`. See
 - Re-run the verified macOS native and clean-target gates for each exact release
   candidate; NUnit remains a separate .NET-hosted gate.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 297 runtime cases, plus the separately
+  candidate commit and binary hashes: all 323 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.

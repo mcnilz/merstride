@@ -239,13 +239,13 @@ is literal and does not select output format.
 | Command | Behavior |
 | --- | --- |
 | `validate <file> [--workflow <id>]` | Validate only; return diagnostics with severity and source locations. |
-| `start <file> --workspace <absolute-path> [--workflow <id>] [--input-file <file>]` | Validate, snapshot, persist a new run, return ready; execute nothing. |
-| `advance <run-id>` | Execute synchronously until waiting_agent, terminal state, or error. |
-| `status <run-id>` | Read compact state, cursor, and current request. |
-| `complete <run-id> --request <id> --outcome <outcome> [--data <json-object>]` | Preferred file-free completion; save receipt and transition only. Alternative: `--result-file <file>`. |
-| `resolve <run-id> --retry` | Only interrupted: explicitly allow a new attempt, return ready. |
-| `resolve <run-id> --fail` | Only interrupted: finish failed without actions. |
-| `logs <run-id> --activation <id> --stream stdout\|stderr [--tail-bytes <n>]` | Read selected log; default/maximum 65536 bytes; n is positive. |
+| `start <file> [--workspace <absolute-path>] [--workflow <id>] [--input-file <file>]` | Validate, snapshot, persist a new run, return ready; execute nothing. Workspace defaults to the project boundary below. |
+| `advance [run-id]` | Execute synchronously until waiting_agent, terminal state, or error. |
+| `status [run-id]` | Read compact state, cursor, and current request. |
+| `complete [run-id] --request <id> --outcome <outcome> [--data <json-object>]` | Preferred file-free completion; save receipt and transition only. Alternative: `--result-file <file>`. |
+| `resolve [run-id] --retry` | Only interrupted: explicitly allow a new attempt, return ready. |
+| `resolve [run-id] --fail` | Only interrupted: finish failed without actions. |
+| `logs [run-id] --activation <id> --stream stdout\|stderr [--tail-bytes <n>]` | Read selected log; default/maximum 65536 bytes; n is positive. |
 | `guide` | Offline compact agent usage guide, no run required; JSON has a guide string. |
 | `creation-guide` | Offline self-contained workflow authoring instructions and a complete copyable example; embedded in the native binary. No arguments or workflow/state access; JSON has a guide string. |
 | `version` | Tool and protocol version. |
@@ -267,7 +267,44 @@ Both guides need no workspace, workflow, run or external content file; even an
 unusable state path is ignored. Retrieval creates/mutates no state, launches no
 child process, makes no network request and never executes its example.
 
-Global `--state-dir <absolute-path>` selects storage. Default is `.merstride/runs` beneath the calling cwd. Start returns the absolute state root; later calls MUST reuse it. Opaque run IDs cannot be used as arbitrary filesystem paths. No delete/publish command in the MVP.
+Global `--state-dir <absolute-path>` overrides storage. Without it, walk upward
+from cwd to the nearest directory containing a `.merstride` or `.git` entry
+(directory or file); stop there, including nested Git projects. Without a marker,
+use cwd. This boundary supplies the default workspace and `.merstride/runs` state
+root. Explicit absolute `--workspace` changes only the workspace; explicit absolute
+`--state-dir` changes only storage. There are no configuration/environment sources.
+Relative workflow paths remain relative to the caller. Start and run summaries
+report the resolved absolute state root. Help/version/guides ignore storage.
+
+Existing cwd-relative `.merstride` directories remain boundaries and are found
+from their subdirectories. Outside a project, first start establishes a cwd
+boundary. A markerless child before first use is independent. Never relocate,
+merge, overwrite or delete existing state. Start appends `/runs/` if absent to
+`.merstride/.gitignore`, retaining existing bytes and parent ignore/config files;
+only start creates it. Explicit roots receive no automatic ignore changes.
+A failed preparation may leave an empty directory/ignore rule. Mutable run state
+is durable, regardless of directory naming. A `.merstride` file is an actionable
+I/O conflict, never permission to fall back to a parent or different root.
+
+For run commands the positional run ID is optional only when exactly one full-ID
+run directory exists in the selected root, including terminal/corrupt/incomplete
+runs. Otherwise provide a full ID or a unique `r_` prefix of 8..32 lowercase hex
+digits. Missing convenience matches return RUN_NOT_FOUND (exit 4); full-ID
+missing-state calls retain their direct I/O error (exit 6). Multiple matches return
+AMBIGUOUS_RUN (4); invalid syntax returns INVALID_RUN_ID (4). Never silently select
+the newest/active run. Full IDs retain stable identity and direct targeting.
+Selected missing snapshots, corruption and unusable/conflicting storage fail
+with exit 6 without mutation or fallback. No selection creates storage.
+
+`--request` remains required and accepts a full ID or unique `q_` prefix of 8..32
+lowercase hex digits. Under the writer lock, match both current request and all
+historical receipts, deduplicated. Invalid/unmatched selections return
+INVALID_REQUEST (4); collisions return AMBIGUOUS_REQUEST (4). Historical prefixes
+target only the original receipt and cannot complete a newer request. Existing
+completion equivalence/conflict rules apply. Text suggests eight-hex run/request
+prefixes alongside full IDs; lengthen ambiguous prefixes. Protocol-1 JSON keeps
+full IDs and existing fields. Opaque IDs/selectors cannot become arbitrary paths.
+No delete/publish command in the MVP. See [ADR 0014](adr/0014-p18.md).
 
 CLI exit codes: 0 successful operation (including ready/waiting/completed); 2 usage; 3 document validation; 4 state/lock/completion conflict; 5 advance ending failed/interrupted or resolve --fail; 6 I/O/corrupt storage/internal error; 130 user interruption. Read-only status succeeds with 0 even when the run failed. Child exit codes are not CLI exit codes. Advance on terminal runs returns their existing result without executing anything; failed returns 5. Guide, creation-guide, version, validate, status, and logs never launch child processes.
 

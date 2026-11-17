@@ -18,13 +18,28 @@ presentation, not a durable event history or a substitute for status/receipts.
 
 1. Read `merstride guide` when unfamiliar with the installed version. Check `version` if protocol compatibility is uncertain. Scripts add `--json` for structured responses.
 2. Validate the chosen file. Review the workflow and execution scope before starting; starting a workflow does not expand the user's authorization.
-3. Start with an absolute workspace and explicit state directory. Retain the returned run ID and state root.
+3. Start in the project, or supply absolute workspace/state overrides. Retain the returned full run ID and state root for automation.
 4. Call `advance` to execute deterministic work.
 5. On `waiting_agent`, use the returned request ID, prompt, selected context, and allowed outcomes. Perform the requested work with your existing tools. Do not infer outcomes from display labels.
 6. Prefer `complete <run-id> --request <id> --outcome <allowed-outcome>`, with optional `--data <json-object>` (default `{}`). No result file is needed. It moves the cursor but runs nothing else.
 7. Call `advance` again until completed, failed, or interrupted. Report the actual terminal result.
 
 Use `status` to resume after losing conversation context. Repeated status/advance while waiting returns the same request. Do not start a new run merely because a completion response was lost: resend the same completion for the same ID. A conflicting result requires investigation, not a fresh request invented by the agent.
+
+For human project use, `start <file>` needs no workspace/state setup. Defaults
+use the nearest ancestor `.merstride`/`.git` boundary, otherwise cwd; state is
+`.merstride/runs`, shared by subdirectory calls. Start preserves existing ignore
+and configuration content while adding its local `/runs/` ignore rule. There is
+no configuration source or automatic migration/cleanup. Explicit absolute
+workspace and state overrides remain independent. See [project rules](CLI.md#project-storage-and-selection).
+
+With exactly one stored run, commands can omit the run ID. All runs count,
+including terminal/corrupt runs; ambiguity fails. Otherwise use a full ID or
+unique `r_` prefix (8..32 lowercase hex digits). `--request` remains required,
+accepting a full ID or unique `q_` prefix across current AND historical requests.
+Use the same saved request selector for a retry: a historical receipt cannot
+complete a newer request. Text suggests eight-hex prefixes; lengthen collisions.
+Full-ID/explicit-root JSON automation below remains supported unchanged.
 
 The current request contains `id`, `activationId`, `nodeId`, literal `prompt`, ordinally
 sorted `allowedOutcomes`, and `context`. Each context item contains `selector`,
@@ -99,8 +114,6 @@ and branch on structured status. For a human walkthrough with readable output,
 follow the [README](../README.md#quick-start) or [CLI examples](CLI.md).
 
 Requires Bash, `jq`, `merstride` on PATH and the repository's `examples/review.md`.
-For a source build, add `artifacts/native` to PATH or replace `merstride` below
-with `"$binary"` after the [README setup](../README.md#quick-start).
 General examples use Bash; agents may adapt them to their available shell.
 
 ```bash

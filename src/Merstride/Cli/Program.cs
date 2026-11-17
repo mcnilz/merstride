@@ -23,7 +23,7 @@ internal static class Program
                 ? [new("error", ex.Problem.Code, ex.Problem.Message, ex.Problem.Location)] : null), ex.ExitCode);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        { return output.Write(new(Error: new("IO_ERROR", "Cannot access the requested workflow or state storage.")), 6); }
+        { return output.Write(new(Error: new("IO_ERROR", "Cannot access the requested workflow or state storage. Check the path, directory type, permissions and original --state-dir; no fallback or reset was performed.")), 6); }
         catch (Exception)
         { return output.Write(new(Error: new("INTERNAL_ERROR", "An unexpected internal error occurred.")), 6); }
     }
@@ -55,10 +55,23 @@ internal static class Program
             1. Validate a marked Markdown workflow. Select --workflow <id> for multiple pairs.
               merstride validate <file> --json
 
-            2. Start a run without executing it. Workspace and state root must be absolute.
+            2. Start a run without executing it. Optional workspace/state overrides must be absolute.
               merstride start <file> --workspace <workspace> --state-dir <state-root> --json
               Save the returned runId and stateRoot. Reuse stateRoot as --state-dir below.
               Optional --input-file <file> supplies a JSON object, frozen at start; default {}.
+
+              Simple project use: merstride start <file>, then merstride status and
+              merstride advance. Defaults use the nearest ancestor .merstride/.git
+              boundary, otherwise cwd: workspace is the boundary, state .merstride/runs.
+              Subdirectories share it; nested Git projects stop discovery. Existing
+              cwd-relative state stays in place. No config/environment source or migration.
+              Start adds /runs/ to .merstride/.gitignore, preserving existing content.
+              --workspace changes only workspace; --state-dir changes only storage.
+              Summaries show the absolute state root. Outside projects first start
+              establishes a cwd boundary; before that, markerless subdirectories are independent.
+              Omit the run only for exactly one stored run (terminal runs also count).
+              Otherwise use full IDs or unique r_ prefixes with at least 8 hex digits.
+              Missing/ambiguous selections fail without choosing a different run.
 
             3. Inspect or advance the saved run.
               merstride status <run-id> --state-dir <state-root> --json
@@ -82,6 +95,11 @@ internal static class Program
               The file contains outcome and optional object data. Choose exactly one mode;
               --data requires --outcome. No result file is needed for inline completion.
             - complete moves only the cursor. Call advance again, even for an end node.
+            - --request is always required. A unique q_ prefix (at least 8 lowercase hex
+              digits) matches both current requests and historical receipts. Copy the
+              displayed Request prefix; lengthen it if ambiguous. There is no latest
+              selector. Historical retries cannot complete newer loop requests.
+              With one run: merstride complete --request <q_prefix> --outcome <outcome>
 
             Completion receipts
             - Retrying equivalent parsed data for an accepted request ID returns its original
@@ -136,7 +154,9 @@ internal static class Program
               Agents/scripts must pass --json for one protocol-version-1 object on stdout.
               Text results use stdout; text errors/warnings use stderr.
             """));
-        var root = options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : Path.GetFullPath(".merstride/runs");
+        var location = command == "validate" ? null : ProjectLocation.Discover(options.GetValueOrDefault("--state-dir"));
+        // validate still checks an explicitly supplied absolute state path, without accessing it.
+        var root = location?.StateRoot ?? (options.TryGetValue("--state-dir", out var stateDir) ? Absolute(stateDir) : "");
         var store = new RunStore(root);
         if (command is "validate" or "start")
         {
@@ -146,16 +166,16 @@ internal static class Program
             var bytes = new byte[(int)file.Length]; file.ReadExactly(bytes);
             var workflow = WorkflowCompiler.Compile(bytes, options.GetValueOrDefault("--workflow"));
             if (command == "validate") return output.Write(new(WorkflowId: workflow.Id, Diagnostics: workflow.Diagnostics));
-            if (!options.TryGetValue("--workspace", out var workspace)) throw Usage("start requires --workspace <absolute-path>.");
-            workspace = Absolute(workspace);
+            var workspace = options.TryGetValue("--workspace", out var selectedWorkspace) ? Absolute(selectedWorkspace) : location!.Workspace;
             if (!Directory.Exists(workspace)) throw Usage("Workspace must be an existing directory.");
             var input = options.TryGetValue("--input-file", out var inputFile) ? JsonValues.Compact(AgentFiles.Input(inputFile)) : "{}";
             var state = new RunState("r_" + Guid.NewGuid().ToString("N"), "ready", workflow,
                 Convert.ToHexStringLower(SHA256.HashData(bytes)), Version, workspace, input, 0, null, workflow.Entry, [], Receipts: []);
+            location!.Prepare();
             store.Create(state);
             return output.Write(Response(state, root));
         }
-        var id = positional[0];
+        string id;
         if (command == "logs")
         {
             if (!options.TryGetValue("--activation", out var activation) ||
@@ -164,9 +184,11 @@ internal static class Program
             var tail = 65536;
             if (options.TryGetValue("--tail-bytes", out var count) && (!int.TryParse(count, out tail) || tail is < 1 or > 65536))
                 throw Usage("--tail-bytes must be from 1 to 65536.");
+            id = ResourceSelection.Run(store, positional[0]);
             var text = store.ReadLog(store.Read(id), activation, stream, tail, out var truncated);
             return output.Write(new(RunId: id, Log: text, Stream: stream, Truncated: truncated), logActivation: activation);
         }
+        id = ResourceSelection.Run(store, positional[0]);
         if (command == "status") return output.Write(Response(store.Status(id), root));
         using var held = store.Lock(id);
         var run = store.Read(id);
@@ -181,7 +203,7 @@ internal static class Program
             var payload = options.TryGetValue("--result-file", out var resultFile)
                 ? AgentFiles.Completion(resultFile)
                 : (Outcome: options["--outcome"], Data: InlineData(options.GetValueOrDefault("--data")));
-            var completed = AgentCompletion.Complete(run, options["--request"], payload.Outcome, payload.Data);
+            var completed = AgentCompletion.Complete(run, ResourceSelection.Request(run, options["--request"]), payload.Outcome, payload.Data);
             if (!ReferenceEquals(run, completed.State))
             {
                 store.Write(completed.State);

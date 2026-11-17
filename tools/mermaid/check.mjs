@@ -15,6 +15,8 @@ for (const name of ['single-end', 'process-chain', 'agent-task', 'review', 'inli
   const markdown = await readFile(resolve(root, `examples/${name}.md`), 'utf8');
   diagrams.push({ name, source: markdown.match(/```mermaid\r?\n([\s\S]*?)\r?\n```/)[1] });
 }
+const readme = await readFile(resolve(root, 'README.md'), 'utf8');
+diagrams.push({ name: 'readme-quick-start', source: readme.match(/```mermaid\r?\n([\s\S]*?)\r?\n```/)[1] });
 diagrams.push({ name: 'whitespace-entities-cycle', source: `%% preceding comment
 flowchart   LR
 %% merstride: compatible

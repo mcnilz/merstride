@@ -104,7 +104,7 @@ evidence, not physical disk failure or precise internal fault-window qualificati
 | A06 | Invalid completions and data boundaries | 03-agents, 04-limits |
 | A07 | Idempotent completion | 03-agents |
 | A08 | Conflicting completion | 03-agents |
-| A09 | Resume across CLI processes and directories | 03-agents, 06-interface |
+| A09 | Resume across CLI processes and directories | 03-agents, 06-interface, 18-project-workflow |
 | A10 | Locks, independent runs, atomic reader visibility | 05-recovery |
 | A11 | Crash, explicit recovery, interrupt, corrupt storage | 05-recovery |
 | A12 | Time, transition, output, context limits | 04-limits |
@@ -267,7 +267,7 @@ inventory is copied into those public notices.
 The separate hosted macOS clean-target Release job runs `scripts/qualify-macos.py` using
 only the downloaded native suite, helper and extracted product. It verifies actual
 absence of standalone .NET installations, exact arm64/source/run/version/hash
-identities, all 297 runtime scenario identities/statuses and current feature hashes.
+identities, all 323 runtime scenario identities/statuses and current feature hashes.
 It retains raw runtime inventories/traces in job artifacts and emits compact proof
 for release assembly. Reference-machine budgets remain separate mandatory evidence.
 
@@ -281,3 +281,12 @@ A read-only authoritative-file fixture rejects the result save and must emit no
 saved-result/completion claim. The real platform signal fixture also runs in text
 mode, retaining attached-tree and exit-130 assertions. These are local runtime
 tests, not clean-target release qualification.
+
+P18 executes `18-project-workflow.feature` through the same published native CLI.
+Its 26 cases cover optional workspace/run arguments, project/subdirectory/Git-file
+boundaries, legacy and explicit roots, paths with spaces, process cwd and selected
+logs, controlled run/request prefix collisions, historical receipt retries across
+loops, invalid/stale selectors, missing/corrupt/conflicting storage, offline
+discovery and preservation of existing ignore/config content. Existing full-ID
+callers retain direct I/O errors; convenience selectors fail closed on ambiguity.
+README Bash blocks are also exercised against the actual native binary.

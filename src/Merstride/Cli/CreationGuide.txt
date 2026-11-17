@@ -11,6 +11,21 @@ Text advance also reports live activity on stderr: activation (launch pending),
 saved process outcomes/routes, agent waiting and terminal/interrupted states.
 This works when redirected; --json suppresses activity. Raw child logs stay separate.
 
+Simple project execution
+- merstride start <file> defaults workspace to the nearest ancestor .merstride/.git
+  boundary (otherwise cwd), and state to .merstride/runs there. Subdirectories
+  share it; nested Git projects stop discovery. No config file or migration.
+  Only start adds /runs/ to .merstride/.gitignore, preserving existing content.
+- merstride status and merstride advance may omit the run only for exactly one
+  stored run, including completed runs. Otherwise use full IDs or unique r_ prefixes
+  with at least 8 lowercase hex digits. Summaries show the absolute state root.
+- Read and perform the waiting prompt, then merstride complete --request <q_prefix>
+  --outcome <allowed-outcome> and merstride advance. The request remains required:
+  its full ID or unique q_ prefix (8+ hex digits) targets current/historical IDs.
+  Ambiguity fails; a receipt retry never completes a newer request.
+- Absolute --workspace and --state-dir override workspace and storage separately.
+  Reuse explicit storage roots; existing cwd-relative state is never moved/deleted.
+
 Pairing and syntax
 - Start executable fences at column 1 with at least three backticks; close with
   at least as many. Use the exact info string yaml merstride for metadata and

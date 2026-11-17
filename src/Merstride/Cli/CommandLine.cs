@@ -23,10 +23,10 @@ internal sealed class CommandLine
         var help = new HelpOption("--help", "-h") { Recursive = true };
         var version = new Option<bool>("--version") { Description = "Return tool and protocol version; add --json for protocol output.", Arity = ArgumentArity.Zero };
         var json = new Option<bool>("--json") { Description = "One protocol JSON object on stdout; default: readable English text. Help returns a guide string.", Arity = ArgumentArity.Zero, Recursive = true };
-        var state = new Option<string>("--state-dir") { Description = "Absolute state root; default: .merstride/runs beneath the current directory.", Arity = ArgumentArity.ExactlyOne, Recursive = true };
+        var state = new Option<string>("--state-dir") { Description = "Absolute state root override; default: .merstride/runs at the nearest .merstride/.git project boundary, otherwise cwd.", Arity = ArgumentArity.ExactlyOne, Recursive = true };
         root.Options.Add(help); root.Options.Add(version); root.Options.Add(json); root.Options.Add(state);
         Add(root, "validate", "Validate a marked workflow without executing or creating state.", "file", "merstride validate 'workflow with spaces.md'", ("--workflow", "Select a workflow ID; default: the single pair."));
-        Add(root, "start", "Snapshot a workflow and persist a ready run without executing it.", "file", "merstride start 'workflow with spaces.md' --workspace 'C:\\work tree' --json", ("--workspace", "Required existing absolute workspace directory."), ("--workflow", "Select a workflow ID; default: the single pair."), ("--input-file", "JSON object input file; default: {}."));
+        Add(root, "start", "Snapshot a workflow and persist a ready run without executing it.", "file", "merstride start 'workflow with spaces.md'", ("--workspace", "Existing absolute workspace override; default: project boundary or cwd."), ("--workflow", "Select a workflow ID; default: the single pair."), ("--input-file", "JSON object input file; default: {}."));
         Add(root, "advance", "Execute sequentially until waiting_agent, terminal state, or error. Text activity is live on stderr; --json suppresses it.", "run-id", "merstride advance r_example --state-dir 'C:\\work tree\\state'");
         Add(root, "status", "Inspect a run without executing; failed-run inspection exits 0.", "run-id", "merstride status r_example --state-dir 'C:\\work tree\\state' --json");
         Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "run-id", "merstride complete r_example --request q_example --outcome approved --json", ("--request", "Required request ID from waiting_agent."), ("--outcome", "Preferred: allowed outcome from waiting_agent; mutually exclusive with --result-file."), ("--data", "Optional inline JSON object with --outcome; default: {}."), ("--result-file", "Alternative UTF-8 JSON completion file: outcome and optional object data."));
@@ -108,12 +108,12 @@ internal sealed class CommandLine
     private static void Add(RootCommand root, string name, string description, string? argument, string example, params (string Name, string Description)[] options)
     {
         var command = new Command(name, description + "\nExample: " + example);
-        if (argument is not null) command.Arguments.Add(new Argument<string>(argument) { Description = "Required " + (argument == "file" ? "Markdown workflow path; quote paths containing spaces." : "opaque run ID returned by start."), Arity = ArgumentArity.ExactlyOne });
+        if (argument is not null) command.Arguments.Add(new Argument<string>(argument) { Description = argument == "file" ? "Required Markdown workflow path; quote paths containing spaces." : "Full run ID or unique r_ prefix (at least 8 hex digits); omit only for exactly one stored run.", Arity = argument == "file" ? ArgumentArity.ExactlyOne : ArgumentArity.ZeroOrOne });
         foreach (var (optionName, optionDescription) in options)
         {
             Option option = optionName is "--retry" or "--fail"
                 ? new Option<bool>(optionName) { Arity = ArgumentArity.Zero }
-                : new Option<string>(optionName) { Arity = ArgumentArity.ExactlyOne, Required = optionName is "--workspace" or "--request" or "--activation" or "--stream" };
+                : new Option<string>(optionName) { Arity = ArgumentArity.ExactlyOne, Required = optionName is "--request" or "--activation" or "--stream" };
             option.Description = optionDescription;
             command.Options.Add(option);
         }
@@ -128,7 +128,23 @@ internal sealed class CommandLine
           merstride complete r_example --request q_example --outcome approved --data '{"summary":"Review completed"}' --json
           merstride resolve r_example --retry --json
         PowerShell: use & 'C:\tools\merstride.exe' followed by the arguments above.
-        Reuse start's absolute stateRoot as --state-dir on every later call.
+        Simple project path (exactly one stored run):
+          merstride start workflow.md
+          merstride status
+          merstride advance
+          merstride complete --request q_12345678 --outcome approved
+          merstride advance
+        Read and perform the waiting request before completing; use its displayed prefix.
+        Omit the run only for exactly one stored run, including completed runs.
+        Otherwise supply a full ID or unique r_ prefix with at least 8 lowercase hex digits.
+        --request is required: full ID or unique q_ prefix with at least 8 hex digits.
+        Prefixes match historical receipts too; retries never target a newer request.
+        Ambiguous prefixes fail; lengthen the prefix or use the full ID.
+        Default workspace/state: nearest ancestor .merstride or .git boundary, else cwd.
+        State lives in .merstride/runs; start preserves ignore/config files and adds a local /runs/ ignore rule.
+        There is no configuration file, migration, cleanup or implicit latest selection.
+        --workspace overrides only workspace; --state-dir overrides only storage.
+        For explicit roots, reuse start's absolute stateRoot as --state-dir on later calls.
         Globals --json and --state-dir work before or after the command, before --.
         Use -- to end options: merstride validate -- '--option-like file.md'.
         Option values beginning with - use '=': --input-file=--result.json.

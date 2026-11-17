@@ -12,12 +12,12 @@ returned by start; keep the native absolute state path, including on Git Bash.
 
 ```bash
 set -euo pipefail
-# Use the run_id and state_root retained from start (see the README's jq extraction).
-merstride status "$run_id" --state-dir "$state_root" --json
+# Use the run_id and state_root retained from the README walkthrough.
+merstride status "$run_id" --state-dir "$state_root"
 # Inspect the workspace and any external systems affected by the process.
 # If a retry is appropriate, resolution alone launches nothing:
-merstride resolve "$run_id" --retry --state-dir "$state_root" --json
-merstride advance "$run_id" --state-dir "$state_root" --json
+merstride resolve "$run_id" --retry --state-dir "$state_root"
+merstride advance "$run_id" --state-dir "$state_root"
 ```
 
 The next advance creates a fresh activation. The previous activation remains
@@ -25,7 +25,7 @@ recorded as interrupted. An alternative decision is to finish without any more
 effects:
 
 ```bash
-if merstride resolve "$run_id" --fail --state-dir "$state_root" --json; then
+if merstride resolve "$run_id" --fail --state-dir "$state_root"; then
     printf 'Unexpected successful exit from resolve --fail.\n' >&2
     exit 1
 else

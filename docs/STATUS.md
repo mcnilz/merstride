@@ -23,6 +23,27 @@ from a local build.
 
 ## Verification
 
+The P16 human-output follow-up on 2026-11-17 makes README, CLI, recovery and
+general authoring/discovery examples use readable default output. Walkthroughs
+reuse displayed IDs through explicit prompts; jq is optional for the separately
+labeled automated JSON integration example. On Windows x64/Bash 5.3.15, the
+actual README and CLI blocks passed with displayed IDs supplied to their read
+prompts. Both interrupted-run recovery decisions, readable invalid-ID errors,
+authoring/discovery and the retained JSON integration also passed. Raw evidence
+is under ignored artifacts; no new Linux/macOS execution is claimed.
+
+An attempted Windows full gate from Bash exposed Unix tar rejecting native
+drive-letter archive paths in a controlled release fixture. That run was stopped;
+Windows build instructions now explicitly use a native PowerShell terminal to
+retain Windows archive tooling. The general CLI examples remain in Bash.
+The repeated complete Windows gate passed from native PowerShell: 520 tests /
+299 local feature cases and all 284 independent native runtime cases, with no
+failures/skips or build/publish warnings/errors. Architecture, dependency,
+distribution, privacy and Mermaid checks passed; native size was 5.974 MiB and
+warm status P95 31.343 ms. Both independent review axes, including the platform
+clarification, found no actionable findings. The three independent clean-target
+orchestration cases remain separately required; no publication was performed.
+
 P16's documentation verification on 2026-11-17 passed on Windows x64 with
 Bash 5.3.15 (`OSTYPE=cygwin`), jq 1.7 (`jq-1.7-dirty` as reported by the installed
 utility), PowerShell 7 and SDK 11.0.100. The README, CLI and agent-guide Bash

@@ -98,7 +98,7 @@ share the existing logs, context, time/output/transition limits and recovery rul
 
 On Unix, PowerShell's `-Command -` may emit terminal control sequences despite
 `-NonInteractive` and redirected output. For plain output, invoke advance from
-a shell with `TERM=dumb`, for example `TERM=dumb merstride advance <run-id> --json`
+a shell with `TERM=dumb`, for example `TERM=dumb merstride advance <run-id>`
 (also pass the saved `--state-dir`). Merstride inherits that environment unchanged
 and preserves raw process output; it does not filter interpreter control bytes.
 An interpreter that exits before reading the complete body still retains its
@@ -126,6 +126,6 @@ launch commands or probe whether an executable is installed. Start freezes the
 selected compiled definition and the source hash; later source edits do not change
 that run. Workspace scripts themselves remain live.
 
-Run `merstride validate workflow.md --json`. Unknown YAML keys, unsupported Mermaid syntax, missing IDs, or invalid routes fail before execution. A successful validation does not establish that commands are safe, installed, or semantically correct.
+Run `merstride validate workflow.md`. Unknown YAML keys, unsupported Mermaid syntax, missing IDs, or invalid routes fail before execution. A successful validation does not establish that commands are safe, installed, or semantically correct.
 
 Use workflow-specific Gherkin scenarios when authoring important workflows: successful path, expected failure, repair loop, and blocked outcome. Product-engine acceptance features in this package test engine semantics; they do not prove every future workflow's business behavior.

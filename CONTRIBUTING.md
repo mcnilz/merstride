@@ -5,7 +5,9 @@
 Build and test on the matching target platform with:
 
 - .NET SDK 11.0.100 (pinned in `global.json`), using stable C# 15.
-- Bash (Git Bash on Windows) and `jq` for the general documentation examples.
+- Bash (Git Bash on Windows) for the general documentation examples.
+- Optional `jq` for the automated JSON integration example; human walkthroughs
+  use readable output directly.
 - PowerShell 7.3+ for repository build/verification scripts and explicit
   PowerShell workflow cases.
 - Windows x64: Visual Studio Build Tools with Desktop development with C++ and
@@ -26,9 +28,12 @@ separate; preserve both platform lock files. See [native verification](docs/RELE
 
 ## Build and verify
 
-From the repository root:
+From the repository root, invoke the PowerShell entry point below. On Windows,
+run it from a native PowerShell terminal so Windows archive tools take precedence;
+Git Bash's Unix `tar` cannot interpret the native drive paths used by the release
+fixtures. On Linux/macOS, the same entry point can be invoked from Bash.
 
-```bash
+```powershell
 pwsh -NoProfile -File scripts/build.ps1
 ```
 

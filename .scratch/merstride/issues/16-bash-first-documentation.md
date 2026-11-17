@@ -77,3 +77,35 @@ historical evidence or local ticket history solely to change shell style.
   here and in docs/STATUS.md. No production or feature/tag changes, dependency
   additions, Linux/macOS execution, hosted run, release qualification, remote push
   or publication. P07's external qualification remains separately outstanding.
+
+**User-directed follow-up — readable examples (2026-11-17):**
+
+The user clarified that examples should primarily omit --json so humans can
+follow the output. This is an explicitly assigned correction to P16.
+
+- README and CLI walkthroughs now print standard readable output and ask the
+  reader to paste displayed Run/Request IDs. They reuse the explicitly selected
+  absolute state root. Recovery and general authoring/discovery examples also
+  use readable output. The general walkthrough no longer requires jq.
+- The existing JSON integration example remains in the agent guide, explicitly
+  labeled as automation. jq is an optional prerequisite for that example only;
+  general contributor/agent guidance preserves the human-readable convention.
+- The exact README/CLI Bash blocks passed with displayed IDs supplied to their
+  read prompts. Both recovery decisions passed against actual interrupted native
+  fixture runs after effect inspection; readable invalid-ID errors retained exit
+  4. Authoring/discovery and the retained automated JSON example also passed.
+  Environment: Windows x64, Bash 5.3.15; raw evidence is under ignored artifacts.
+- Attempting the complete Windows gate from Bash exposed Unix tar treating
+  native drive-letter archive paths as remote syntax in the controlled release
+  fixture. That owned run was stopped. Contributor/README/release guidance now
+  explicitly selects native PowerShell for Windows builds so native archive
+  tools take precedence; Linux/macOS can still invoke the script from Bash.
+- Independent Standards and Spec reviews found zero actionable findings,
+  including incremental review of the Windows tooling clarification.
+- The repeated complete gate from native PowerShell passed: 520 tests / 299 local
+  feature cases and all 284 independent native runtime cases, zero failures/skips
+  and no build/publish warnings/errors. Architecture/dependency/distribution/
+  privacy/Mermaid checks passed. Native size 5.974 MiB; warm status P95 31.343 ms.
+  This supersedes the aborted Bash-hosted attempt, not the separate outstanding
+  release qualification. No new product/feature/tag changes, dependency changes,
+  Linux/macOS execution, hosted run, remote push or publication.

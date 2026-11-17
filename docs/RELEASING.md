@@ -150,7 +150,8 @@ the reference's asset replacement behavior.
 ## Verification and qualification
 
 Run `pwsh -NoProfile -File scripts/build.ps1` on Windows, Linux or a qualified macOS host with SDK 11.0.100,
-PowerShell 7, native compiler/linker, Node/npm and a headless browser. Linux also
+PowerShell 7, native compiler/linker, Node/npm and a headless browser. On Windows,
+use a native PowerShell terminal to retain Windows archive tooling. Linux also
 requires strace; set `MERSTRIDE_BROWSER=/usr/bin/google-chrome`. Keep platform
 checkouts, obj/bin, package lock and artifacts paths separate. Linux uses
 packages.linux-x64.lock.json; macOS uses packages.osx-arm64.lock.json;

@@ -17,13 +17,13 @@ Help/guides use `guide`; version/root `--version` use `version`. JSON errors rem
 inside the response, with no duplicate text on stderr. No colors, ANSI sequences,
 banners or progress messages are added. Protocol version 1 is unchanged.
 
-Use `merstride creation-guide --json` for self-contained authoring instructions,
+Use `merstride creation-guide` for self-contained authoring instructions,
 a complete Markdown workflow and a validation checklist. The text is embedded in
 the native executable and needs no checkout, external content file or network.
 Without `--json`, the argument-free command prints the instructions directly with
 real line breaks and a copyable workflow. With `--json`, they are in a nonempty
 `guide` string, with null status/error and exit 0. Both guides create no state and
-ignore an unusable state path. Use `merstride guide --json` for the agent loop.
+ignore an unusable state path. Use `merstride guide` for the agent loop.
 Both commands support `-h` / `--help` and the global options described below.
 
 `--json` and `--state-dir <absolute-path>` are global: put them before or after the
@@ -69,46 +69,44 @@ must precede it. For an option value beginning with `-`, use the equals form:
 abbreviations and single-character option bundles are disabled. An at-sign path
 is an ordinary filename. Nothing implicitly launches a shell.
 
-Bash example using `jq`, with `merstride` on PATH and a reviewed workflow named
+Bash walkthrough with `merstride` on PATH and a reviewed workflow named
 `workflow with spaces.md`. For a source build, add `artifacts/native` to PATH or
 replace `merstride` below with `"$binary"` after the
-[README setup](../README.md#quick-start). These are caller prerequisites; the engine
-needs neither Bash nor `jq` for direct process workflows.
+[README setup](../README.md#quick-start). Read the standard output directly and
+paste only the displayed ID when prompted. No JSON utility is required.
 
 ```bash
 set -euo pipefail
 workspace=$(pwd -P)
 case "$OSTYPE" in msys*|cygwin*) workspace=$(cygpath -am "$workspace") ;; esac
-state="$workspace/.merstride/runs"
+state_root="$workspace/.merstride/runs"
 merstride --help
-merstride start --help --json
-merstride --json validate -- 'workflow with spaces.md'
-run=$(merstride start 'workflow with spaces.md' --workspace "$workspace" --state-dir "$state" --json)
-run_id=$(jq -er '.runId' <<< "$run")
-state_root=$(jq -er '.stateRoot' <<< "$run")
-current=$(merstride advance "$run_id" --state-dir "$state_root" --json)
-merstride status "$run_id" --state-dir "$state_root" --json
-jq '.status, .request' <<< "$current"
+merstride start --help
+merstride validate -- 'workflow with spaces.md'
+merstride start 'workflow with spaces.md' --workspace "$workspace" --state-dir "$state_root"
+read -r -p 'Paste the Run ID (r_...) shown above: ' run_id
+merstride advance "$run_id" --state-dir "$state_root"
+merstride status "$run_id" --state-dir "$state_root"
 ```
 
-Only if `status` is `waiting_agent`, perform the literal task with your existing
+Only if the output shows `Status: waiting_agent`, read `Request`, `Prompt`,
+`Allowed outcomes` and `Context`, and perform the literal task with your existing
 agent. After completing the review, if `approved` is the appropriate allowed
 outcome, submit it (using the same Bash session):
 
 ```bash
-jq -e '.status == "waiting_agent" and (.request.allowedOutcomes | index("approved") != null)' <<< "$current"
-request_id=$(jq -er '.request.id' <<< "$current")
-merstride complete "$run_id" --request "$request_id" --outcome approved --data '{"summary":"Review completed"}' --state-dir "$state_root" --json
-merstride advance "$run_id" --state-dir "$state_root" --json
+read -r -p 'Paste the Request ID shown above: ' request_id
+merstride complete "$run_id" --request "$request_id" --outcome approved --state-dir "$state_root"
+merstride advance "$run_id" --state-dir "$state_root"
 ```
 
 Use `resolve --fail` instead of `--retry` to finish failed without executing.
 Do not complete a run unless its response contains a waiting request, or resolve
 unless it is interrupted. `start` creates ready without executing; `complete`
 moves only the cursor. Reuse the returned absolute `stateRoot` on subsequent calls.
-The examples stop on a nonzero CLI or `jq` exit; a failed/interrupted advance must
+The examples stop on a nonzero CLI exit; a failed/interrupted advance must
 be inspected before continuing. See the [agent guide](AGENT-GUIDE.md#bash-example)
-for explicit error/status handling and [recovery](../examples/recovery.md) for
+for automatic JSON extraction and error/status handling, and [recovery](../examples/recovery.md) for
 the separate interruption decision. Use native absolute paths on each OS;
 Git Bash/Cygwin's `cygpath -am` supplies Windows paths. Workflow process arguments remain literal.
 

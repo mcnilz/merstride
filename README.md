@@ -26,11 +26,12 @@ and GitHub Actions. Windows x64 and Linux x64 have local verification. The macOS
 without system .NET passed on GitHub-hosted runners; see [current evidence](docs/STATUS.md).
 Overall release qualification and publication remain incomplete.
 
-Build from source using the [development prerequisites](CONTRIBUTING.md#prerequisites)
-and `pwsh -NoProfile -File scripts/build.ps1`. The examples below use Bash and
-`jq` from the repository root (Git Bash on Windows). On Linux/macOS, use the
-matching native build; on Windows, select `merstride.exe` as shown below. `jq`
-is a caller-side JSON utility, not an engine dependency. Release qualification is still incomplete;
+Build from source using the [development prerequisites and build instructions](CONTRIBUTING.md#build-and-verify)
+and `pwsh -NoProfile -File scripts/build.ps1` (from native PowerShell on Windows).
+The examples below use Bash
+from the repository root (Git Bash on Windows). They show readable output;
+copy the displayed IDs when prompted. On Linux/macOS, use the matching native
+build; on Windows, select `merstride.exe` as shown below. Release qualification is still incomplete;
 see [current status](docs/STATUS.md) before considering distribution.
 
 First run a workflow with a single successful end node:
@@ -43,38 +44,37 @@ if [[ -f "$binary.exe" ]]; then
     binary="$binary.exe"
     workspace=$(pwd -W) # Git Bash: native Windows path for --workspace/--state-dir.
 fi
-state="$workspace/.merstride/runs"
+state_root="$workspace/.merstride/runs"
 "$binary" --help
-"$binary" validate examples/single-end.md --json
-run=$("$binary" start examples/single-end.md --workspace "$workspace" --state-dir "$state" --json)
-run_id=$(jq -er '.runId' <<< "$run")
-state_root=$(jq -er '.stateRoot' <<< "$run")
-"$binary" status "$run_id" --state-dir "$state_root" --json
-"$binary" advance "$run_id" --state-dir "$state_root" --json
+"$binary" validate examples/single-end.md
+"$binary" start examples/single-end.md --workspace "$workspace" --state-dir "$state_root"
+read -r -p 'Paste the Run ID (r_...) shown above: ' run_id
+"$binary" status "$run_id" --state-dir "$state_root"
+"$binary" advance "$run_id" --state-dir "$state_root"
 ```
 
 `start` saves a ready run and executes nothing. `status` inspects it. `advance`
-executes the selected node; this example returns `completed`.
+executes the selected node; this example shows `Status: completed`. The `Run:`
+line contains the ID to paste, without the label. Keep the same `State root`
+for every call; this example explicitly selects it in `state_root`.
 
 For an existing-agent handoff, use the [agent task example](examples/agent-task.md):
 
 ```bash
-run=$("$binary" start examples/agent-task.md --workspace "$workspace" --state-dir "$state" --json)
-run_id=$(jq -er '.runId' <<< "$run")
-state_root=$(jq -er '.stateRoot' <<< "$run")
-current=$("$binary" advance "$run_id" --state-dir "$state_root" --json)
-jq -e '.status == "waiting_agent"' <<< "$current"
-jq '.request' <<< "$current"
-request_id=$(jq -er '.request.id' <<< "$current")
+"$binary" start examples/agent-task.md --workspace "$workspace" --state-dir "$state_root"
+read -r -p 'Paste the new Run ID (r_...) shown above: ' run_id
+"$binary" advance "$run_id" --state-dir "$state_root"
 ```
 
-The response is `waiting_agent`. Read `request.id`, `prompt`, `context` and
-`allowedOutcomes`, then perform the requested review. Once the review is complete
+The output shows `Status: waiting_agent`, followed by `Request`, `Prompt`,
+`Allowed outcomes` and `Context`. Read them and perform the requested review.
+Once the review is complete
 and `approved` is the appropriate allowed outcome, return it directly:
 
 ```bash
-"$binary" complete "$run_id" --request "$request_id" --outcome approved --state-dir "$state_root" --json
-"$binary" advance "$run_id" --state-dir "$state_root" --json
+read -r -p 'Paste the Request ID shown by advance: ' request_id
+"$binary" complete "$run_id" --request "$request_id" --outcome approved --state-dir "$state_root"
+"$binary" advance "$run_id" --state-dir "$state_root"
 ```
 
 Optional result data goes in one JSON argument, for example
@@ -84,7 +84,8 @@ Repeated inspection while waiting returns the same request. If a completion
 response is lost, retry the same request ID with equivalent data. Inspect every
 exit code and returned status in an integration; the setup enables Bash fail-fast
 handling for this success path. See the [agent operating loop](docs/AGENT-GUIDE.md)
-for handling failures and other statuses explicitly.
+for handling failures and other statuses explicitly. For automatic ID extraction
+and structured responses, see its [JSON integration example](docs/AGENT-GUIDE.md#bash-example).
 
 Try the [inline scripts](examples/inline-scripts.md) for shared scripts and platform
 variants, or the [process chain](examples/process-chain.md) for literal command arguments
@@ -96,9 +97,9 @@ workspace; review their commands before running them.
 
 | Task | Reference |
 | --- | --- |
-| Write and validate workflows | `merstride creation-guide --json`, [authoring guide](docs/AUTHORING.md) and [examples](examples/) |
+| Write and validate workflows | `merstride creation-guide`, [authoring guide](docs/AUTHORING.md) and [examples](examples/) |
 | Discover commands and exit codes | `merstride --help`, `merstride <command> --help`, [CLI usage](docs/CLI.md) |
-| Integrate an existing agent or resume a run | `merstride guide --json`, [agent guide](docs/AGENT-GUIDE.md) |
+| Integrate an existing agent or resume a run | `merstride guide`, [agent guide](docs/AGENT-GUIDE.md) |
 | Handle interrupted execution | [Recovery example](examples/recovery.md) |
 | Check exact behavior and limits | [Execution contract](docs/CONTRACT.md), [product scope](docs/SPEC.md) |
 | Assess readiness and outstanding work | [Current status](docs/STATUS.md) |

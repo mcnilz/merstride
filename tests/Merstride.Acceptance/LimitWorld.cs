@@ -107,7 +107,7 @@ internal sealed class LimitWorld : IDisposable
             case "the run fails with \"CONTEXT_LIMIT\"":
                 Assert.That(cli.ExitCode, Is.EqualTo(5));
                 Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("failed"));
-                Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("CONTEXT_LIMIT")); break;
+                Assert.That(cli.ErrorCode, Is.EqualTo("CONTEXT_LIMIT")); break;
             case "no silently truncated structured context is returned":
                 Assert.That(cli.Response.GetProperty("request").ValueKind, Is.EqualTo(JsonValueKind.Null));
                 Assert.That(cli.Response.GetProperty("lastActivation").ValueKind, Is.EqualTo(JsonValueKind.Null)); break;
@@ -137,7 +137,7 @@ internal sealed class LimitWorld : IDisposable
                 Assert.That(cli.ExitCode, Is.EqualTo(5));
                 Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo("done"));
                 Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("outcome").GetString(), Is.EqualTo("timeout"));
-                Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("WORKFLOW_FAILURE")); break;
+                Assert.That(cli.ErrorCode, Is.EqualTo("WORKFLOW_FAILURE")); break;
             case "the parent and attached child have terminated":
                 Assert.That(descendants, Has.Count.EqualTo(2));
                 foreach (var child in descendants) Assert.That(child.WaitForExit(2000), Is.True, "Observed helper must exit."); break;
@@ -216,7 +216,7 @@ internal sealed class LimitWorld : IDisposable
         }
         else
         {
-            Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo(dataError));
+            Assert.That(cli.ErrorCode, Is.EqualTo(dataError));
             Assert.That(File.ReadAllBytes(StateFile), Is.EqualTo(snapshot));
         }
     }
@@ -235,7 +235,7 @@ internal sealed class LimitWorld : IDisposable
         else
         {
             Assert.That(cli.ExitCode, Is.EqualTo(4));
-            Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo(error == "DATA_LIMIT" ? "INPUT_LIMIT" : error));
+            Assert.That(cli.ErrorCode, Is.EqualTo(error == "DATA_LIMIT" ? "INPUT_LIMIT" : error));
             Assert.That(Directory.Exists(cli.State), Is.False);
         }
     }
@@ -261,7 +261,7 @@ internal sealed class LimitWorld : IDisposable
         Advance(0);
         Assert.That(cli.ExitCode, Is.EqualTo(target == "end" ? 0 : 5));
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(target == "end" ? "completed" : "failed"));
-        if (target != "end") Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("TRANSITION_LIMIT"));
+        if (target != "end") Assert.That(cli.ErrorCode, Is.EqualTo("TRANSITION_LIMIT"));
         Assert.That(cli.Response.GetProperty("request").ValueKind, Is.EqualTo(JsonValueKind.Null));
         Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(2));
         Assert.That(File.ReadAllText(Path.Combine(cli.DirectoryPath, "effects.txt")), Is.EqualTo("first\n"));
@@ -334,7 +334,7 @@ internal sealed class LimitWorld : IDisposable
         Assert.That(cli.Response.GetProperty("request").ValueKind, Is.EqualTo(JsonValueKind.Null));
         Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("nodeId").GetString(), Is.EqualTo("second"));
         Assert.That(File.ReadAllText(Path.Combine(cli.DirectoryPath, "effects.txt")), Is.EqualTo("first\nsecond\n"));
-        if (failed) Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("TRANSITION_LIMIT"));
+        if (failed) Assert.That(cli.ErrorCode, Is.EqualTo("TRANSITION_LIMIT"));
     }
 
     private void Advance(int children)

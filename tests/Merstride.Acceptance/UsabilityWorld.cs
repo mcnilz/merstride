@@ -15,6 +15,22 @@ internal sealed class UsabilityWorld : IDisposable
 
     internal void Execute(string step)
     {
+        const string management = "I invoke management help using ";
+        if (step.StartsWith(management, StringComparison.Ordinal))
+        {
+            var args = step[management.Length..].Split(';');
+            command = CliWorld.Command(args);
+            world.Raw(args);
+            return;
+        }
+        if (step.StartsWith("offline management help succeeds in ", StringComparison.Ordinal))
+        {
+            Assert.That(world.ExitCode, Is.Zero);
+            var managementHelp = world.Stdout.StartsWith('{') ? Protocol().GetProperty("guide").GetString()! : world.Stdout;
+            Assert.That(managementHelp, Does.Contain("Usage:").And.Contain("merstride " + command).And.Contain("--json").And.Contain("Exit codes:"));
+            NoEffects();
+            return;
+        }
         if (step == "an isolated CLI discovery directory") return;
         var help = Regex.Match(step, "^I request (root|validate|start|advance|status|complete|resolve|logs|guide|version) help using (--help|-h) as (text|json)$");
         if (help.Success)
@@ -72,9 +88,13 @@ internal sealed class UsabilityWorld : IDisposable
                 NoEffects(); break;
             case "one JSON usage error includes a help hint without side effects":
                 Assert.That(world.ExitCode, Is.EqualTo(2));
-                var error = Protocol().GetProperty("error");
-                Assert.That(error.GetProperty("code").GetString(), Is.EqualTo("USAGE"));
-                Assert.That(error.GetProperty("message").GetString(), Does.Contain("--help"));
+                Assert.That(world.ErrorCode, Is.EqualTo("USAGE"));
+                if (UsabilityAuditWorld.Complementary) Assert.That(UsabilityAuditWorld.LastText + world.Stdout + world.Stderr, Does.Contain("--help"));
+                else
+                {
+                    var error = Protocol().GetProperty("error");
+                    Assert.That(error.GetProperty("message").GetString(), Does.Contain("--help"));
+                }
                 NoEffects(); break;
             case "one JSON version response succeeds without side effects":
                 Assert.That(world.ExitCode, Is.Zero);
@@ -94,13 +114,13 @@ internal sealed class UsabilityWorld : IDisposable
         using var document = JsonDocument.Parse(world.Stdout);
         var response = document.RootElement.Clone();
         Assert.That(response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
-        Assert.That(world.Stderr, Is.Empty);
+        if (!UsabilityAuditWorld.Complementary || world.ExitCode == 0) Assert.That(world.Stderr, Is.Empty);
         return response;
     }
 
     private void NoEffects()
     {
-        Assert.That(world.Stderr, Is.Empty);
+        if (!UsabilityAuditWorld.Complementary || world.ExitCode == 0) Assert.That(world.Stderr, Is.Empty);
         Assert.That(Directory.GetFileSystemEntries(world.DirectoryPath), Is.Empty);
     }
 

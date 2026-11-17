@@ -103,14 +103,22 @@ internal sealed class StartAdvanceWorld : IDisposable
         cli.ExpectedChildren = Children;
         cli.Call("advance", separateId); separate = cli.Response;
         Assert.That(cli.ExitCode, Is.EqualTo(Exit), cli.Stdout + cli.Stderr);
-        if (format == "json")
+        var structuredComplement = UsabilityAuditWorld.Complementary && format == "text";
+        if (format == "json" || structuredComplement)
         {
-            cli.Call(startArgs.Concat(["--advance"]).ToArray()); combined = cli.Response;
+            if (structuredComplement) UsabilityAuditWorld.Structured(() => cli.Call(startArgs.Concat(["--advance"]).ToArray()));
+            else cli.Call(startArgs.Concat(["--advance"]).ToArray());
+            combined = cli.Response;
             Assert.That(cli.ExitCode, Is.EqualTo(Exit), cli.Stdout + cli.Stderr);
             combinedId = combined.GetProperty("runId").GetString()!;
-            Assert.That(combined.GetProperty("start").GetProperty("created").GetBoolean(), Is.True);
-            Assert.That(combined.GetProperty("start").GetProperty("phase").GetString(), Is.EqualTo("advance"));
-            Assert.That(combined.GetProperty("start").GetProperty("advance").GetString(), Is.EqualTo("finished"));
+            if (UsabilityAuditWorld.Complementary && !structuredComplement)
+                Assert.That(UsabilityAuditWorld.LastText, Does.Contain("Creation: saved new run").And.Contain("Initial advance: finished"));
+            else
+            {
+                Assert.That(combined.GetProperty("start").GetProperty("created").GetBoolean(), Is.True);
+                Assert.That(combined.GetProperty("start").GetProperty("phase").GetString(), Is.EqualTo("advance"));
+                Assert.That(combined.GetProperty("start").GetProperty("advance").GetString(), Is.EqualTo("finished"));
+            }
             Assert.That(cli.Stderr, Is.Empty);
             Assert.That(cli.Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(1));
         }

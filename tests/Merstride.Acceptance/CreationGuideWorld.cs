@@ -61,7 +61,7 @@ internal sealed class CreationGuideWorld : IDisposable
                 break;
             case "a usage error includes a help hint":
                 Assert.That(world.ExitCode, Is.EqualTo(2));
-                if (json)
+                if (json && !(UsabilityAuditWorld.Complementary && !world.Stdout.StartsWith('{')))
                 {
                     var error = Protocol().GetProperty("error");
                     Assert.That(error.GetProperty("code").GetString(), Is.EqualTo("USAGE"));

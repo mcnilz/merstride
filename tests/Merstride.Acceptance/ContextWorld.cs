@@ -162,7 +162,7 @@ internal sealed partial class ContextWorld : IDisposable
                 var otherBytes = File.ReadAllText(otherPath);
                 Json("use", first);
                 var removed = Json("discard", first);
-                Assert.That(removed.GetProperty("discarded").GetBoolean(), Is.True);
+                if (!UsabilityAuditWorld.Complementary) Assert.That(removed.GetProperty("discarded").GetBoolean(), Is.True);
                 Assert.That(removed.GetProperty("sourcePath").GetString(), Is.EqualTo(cli.FilePath));
                 Assert.That(Directory.Exists(Path.Combine(Root, first)), Is.False);
                 Assert.That(File.ReadAllText(otherPath), Is.EqualTo(otherBytes));
@@ -180,6 +180,23 @@ internal sealed partial class ContextWorld : IDisposable
             case "the readable path completes without run IDs or JSON tools":
                 Assert.That(verified, Is.True); break;
             case "I follow the readable contextual handoff":
+                if (UsabilityAuditWorld.Complementary)
+                {
+                    UsabilityAuditWorld.Structured(() =>
+                    {
+                        Json("start", OtherFile);
+                        var created = Json("start", cli.FilePath).GetProperty("runId").GetString();
+                        Assert.That(Json("status").GetProperty("runId").GetString(), Is.EqualTo(created));
+                        var waiting = Json("advance");
+                        Assert.That(waiting.GetProperty("status").GetString(), Is.EqualTo("waiting_agent"));
+                        var request = waiting.GetProperty("request").GetProperty("id").GetString()!;
+                        var completed = Json("complete", "--request", request, "--outcome", "approved");
+                        Assert.That(completed.GetProperty("status").GetString(), Is.EqualTo("ready"));
+                        Assert.That(completed.GetProperty("transitionCount").GetInt32(), Is.EqualTo(1));
+                        Assert.That(Json("advance").GetProperty("status").GetString(), Is.EqualTo("completed"));
+                    });
+                    verified = true; break;
+                }
                 foreach (var args in new[] { new[] { "start", OtherFile }, new[] { "start", cli.FilePath }, new[] { "status" }, new[] { "advance" } })
                 {
                     cli.Raw(args); Assert.That(cli.ExitCode, Is.Zero, cli.Stderr);
@@ -201,7 +218,7 @@ internal sealed partial class ContextWorld : IDisposable
     private void Error(string code, int exit)
     {
         Assert.That(cli.ExitCode, Is.EqualTo(exit), cli.Stdout + cli.Stderr);
-        Assert.That(JsonDocument.Parse(cli.Stdout).RootElement.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo(code));
+        Assert.That(cli.ErrorCode, Is.EqualTo(code));
     }
 
     internal const string AgentWorkflow = """

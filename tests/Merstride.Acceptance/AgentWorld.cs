@@ -231,7 +231,7 @@ internal sealed class AgentWorld : IDisposable
     private void Error(string code)
     {
         Assert.That(cli.ExitCode, Is.EqualTo(4));
-        Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo(code));
+        Assert.That(cli.ErrorCode, Is.EqualTo(code));
     }
 
     internal void RejectPayload(string payload)
@@ -366,7 +366,7 @@ internal sealed class AgentWorld : IDisposable
         runId = cli.Response.GetProperty("runId").GetString()!;
         cli.Call("advance", runId);
         Assert.That(cli.ExitCode, Is.EqualTo(5));
-        Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("CONTEXT_LIMIT"));
+        Assert.That(cli.ErrorCode, Is.EqualTo("CONTEXT_LIMIT"));
         Assert.That(cli.Response.GetProperty("request").ValueKind, Is.EqualTo(JsonValueKind.Null));
     }
 

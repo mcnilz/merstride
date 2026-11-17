@@ -78,13 +78,19 @@ internal sealed class InlineScriptWorld : IDisposable
                 File.WriteAllText(cli.FilePath, File.ReadAllText(cli.FilePath).Replace("|spawn_error|", "|exit_0|")); break;
             case "advance fails with NO_MATCHING_EDGE and exit 5":
                 Assert.That(cli.ExitCode, Is.EqualTo(5));
-                Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("NO_MATCHING_EDGE"));
+                Assert.That(cli.ErrorCode, Is.EqualTo("NO_MATCHING_EDGE"));
                 Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("outcome").GetString(), Is.EqualTo("spawn_error")); break;
             case "I validate and start the invalid inline workflow":
                 foreach (var args in new[] { new[] { "validate", cli.FilePath }, new[] { "start", cli.FilePath, "--workspace", cli.DirectoryPath } })
                 {
                     cli.Call(args);
                     Assert.That(cli.ExitCode, Is.EqualTo(3), cli.Stdout);
+                    if (UsabilityAuditWorld.Complementary)
+                    {
+                        Assert.That(cli.ErrorCode, Is.EqualTo("INVALID_DOCUMENT"));
+                        Assert.That(UsabilityAuditWorld.LastText, Does.Contain("line ").And.Contain("column "));
+                        continue;
+                    }
                     var error = cli.Response.GetProperty("error");
                     Assert.That(error.GetProperty("code").GetString(), Is.EqualTo("INVALID_DOCUMENT"));
                     Assert.That(error.GetProperty("location").GetProperty("line").GetInt32(), Is.GreaterThan(1));

@@ -432,7 +432,19 @@
     "features/21-start-and-advance.feature:50 Keep identity and durable progress after first-advance errors [result save, text]",
     "features/21-start-and-advance.feature:52 Preserve exact targeting while other callers change selection",
     "features/21-start-and-advance.feature:61 Interrupt combined execution and recover explicitly [json, retry]",
-    "features/21-start-and-advance.feature:62 Interrupt combined execution and recover explicitly [text, fail]"
+    "features/21-start-and-advance.feature:62 Interrupt combined execution and recover explicitly [text, fail]",
+    "features/22-cross-scenario-usability.feature:10 Read offline management help without selecting or changing a run [--json;runs;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:11 Read offline management help without selecting or changing a run [runs;workflow.md;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:12 Read offline management help without selecting or changing a run [--json;runs;workflow.md;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:13 Read offline management help without selecting or changing a run [use;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:14 Read offline management help without selecting or changing a run [--json;use;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:15 Read offline management help without selecting or changing a run [use;r_000001;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:16 Read offline management help without selecting or changing a run [--json;use;r_000001;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:17 Read offline management help without selecting or changing a run [discard;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:18 Read offline management help without selecting or changing a run [--json;discard;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:19 Read offline management help without selecting or changing a run [discard;r_000001;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:20 Read offline management help without selecting or changing a run [--json;discard;r_000001;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:9 Read offline management help without selecting or changing a run [runs;--help;--state-dir;not-absolute, text]"
   ],
   "schemaVersion": 1,
   "featureHashes": {
@@ -455,7 +467,8 @@
     "features/18-project-workflow.feature": "dd3f559b8f7d09610b75452d0379bc0218d204369393fdf3c81b946f3291f62f",
     "features/19-contextual-selection.feature": "917d5aec8275827a2cd2a0d3aac551a76b0e7c078b12a2a6fa1fecfa84b28a03",
     "features/20-flow-progression.feature": "1f8154cbafbdcc9f7086456d9b593c601d7b30941330667d015cb291bc9d23c5",
-    "features/21-start-and-advance.feature": "43854f92f517c09548924420298d07233e860b4699a739e84ee0fdb5d3612272"
+    "features/21-start-and-advance.feature": "43854f92f517c09548924420298d07233e860b4699a739e84ee0fdb5d3612272",
+    "features/22-cross-scenario-usability.feature": "f4c42b208d781c2fa6e158aa2747a4221c38f78dce113518508ad75410e51457"
   },
   "generator": "Official Cucumber Gherkin 43.0.0 via FeatureTests.Cases; excludes only the three recursive ReleaseEnvironment orchestration cases",
   "cleanScenarios": [
@@ -876,6 +889,18 @@
     "features/21-start-and-advance.feature:50 Keep identity and durable progress after first-advance errors [result save, text]",
     "features/21-start-and-advance.feature:52 Preserve exact targeting while other callers change selection",
     "features/21-start-and-advance.feature:61 Interrupt combined execution and recover explicitly [json, retry]",
-    "features/21-start-and-advance.feature:62 Interrupt combined execution and recover explicitly [text, fail]"
+    "features/21-start-and-advance.feature:62 Interrupt combined execution and recover explicitly [text, fail]",
+    "features/22-cross-scenario-usability.feature:10 Read offline management help without selecting or changing a run [--json;runs;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:11 Read offline management help without selecting or changing a run [runs;workflow.md;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:12 Read offline management help without selecting or changing a run [--json;runs;workflow.md;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:13 Read offline management help without selecting or changing a run [use;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:14 Read offline management help without selecting or changing a run [--json;use;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:15 Read offline management help without selecting or changing a run [use;r_000001;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:16 Read offline management help without selecting or changing a run [--json;use;r_000001;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:17 Read offline management help without selecting or changing a run [discard;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:18 Read offline management help without selecting or changing a run [--json;discard;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:19 Read offline management help without selecting or changing a run [discard;r_000001;--help;--state-dir;not-absolute, text]",
+    "features/22-cross-scenario-usability.feature:20 Read offline management help without selecting or changing a run [--json;discard;r_000001;-h;--state-dir;not-absolute, json]",
+    "features/22-cross-scenario-usability.feature:9 Read offline management help without selecting or changing a run [runs;--help;--state-dir;not-absolute, text]"
   ]
 }

@@ -35,7 +35,7 @@ internal sealed class ProjectWorld : IDisposable
         if (error.Success)
         {
             Assert.That(cli.ExitCode, Is.EqualTo(int.Parse(error.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture)), cli.Stdout + cli.Stderr);
-            Assert.That(JsonDocument.Parse(cli.Stdout).RootElement.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo(error.Groups[1].Value));
+            Assert.That(cli.ErrorCode, Is.EqualTo(error.Groups[1].Value));
             if (checkedPath.Length > 0) Assert.That(File.ReadAllText(checkedPath), Is.EqualTo(original));
             return;
         }
@@ -156,7 +156,7 @@ internal sealed class ProjectWorld : IDisposable
     private void Error(string code, int exit)
     {
         Assert.That(cli.ExitCode, Is.EqualTo(exit), cli.Stdout + cli.Stderr);
-        Assert.That(JsonDocument.Parse(cli.Stdout).RootElement.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo(code));
+        Assert.That(cli.ErrorCode, Is.EqualTo(code));
     }
 
     private void AgentWorkflow() => File.WriteAllText(cli.FilePath, """

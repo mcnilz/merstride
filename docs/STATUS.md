@@ -39,6 +39,69 @@ from a local build.
 
 ## Verification
 
+P22 audits the complete scenario set against the accepted P19–P21 baseline
+`910b7e7de053c5275dd7fd0b2216bb4b2c098877` plus the reviewed P22 verification
+changes. [The audit](USABILITY.md) and [row matrix](usability-scenario-review.tsv)
+account for **448 expanded rows** from 138 declarations (92 ordinary scenarios,
+46 outlines / 356 example rows), preserving tags and owners across 21 feature
+files. The established inventory reconciles **445 local cases**, including 15
+public-build cases, and **430 native runtime cases**. Three recursive external
+release-environment cases remain separately mandatory. Of 428 product-CLI rows,
+420 require readable and structured primary actions; eight deliberately malformed
+JSON-format rows require the specified protocol error and have concrete reasons.
+The observer and native-budget rows retain their real noninteractive boundaries.
+
+Native complementary passes reuse public fixtures and independent semantic,
+process/filesystem and no-mutation assertions. Typed action/observation evidence
+requires each declared command and operation variant in its actual modes in both
+hosts: controlled writers, forced crashes, signals, concurrent readers, selection
+races and PowerShell completion cannot be replaced by later status calls.
+Failed mutations are never reissued to obtain JSON. Accepted completion alone
+uses its documented stable-request receipt retry. Twelve new @P22 management-help
+rows cover runs/use/discard with and without selectors and unusable storage.
+Sixteen public audit controls reject inventory omissions/duplication, missing
+assessments, wrong boundaries, missing action modes/commands, observation-only
+substitutes and wrong operation variants. No product behavior, dependency,
+license, protocol or saved-state schema changed.
+
+On 2026-11-17 the settled source passed the complete Windows x64
+`scripts/build.ps1` gate: **682 tests / 445 local feature cases / 430 independent
+native runtime cases**, with **zero failures/skips** and no build/publish
+warnings/errors. Architecture, dependency, distribution, privacy, usability
+reconciliation, budgets and Mermaid checks passed. Native size was **6.284 MiB**;
+warm status P95 was **21.114 ms**. The audit records 170 source inputs with digest
+`6ba74b9e797164f7f17b1612239dd720261541096954ef917e8157d2d4f2904f`;
+the matrix digest is
+`f6d8bee9bf361f54767c447ce5cf09095c924c218a6da08bff692fef657295b0`.
+Source, test, feature and inventory inputs remained fixed throughout this gate
+and the subsequent walkthroughs. Later edits record only results/history.
+
+Actual Bash human and explicit-JSON/jq walkthroughs passed using that exact gate
+binary in isolated projects. They cover offline discovery/validation, retained
+nonexecuting start, combined start/advance, workflow-path selection, literal
+handoffs, rejected completion, explicit loop advancement, historical receipt
+retries while another workflow is selected, conflicting receipts, deliberate
+discard and retained unrelated work. A native after-effect barrier then loses
+only the engine: human retry resolution executes nothing before explicit advance;
+AI fail resolution and failed status preserve effects without replay. Final
+marker counts and expected exits were asserted. Human commands use no JSON tools.
+
+Both independent source review axes found no remaining actionable findings after
+the recorded coverage/evidence findings were fixed. Final evidence/prose review
+is recorded in the local ticket. Raw TRX, native records, gate logs and Bash
+transcripts stay under ignored `artifacts/`. The coordinator accepted P22 on
+2026-11-17 after independent inspection of its coverage, primary-operation evidence,
+digests, full gate, walkthroughs and reviews, and authorized its one scoped local
+commit. Implementation is complete; these final acceptance/history edits do not
+change the verified source, tests, features or inventory. No push/publication occurred.
+
+This is Windows development-host evidence. No new Linux/macOS, clean-target or
+hosted qualification is claimed. Physical disk failure and precise signals in the
+narrow creation-to-advance window remain unqualified; the actual running-tree
+signal and public filesystem-refusal cases retain their stated limits. No token
+savings percentage is measured and local success does not establish release
+readiness. All external release prerequisites below remain mandatory.
+
 P21 adds explicit optional `start <file> --advance`, using the same synchronous
 advance adapter as the separate command and passing exactly the newly created ID.
 Ordinary start remains ready/nonexecuting; completion still only moves the cursor.
@@ -428,7 +491,7 @@ audits and timing records stay under ignored `artifacts/`. See
 - Re-run the verified macOS native and clean-target gates for each exact release
   candidate; NUnit remains a separate .NET-hosted gate.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 387 runtime cases, plus the separately
+  candidate commit and binary hashes: all 430 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.

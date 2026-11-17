@@ -1,5 +1,12 @@
 # Acceptance testing with Gherkin
 
+The [cross-scenario usability audit](USABILITY.md) accounts for every expanded
+row in [the review matrix](usability-scenario-review.tsv). The local build reconciles
+it with the release/native inventory and actual managed/native results. Native
+fixtures retain semantic and process/filesystem assertions in a complementary
+readable pass; error, concurrency and recovery cases stay included. See that audit
+for observation versus mutation rules and real external-qualification limits.
+
 The `.feature` files are the reviewable behavioral contract. The NUnit
 runner executes local cases from these files against the published
 native executable. The three clean-platform orchestration cases remain mandatory

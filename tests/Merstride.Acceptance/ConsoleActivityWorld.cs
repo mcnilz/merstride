@@ -22,6 +22,48 @@ internal sealed class ConsoleActivityWorld : IDisposable
     private static string[] Lines(string text) => text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
     private string[] ActivityLines => Lines(cli.Stderr).Where(l => l.StartsWith("[" + runId + "] ", StringComparison.Ordinal)).ToArray();
 
+    internal bool StructuredCompanion(FeatureCase scenario)
+    {
+        if (scenario.Steps.Contains("I execute the handoff and completion with explicit JSON")) return false;
+        if (scenario.Steps.Contains("a console activity chain ending at an agent"))
+        {
+            ChainFixture();
+            UsabilityAuditWorld.Structured(() => Execute("I execute the handoff and completion with explicit JSON"));
+            return true;
+        }
+        const string prefix = "a console activity process producing ";
+        var given = scenario.Steps.FirstOrDefault(s => s.StartsWith(prefix, StringComparison.Ordinal));
+        var outcome = given is not null ? given[prefix.Length..]
+            : scenario.Steps.Contains("a console activity workflow containing terminal controls") ? "raw"
+            : scenario.Steps.Contains("a console activity loop with one allowed transition") ? "loop" : null;
+        if (outcome is null) return false;
+        ProcessFixture(outcome);
+        UsabilityAuditWorld.Structured(() =>
+        {
+            cli.ExpectedChildren = outcome == "spawn_error" ? 0 : 1;
+            cli.Call("advance", runId); cli.ExpectedChildren = 0;
+            var failed = outcome is "exit_7" or "exit_0" or "loop";
+            Assert.That(cli.ExitCode, Is.EqualTo(failed ? 5 : 0));
+            Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(failed ? "failed" : "completed"));
+            Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo(outcome is "exit_7" or "loop" ? "work" : "done"));
+            Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(outcome == "exit_7" ? 0 : 1));
+            var activation = cli.Response.GetProperty("lastActivation");
+            Assert.That(activation.GetProperty("outcome").GetString(), Is.EqualTo(outcome is "raw" or "loop" ? "exit_0" : outcome));
+            if (failed) Assert.That(cli.ErrorCode, Is.EqualTo(outcome switch { "exit_7" => "NO_MATCHING_EDGE", "exit_0" => "WORKFLOW_FAILURE", _ => "TRANSITION_LIMIT" }));
+            if (outcome == "raw")
+            {
+                var path = Path.Combine(cli.State, runId, activation.GetProperty("stdoutPath").GetString()!);
+                var bytes = File.ReadAllBytes(path);
+                Assert.That(bytes, Is.EqualTo(new byte[] { 0, 255, 13, 10 }));
+                cli.Call("logs", runId, "--activation", activation.GetProperty("id").GetString()!, "--stream", "stdout");
+                Assert.That(cli.Response.GetProperty("log").GetString(), Is.EqualTo("\0\uFFFD\r\n"));
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(bytes));
+            }
+            cli.Raw("status", runId, "--state-dir", cli.State);
+        });
+        return true;
+    }
+
     internal void Execute(string step)
     {
         const string process = "a console activity process producing ";
@@ -105,12 +147,40 @@ internal sealed class ConsoleActivityWorld : IDisposable
                 break;
             case "I execute the handoff and completion with explicit JSON":
                 cli.ExpectedChildren = 2; cli.Call("advance", runId); cli.ExpectedChildren = 0; CheckJson();
-                var jsonRequest = cli.Response.GetProperty("request").GetProperty("id").GetString()!;
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("waiting_agent"));
+                Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo("review"));
+                Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(2));
+                var task = cli.Response.GetProperty("request");
+                var jsonRequest = task.GetProperty("id").GetString()!;
+                Assert.That(task.GetProperty("nodeId").GetString(), Is.EqualTo("review"));
+                Assert.That(task.GetProperty("allowedOutcomes")[0].GetString(), Is.EqualTo("approved"));
+                Assert.That(task.GetProperty("context")[0].GetProperty("value").GetInt32(), Is.Zero);
+                Assert.That(task.GetProperty("context")[1].GetProperty("value").GetInt32(), Is.EqualTo(7));
+                var chainStateFile = Path.Combine(cli.State, runId, "state.json");
+                var waitingBytes = File.ReadAllBytes(chainStateFile);
                 cli.Call("advance", runId); CheckJson();
+                Assert.That(cli.Response.GetProperty("request").GetProperty("id").GetString(), Is.EqualTo(jsonRequest));
+                Assert.That(File.ReadAllBytes(chainStateFile), Is.EqualTo(waitingBytes));
                 cli.Call("complete", runId, "--request", jsonRequest, "--outcome", "invalid"); CheckJson(4);
+                Assert.That(cli.ErrorCode, Is.EqualTo("INVALID_OUTCOME"));
+                Assert.That(File.ReadAllBytes(chainStateFile), Is.EqualTo(waitingBytes));
                 cli.Call("complete", runId, "--request", jsonRequest, "--outcome", "approved"); CheckJson();
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("ready"));
+                Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo("done"));
+                Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(3));
+                var chainReceipt = cli.Response.GetProperty("receipt").GetRawText();
+                Assert.That(cli.Response.GetProperty("receipt").GetProperty("requestId").GetString(), Is.EqualTo(jsonRequest));
+                var acceptedBytes = File.ReadAllBytes(chainStateFile);
                 cli.Call("complete", runId, "--request", jsonRequest, "--outcome", "approved"); CheckJson();
+                Assert.That(cli.Response.GetProperty("receipt").GetRawText(), Is.EqualTo(chainReceipt));
+                Assert.That(File.ReadAllBytes(chainStateFile), Is.EqualTo(acceptedBytes));
                 cli.Call("advance", runId); CheckJson(); verified = true;
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("completed"));
+                Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(3));
+                var terminal = File.ReadAllBytes(chainStateFile);
+                cli.Call("advance", runId); CheckJson();
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("completed"));
+                Assert.That(File.ReadAllBytes(chainStateFile), Is.EqualTo(terminal));
                 break;
             case "every JSON call has one protocol response and no activity": Assert.That(verified, Is.True); break;
             case "a console activity workflow containing terminal controls": ProcessFixture("raw"); break;
@@ -136,12 +206,26 @@ internal sealed class ConsoleActivityWorld : IDisposable
             case "a console activity loop with one allowed transition": ProcessFixture("loop"); break;
             case "the activity consumer closes its pipe before process completion":
                 writer = LaunchAdvance();
-                var firstLine = writer.StandardError.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
-                Assert.That(firstLine, Does.Contain("activating (launch pending)"));
+                if (UsabilityAuditWorld.Complementary)
+                    Assert.That(SpinWait.SpinUntil(() => File.Exists(Path.Combine(cli.DirectoryPath, "activity.ready")), 5000), Is.True);
+                else
+                {
+                    var firstLine = writer.StandardError.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+                    Assert.That(firstLine, Does.Contain("activating (launch pending)"));
+                }
                 writer.StandardError.Close();
                 File.WriteAllText(Path.Combine(cli.DirectoryPath, "activity.release"), "release");
                 Assert.That(writer.WaitForExit(10000), Is.True);
                 Assert.That(writer.ExitCode, Is.Zero, stdout!.Result);
+                FeatureTests.RecordOperation("advance", UsabilityAuditWorld.Complementary, writer.ExitCode, variant: "closed-pipe");
+                if (UsabilityAuditWorld.Complementary)
+                {
+                    var closed = JsonDocument.Parse(stdout!.Result).RootElement;
+                    Assert.That(closed.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+                    Assert.That(closed.GetProperty("status").GetString(), Is.EqualTo("completed"));
+                    Assert.That(closed.GetProperty("transitionCount").GetInt32(), Is.EqualTo(1));
+                    Assert.That(Lines(stdout.Result), Has.Length.EqualTo(1));
+                }
                 break;
             case "the saved run still completes successfully":
                 cli.Call("status", runId);
@@ -198,6 +282,16 @@ internal sealed class ConsoleActivityWorld : IDisposable
                 Assert.That(writer!.WaitForExit(10000), Is.True);
                 stderr!.GetAwaiter().GetResult();
                 Assert.That(writer.ExitCode, Is.Zero);
+                FeatureTests.RecordOperation("advance", UsabilityAuditWorld.Complementary, writer.ExitCode, variant: "barrier-writer");
+                if (UsabilityAuditWorld.Complementary)
+                {
+                    var structured = JsonDocument.Parse(stdout!.Result).RootElement;
+                    Assert.That(structured.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+                    Assert.That(structured.GetProperty("status").GetString(), Is.EqualTo("completed"));
+                    Assert.That(structured.GetProperty("transitionCount").GetInt32(), Is.EqualTo(1));
+                    Assert.That(activity, Is.Empty);
+                    break;
+                }
                 Assert.That(stdout!.Result, Does.Contain("Status: completed"));
                 Assert.That(activity.Count, Is.EqualTo(4));
                 Assert.That(activity[0], Does.Contain(runId).And.Contain("Process work").And.Contain("launch pending"));
@@ -211,6 +305,16 @@ internal sealed class ConsoleActivityWorld : IDisposable
 
     private void AssertLiveActivation()
     {
+        if (UsabilityAuditWorld.Complementary)
+        {
+            Assert.That(SpinWait.SpinUntil(() => File.Exists(Path.Combine(cli.DirectoryPath, "activity.ready")), 5000), Is.True);
+            Assert.That(writer!.HasExited, Is.False);
+            Assert.That(File.Exists(Path.Combine(cli.DirectoryPath, "activity.release")), Is.False);
+            lock (activity) Assert.That(activity, Is.Empty, "Structured operation suppresses live activity while still executing.");
+            cli.Call("status", runId);
+            Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("executing"));
+            return;
+        }
         Assert.That(SpinWait.SpinUntil(() =>
         {
             lock (activity) return activity.Any(l => l.Contains("activating (launch pending)", StringComparison.Ordinal));
@@ -230,6 +334,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
             WorkingDirectory = cli.DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true,
             ArgumentList = { "advance", runId, "--state-dir", cli.State }
         };
+        if (UsabilityAuditWorld.Complementary) start.ArgumentList.Add("--json");
         var launched = Process.Start(start)!;
         stdout = launched.StandardOutput.ReadToEndAsync();
         return launched;
@@ -248,6 +353,11 @@ internal sealed class ConsoleActivityWorld : IDisposable
     private void CheckJson(int code = 0)
     {
         Assert.That(cli.ExitCode, Is.EqualTo(code), cli.Stdout + cli.Stderr);
+        if (UsabilityAuditWorld.ConvertJson && code != 0)
+        {
+            Assert.That(cli.Stderr, Does.Contain("Error INVALID_OUTCOME").And.Not.Contain("accepted and saved"));
+            return;
+        }
         Assert.That(cli.Stderr, Is.Empty);
         Assert.That(Lines(cli.Stdout), Has.Length.EqualTo(1));
         Assert.That(cli.Response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
@@ -274,6 +384,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
               review:
                 kind: agent
                 prompt: "Review Grüße\e[31m\u0000\u202E."
+                context: [nodes.first.exitCode, nodes.second.exitCode]
               done:
                 kind: end
                 result: success
@@ -339,7 +450,16 @@ internal sealed class ConsoleActivityWorld : IDisposable
             Assert.That(writer!.WaitForExit(10000), Is.True);
             stderr!.GetAwaiter().GetResult();
             Assert.That(writer.ExitCode, Is.EqualTo(6));
-            Assert.That(string.Join('\n', activity), Does.Contain("activating (launch pending)").And.Contain("IO_ERROR")
+            FeatureTests.RecordOperation("advance", UsabilityAuditWorld.Complementary, writer.ExitCode, variant: "failed-save");
+            if (UsabilityAuditWorld.Complementary)
+            {
+                var result = JsonDocument.Parse(stdout!.Result).RootElement;
+                Assert.That(result.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+                Assert.That(Lines(stdout.Result), Has.Length.EqualTo(1));
+                Assert.That(result.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("IO_ERROR"));
+                Assert.That(activity, Is.Empty);
+            }
+            else Assert.That(string.Join('\n', activity), Does.Contain("activating (launch pending)").And.Contain("IO_ERROR")
                 .And.Not.Contain("saved exit").And.Not.Contain("Flow #").And.Not.Contain("overall result: success"));
             Assert.That(File.ReadAllBytes(stateFile), Is.EqualTo(snapshot));
         }

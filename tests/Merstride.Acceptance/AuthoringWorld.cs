@@ -172,6 +172,13 @@ internal sealed class AuthoringWorld : IDisposable
     }
     private void Diagnostic()
     {
+        if (UsabilityAuditWorld.Complementary)
+        {
+            Assert.That(UsabilityAuditWorld.LastText, Does.Contain("Error INVALID_DOCUMENT").And.Contain("line ").And.Contain("column "));
+            if (expectedLocation is { } location)
+                Assert.That(UsabilityAuditWorld.LastText, Does.Contain($"line {location.Line}, column {location.Column}"));
+            return;
+        }
         var diagnostic = cli.Response.GetProperty("diagnostics")[0];
         Assert.That(diagnostic.GetProperty("severity").GetString(), Is.EqualTo("error"));
         Assert.That(diagnostic.GetProperty("location").GetProperty("line").GetInt32(), Is.Positive);

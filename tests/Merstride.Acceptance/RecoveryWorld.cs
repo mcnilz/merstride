@@ -18,8 +18,11 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
     private string runId = "", priorActivation = "";
     private byte[] snapshot = [];
     private readonly List<JsonElement> readerResponses = [];
+    private readonly List<(string Status, string Cursor, int Transition)> textResponses = [];
     private uint? processBaseline;
+    private int probeBaseline;
     private int readCalls;
+    private bool combinedSignal;
     private string Helper => TestPaths.Helper;
     private string StateFile => Path.Combine(cli.State, runId, "state.json");
     private string PathFor(string name) => Path.Combine(cli.DirectoryPath, name);
@@ -29,10 +32,20 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         switch (step)
         {
             case "advance is holding a run lock while a test process waits on a barrier": StartBarrier(2); break;
-            case "an executing process with an attached child": StartInterrupt(); break;
+            case "an executing process with an attached child": StartInterrupt(text: UsabilityAuditWorld.Complementary); break;
             case "I send the platform's supported user-interrupt signal":
                 File.WriteAllText(PathFor("signal.request"), "signal"); WaitFile("signal.exit");
                 cli.ExitCode = int.Parse(File.ReadAllText(PathFor("signal.exit")), System.Globalization.CultureInfo.InvariantCulture);
+                var signalOutput = File.ReadAllText(PathFor("signal.stdout"));
+                var signalJson = signalOutput.StartsWith('{');
+                FeatureTests.RecordOperation(combinedSignal ? "start-advance" : "advance", signalJson, cli.ExitCode, variant: "signal");
+                if (signalJson)
+                {
+                    using var document = JsonDocument.Parse(signalOutput);
+                    Assert.That(document.RootElement.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+                    Assert.That(signalOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(1));
+                    Assert.That(File.ReadAllText(PathFor("signal.stderr")), Is.Empty);
+                }
                 break;
             case "the CLI exits with code 130": Assert.That(cli.ExitCode, Is.EqualTo(130), File.ReadAllText(PathFor("signal.stderr"))); break;
             case "the process tree is terminated on the supported test platform":
@@ -40,7 +53,12 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
                 Assert.That(signalHost!.WaitForExit(2000), Is.True);
                 if (processBaseline.HasValue) Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo(OperatingSystem.IsWindows() ? 5 : 4),
                     "Signal host, private console host, CLI and two attached helpers.");
-                cli.Response = JsonDocument.Parse(File.ReadAllText(PathFor("signal.stdout"))).RootElement.Clone();
+                if (UsabilityAuditWorld.Complementary)
+                {
+                    Assert.That(File.ReadAllText(PathFor("signal.stdout")), Does.Contain("Status: interrupted").And.Contain("Next: inspect external effects"));
+                    cli.Call("status", runId);
+                }
+                else cli.Response = JsonDocument.Parse(File.ReadAllText(PathFor("signal.stdout"))).RootElement.Clone();
                 Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("interrupted")); break;
             case "a fresh status reports interrupted":
                 cli.Call("status", runId);
@@ -52,12 +70,12 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
             case "I read its status": cli.Call("status", runId); break;
             case "the CLI exits with code 6":
                 Assert.That(cli.ExitCode, Is.EqualTo(6));
-                Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("CORRUPT_STATE")); break;
+                Assert.That(cli.ErrorCode, Is.EqualTo("CORRUPT_STATE")); break;
             case "the corrupt state is not replaced or reset": Assert.That(File.ReadAllBytes(StateFile), Is.EqualTo(snapshot)); break;
             case "a writer repeatedly commits valid transitions while holding its run lock": StartBarrier(12); break;
             case "independent readers repeatedly query status": ReadConcurrently(); break;
             case "every successful response is one complete protocol JSON object":
-                Assert.That(readerResponses.Count, Is.GreaterThanOrEqualTo(12));
+                Assert.That(readerResponses.Count + textResponses.Count, Is.GreaterThanOrEqualTo(12));
                 foreach (var response in readerResponses)
                 {
                     Assert.That(response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
@@ -65,6 +83,20 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
                 }
                 break;
             case "every reported cursor and status is a committed combination":
+                foreach (var response in textResponses)
+                {
+                    if (response.Transition == 12)
+                    {
+                        Assert.That(response.Cursor, Is.EqualTo("done"));
+                        Assert.That(response.Status, Is.AnyOf("ready", "completed"));
+                    }
+                    else
+                    {
+                        Assert.That(response.Transition, Is.InRange(0, 11));
+                        Assert.That(response.Cursor, Is.EqualTo("work" + response.Transition));
+                        Assert.That(response.Status, Is.AnyOf("ready", "executing"));
+                    }
+                }
                 foreach (var response in readerResponses)
                 {
                     var status = response.GetProperty("status").GetString();
@@ -126,7 +158,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
             case "a second CLI process attempts to advance the same run": cli.Call("advance", runId); break;
             case "it exits with code 4 and error \"RUN_LOCKED\"":
                 Assert.That(cli.ExitCode, Is.EqualTo(4));
-                Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("RUN_LOCKED")); break;
+                Assert.That(cli.ErrorCode, Is.EqualTo("RUN_LOCKED")); break;
             case "the child process has started only once": AssertEffects(1); break;
             case "another run can advance independently":
                 using (var other = new CliWorld())
@@ -152,7 +184,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
                     };
                     cli.Call(args);
                     Assert.That(cli.ExitCode, Is.EqualTo(4));
-                    Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("RUN_LOCKED"));
+                    Assert.That(cli.ErrorCode, Is.EqualTo("RUN_LOCKED"));
                 }
                 AssertEffects(2);
                 File.WriteAllText(PathFor("effect1.release"), "release"); FinishWriter(0); break;
@@ -199,11 +231,12 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
     private static string Binary => Environment.GetEnvironmentVariable("MERSTRIDE_BINARY") ??
         Path.Combine(FeatureTests.Root, "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
 
-    private Process Launch(string command)
+    private Process Launch(string command, bool readable = false)
     {
         var start = new ProcessStartInfo(Binary)
         { WorkingDirectory = cli.DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var arg in new[] { command, runId, "--state-dir", cli.State, "--json" }) start.ArgumentList.Add(arg);
+        foreach (var arg in new[] { command, runId, "--state-dir", cli.State }) start.ArgumentList.Add(arg);
+        if (!readable && (!UsabilityAuditWorld.Complementary || command == "status")) start.ArgumentList.Add("--json");
         return Process.Start(start)!;
     }
 
@@ -211,6 +244,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
     {
         CreateWorkflow(count);
         processBaseline = ProcessObserver.TotalProcesses();
+        probeBaseline = UsabilityAuditWorld.Probes;
         writer = Launch("advance");
         output = writer.StandardOutput.ReadToEndAsync(); error = writer.StandardError.ReadToEndAsync();
         var name = count == 1 ? "effect" : "effect0";
@@ -221,8 +255,10 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
 
     private void StartInterrupt(bool text = false, bool combined = false)
     {
+        combinedSignal = combined;
         CreateWorkflow(mode: "interrupt_parent");
         processBaseline = ProcessObserver.TotalProcesses();
+        probeBaseline = UsabilityAuditWorld.Probes;
         var existing = ProcessObserver.ActiveProcessIds();
         signalHost = WindowsInterrupt.Start(Helper, Binary, combined ? cli.FilePath : runId, cli.State, cli.DirectoryPath, text, combined);
         WaitFile("parent.ready"); ObserveHelper("parent.pid"); ObserveHelper("child.pid");
@@ -256,6 +292,22 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
                 Assert.That(reader.ExitCode, Is.Zero, stdout.Result + stderr.Result);
                 var response = JsonDocument.Parse(stdout.Result).RootElement.Clone();
                 lock (readerResponses) readerResponses.Add(response);
+                FeatureTests.RecordOperation("status", true, reader.ExitCode, variant: "concurrent-reader");
+                if (UsabilityAuditWorld.Complementary)
+                {
+                    using var textReader = Launch("status", readable: true);
+                    Interlocked.Increment(ref readCalls);
+                    var textOutput = textReader.StandardOutput.ReadToEndAsync();
+                    var textError = textReader.StandardError.ReadToEndAsync();
+                    if (!textReader.WaitForExit(10000)) { textReader.Kill(true); Assert.Fail("Readable reader watchdog."); }
+                    Assert.That(textReader.ExitCode, Is.Zero, textOutput.Result + textError.Result);
+                    Assert.That(textError.Result, Is.Empty);
+                    string Field(string label) => System.Text.RegularExpressions.Regex.Match(textOutput.Result, "(?m)^" + label + ": ([a-z0-9_]+)").Groups[1].Value;
+                    var status = Field("Status"); var cursor = Field("Cursor");
+                    var transition = int.Parse(Field("Transitions"), System.Globalization.CultureInfo.InvariantCulture);
+                    lock (textResponses) textResponses.Add((status, cursor, transition));
+                    FeatureTests.RecordOperation("status", false, textReader.ExitCode, variant: "concurrent-reader");
+                }
                 if (response.GetProperty("status").GetString() == "completed") break;
             }
         })).ToArray();
@@ -294,7 +346,20 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
     {
         Assert.That(writer!.WaitForExit(10000), Is.True, "Writer watchdog.");
         Assert.That(writer.ExitCode, Is.EqualTo(expected), error!.Result);
-        cli.Response = JsonDocument.Parse(output!.Result).RootElement.Clone(); cli.ExitCode = writer.ExitCode;
+        FeatureTests.RecordOperation("advance", !UsabilityAuditWorld.Complementary, writer.ExitCode, variant: "barrier-writer");
+        if (UsabilityAuditWorld.Complementary)
+        {
+            Assert.That(output!.Result, Does.Contain("Run: " + runId).And.Contain("Status: completed"));
+        }
+        else
+        {
+            cli.Response = JsonDocument.Parse(output!.Result).RootElement.Clone();
+            Assert.That(cli.Response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+            Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("completed"));
+            Assert.That(output.Result.Split('\n', StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(1));
+            Assert.That(error.Result, Is.Empty);
+        }
+        cli.ExitCode = writer.ExitCode;
     }
 
     private void Crash()
@@ -304,6 +369,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         snapshot = File.ReadAllBytes(StateFile);
         writer!.Kill(); // Deliberately terminate just the engine after the external marker.
         Assert.That(writer.WaitForExit(2000), Is.True);
+        FeatureTests.RecordOperation("advance", !UsabilityAuditWorld.Complementary, writer.ExitCode, variant: "forced-crash");
         Assert.That(helpers[0].HasExited, Is.False, "External effect helper outlives engine crash.");
     }
 
@@ -312,6 +378,15 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
     internal void AssertReadableResolution(bool retry)
     {
         StartBarrier(); Crash();
+        if (UsabilityAuditWorld.Complementary)
+        {
+            UsabilityAuditWorld.Structured(() => cli.Call("resolve", runId, retry ? "--retry" : "--fail"));
+            Assert.That(cli.ExitCode, Is.EqualTo(retry ? 0 : 5));
+            Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(retry ? "ready" : "failed"));
+            Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("outcome").GetString(), Is.EqualTo("interrupted"));
+            AssertEffects(1);
+            return;
+        }
         cli.Raw("resolve", runId, retry ? "--retry" : "--fail", "--state-dir", cli.State);
         Assert.That(cli.ExitCode, Is.EqualTo(retry ? 0 : 5));
         Assert.That(cli.Stdout, Does.Contain("Run: " + runId).And.Contain("Status: " + (retry ? "ready" : "failed")));
@@ -326,6 +401,35 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
     internal void AssertProgressionRecovery(bool retry)
     {
         StartBarrier(); Crash();
+        if (UsabilityAuditWorld.Complementary)
+        {
+            UsabilityAuditWorld.Structured(() =>
+            {
+                cli.Call("status", runId);
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
+                cli.Call("advance", runId); Assert.That(cli.ExitCode, Is.EqualTo(5)); AssertEffects(1);
+                var saved = File.ReadAllBytes(StateFile);
+                using (new RejectedStateSave(StateFile))
+                {
+                    cli.Call("resolve", runId, retry ? "--retry" : "--fail");
+                    Assert.That(cli.ExitCode, Is.EqualTo(6)); Assert.That(cli.ErrorCode, Is.EqualTo("IO_ERROR"));
+                    Assert.That(File.ReadAllBytes(StateFile), Is.EqualTo(saved));
+                }
+                cli.Call("resolve", runId, retry ? "--retry" : "--fail");
+                Assert.That(cli.ExitCode, Is.EqualTo(retry ? 0 : 5));
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(retry ? "ready" : "failed"));
+                Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo("work"));
+                Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.Zero); AssertEffects(1);
+                if (!retry) return;
+                File.WriteAllText(PathFor("effect.release"), "release");
+                foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
+                cli.ExpectedChildren = 1; cli.Call("advance", runId); cli.ExpectedChildren = 0;
+                Assert.That(cli.ExitCode, Is.Zero);
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("completed"));
+                Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("id").GetString(), Is.Not.EqualTo(priorActivation)); AssertEffects(2);
+            });
+            return;
+        }
         cli.Raw("status", runId, "--state-dir", cli.State);
         Assert.That(cli.ExitCode, Is.Zero);
         Assert.That(cli.Stderr, Does.Not.Contain("[" + runId + "]"));
@@ -361,20 +465,32 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
 
     internal void AssertTextInterruption()
     {
-        StartInterrupt(text: true);
+        StartInterrupt(text: !UsabilityAuditWorld.Complementary);
         Execute("I send the platform's supported user-interrupt signal");
         Assert.That(cli.ExitCode, Is.EqualTo(130));
         var text = File.ReadAllText(PathFor("signal.stdout"));
         var activity = File.ReadAllText(PathFor("signal.stderr"));
-        Assert.That(text, Does.Contain("Status: interrupted").And.Contain("Next: inspect external effects"));
-        Assert.That(activity, Does.Contain("activating (launch pending)").And.Contain("saved execution interrupted; effects uncertain (interrupted)")
-            .And.Contain("Run executing -> interrupted").And.Contain("Flow stays at work; no route taken")
-            .And.Contain("resolve --retry or --fail").And.Not.Contain("Flow #"));
+        if (UsabilityAuditWorld.Complementary)
+        {
+            var response = JsonDocument.Parse(text).RootElement;
+            Assert.That(response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+            Assert.That(response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
+            Assert.That(response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("INTERRUPTED"));
+            Assert.That(activity, Is.Empty);
+        }
+        else
+        {
+            Assert.That(text, Does.Contain("Status: interrupted").And.Contain("Next: inspect external effects"));
+            Assert.That(activity, Does.Contain("activating (launch pending)").And.Contain("saved execution interrupted; effects uncertain (interrupted)")
+                .And.Contain("Run executing -> interrupted").And.Contain("Flow stays at work; no route taken")
+                .And.Contain("resolve --retry or --fail").And.Not.Contain("Flow #"));
+        }
         foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
         Assert.That(signalHost!.WaitForExit(2000), Is.True);
         if (processBaseline.HasValue)
             Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo(OperatingSystem.IsWindows() ? 5 : 4));
-        cli.Raw("advance", runId, "--state-dir", cli.State);
+        if (UsabilityAuditWorld.Complementary) UsabilityAuditWorld.Structured(() => cli.Call("advance", runId));
+        else cli.Raw("advance", runId, "--state-dir", cli.State);
         Assert.That(cli.ExitCode, Is.EqualTo(5));
         Assert.That(cli.Stderr, Does.Not.Contain("[" + runId + "]"));
         cli.Call("status", runId);
@@ -383,13 +499,14 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
 
     internal void AssertCombinedInterruption(bool text, bool retry)
     {
+        if (UsabilityAuditWorld.Complementary) text = !text;
         StartInterrupt(text, combined: true);
         Execute("I send the platform's supported user-interrupt signal");
         Assert.That(cli.ExitCode, Is.EqualTo(130), File.ReadAllText(PathFor("signal.stderr")));
         foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
         Assert.That(signalHost!.WaitForExit(2000), Is.True);
         if (processBaseline.HasValue)
-            Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo(OperatingSystem.IsWindows() ? 6 : 5));
+            Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo((OperatingSystem.IsWindows() ? 6 : 5) + UsabilityAuditWorld.Probes - probeBaseline));
         var result = File.ReadAllText(PathFor("signal.stdout"));
         if (text)
             Assert.That(result, Does.Contain("Run: " + runId).And.Contain("Creation: saved new run").And.Contain("Initial advance: interrupted").And.Contain("Status: interrupted"));
@@ -433,7 +550,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         {
             cli.Call(command == "resolve" ? [command, runId, "--retry"] : [command, runId]);
             Assert.That(cli.ExitCode, Is.EqualTo(6));
-            Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("CORRUPT_STATE"));
+            Assert.That(cli.ErrorCode, Is.EqualTo("CORRUPT_STATE"));
             Assert.That(File.ReadAllBytes(StateFile), Is.EqualTo(snapshot));
         }
         Assert.That(File.Exists(PathFor("effects.txt")), Is.False);
@@ -441,7 +558,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
 
     internal void InterruptWithReadOnlyState()
     {
-        StartInterrupt();
+        StartInterrupt(text: UsabilityAuditWorld.Complementary);
         snapshot = File.ReadAllBytes(StateFile);
         var attributes = File.GetAttributes(StateFile);
         var stateDirectory = Path.GetDirectoryName(StateFile)!;
@@ -452,9 +569,14 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
             if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(stateDirectory, UnixFileMode.UserRead | UnixFileMode.UserExecute);
             Execute("I send the platform's supported user-interrupt signal");
             Assert.That(cli.ExitCode, Is.EqualTo(130));
-            var response = JsonDocument.Parse(File.ReadAllText(PathFor("signal.stdout"))).RootElement;
-            Assert.That(response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
-            Assert.That(response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("INTERRUPTED"));
+            if (UsabilityAuditWorld.Complementary)
+                Assert.That(File.ReadAllText(PathFor("signal.stdout")), Does.Contain("Status: interrupted"));
+            else
+            {
+                var response = JsonDocument.Parse(File.ReadAllText(PathFor("signal.stdout"))).RootElement;
+                Assert.That(response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
+                Assert.That(response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("INTERRUPTED"));
+            }
             foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
             Assert.That(File.ReadAllBytes(StateFile), Is.EqualTo(snapshot));
             cli.Call("status", runId);

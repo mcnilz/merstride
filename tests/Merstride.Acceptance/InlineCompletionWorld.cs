@@ -150,7 +150,7 @@ internal sealed class InlineCompletionWorld : IDisposable
                 $data = @{ note = "Grüße with spaces and 'quotes'"; nested = @{ items = @(1, $true) } } | ConvertTo-Json -Depth 4 -Compress
                 & $Binary complete $Run --request $Request --outcome retry --data $data --state-dir $Root --json
                 exit $LASTEXITCODE
-                """);
+                """.Replace(" --json", UsabilityAuditWorld.Complementary ? "" : " --json"));
             var binary = Environment.GetEnvironmentVariable("MERSTRIDE_BINARY") ?? Path.Combine(FeatureTests.Root,
                 "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
             var start = new ProcessStartInfo("pwsh") { RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
@@ -163,10 +163,22 @@ internal sealed class InlineCompletionWorld : IDisposable
             if (!process.WaitForExit(15000)) { process.Kill(true); Assert.Fail("PowerShell exceeded the CLI watchdog."); }
             cli.ExitCode = process.ExitCode;
             cli.Stderr = stderr.GetAwaiter().GetResult();
-            using var document = JsonDocument.Parse(stdout.GetAwaiter().GetResult());
-            cli.Response = document.RootElement.Clone();
-            Assert.That(cli.Response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+            FeatureTests.RecordOperation("complete", !UsabilityAuditWorld.Complementary, process.ExitCode, variant: "powershell");
             if (before.HasValue) Assert.That(ProcessObserver.TotalProcesses() - before, Is.EqualTo(2), "Only PowerShell and the CLI launch.");
+            if (UsabilityAuditWorld.Complementary)
+            {
+                Assert.That(cli.ExitCode, Is.Zero);
+                Assert.That(stdout.GetAwaiter().GetResult(), Does.Contain("Completion: " + requestId).And.Contain("Status: ready"));
+                // Exact accepted-receipt retry observes data without replaying work.
+                cli.Call("complete", runId, "--request", requestId, "--outcome", "retry", "--data",
+                    "{\"note\":\"Grüße with spaces and 'quotes'\",\"nested\":{\"items\":[1,true]}}");
+            }
+            else
+            {
+                using var document = JsonDocument.Parse(stdout.GetAwaiter().GetResult());
+                cli.Response = document.RootElement.Clone();
+                Assert.That(cli.Response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+            }
         }
         finally { File.Delete(script); }
     }
@@ -186,8 +198,9 @@ internal sealed class InlineCompletionWorld : IDisposable
     private void Reject(string code, int exit)
     {
         Assert.That(cli.ExitCode, Is.EqualTo(exit));
-        Assert.That(cli.Stderr, Is.Empty);
-        Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo(code));
+        if (UsabilityAuditWorld.Complementary) Assert.That(cli.Stderr, Does.Contain("Error " + code));
+        else Assert.That(cli.Stderr, Is.Empty);
+        Assert.That(cli.ErrorCode, Is.EqualTo(code));
         Assert.That(File.ReadAllBytes(StateFile), Is.EqualTo(snapshot));
     }
 

@@ -37,7 +37,7 @@ internal sealed class StartAdvanceSafetyWorld : IDisposable
         else if (step.StartsWith(advance, StringComparison.Ordinal))
         {
             var parts = step[advance.Length..].Split(" in ", StringSplitOptions.None);
-            failure = parts[0]; format = parts[1]; AdvanceFailure();
+            failure = parts[0]; format = UsabilityAuditWorld.Complementary ? parts[1] == "json" ? "text" : "json" : parts[1]; AdvanceFailure();
         }
         else if (step == "the created run is recoverable without rollback or automatic replay") Recover();
         else if (step == "combined start runs behind a barrier while same and different workflows start") Concurrent();
@@ -123,6 +123,12 @@ internal sealed class StartAdvanceSafetyWorld : IDisposable
             if (defect == "preparation conflict") cli.Raw(args.Concat(["--json"]).ToArray());
             else cli.Call(args.ToArray());
             Assert.That(cli.ExitCode, Is.EqualTo(expected), cli.Stdout + cli.Stderr);
+            if (UsabilityAuditWorld.Complementary)
+            {
+                Assert.That(UsabilityAuditWorld.LastText, Does.Contain("Error "));
+                Assert.That(Directory.GetDirectories(cli.State, "r_*").Length, Is.EqualTo(1));
+                return;
+            }
             response = defect == "preparation conflict" ? JsonDocument.Parse(cli.Stdout).RootElement.Clone() : cli.Response;
             Assert.That(response.GetProperty("runId").ValueKind, Is.EqualTo(JsonValueKind.Null));
             if (response.GetProperty("start").ValueKind != JsonValueKind.Null)
@@ -154,7 +160,7 @@ internal sealed class StartAdvanceSafetyWorld : IDisposable
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("executing"));
         cli.Call("advance", created);
         Assert.That(cli.ExitCode, Is.EqualTo(4));
-        Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("RUN_LOCKED"));
+        Assert.That(cli.ErrorCode, Is.EqualTo("RUN_LOCKED"));
     }
 
     private void Finish(int expected)
@@ -162,15 +168,19 @@ internal sealed class StartAdvanceSafetyWorld : IDisposable
         File.WriteAllText(Path.Combine(cli.DirectoryPath, "combined.release"), "release");
         Assert.That(writer!.WaitForExit(10000), Is.True, "Combined writer watchdog.");
         Assert.That(writer.ExitCode, Is.EqualTo(expected), stdout!.Result + stderr!.Result);
+        FeatureTests.RecordOperation("start-advance", format == "json", writer.ExitCode, variant: "controlled-writer");
         if (format == "json")
         {
             response = JsonDocument.Parse(stdout.Result).RootElement.Clone();
+            Assert.That(response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+            Assert.That(stdout.Result.Split('\n', StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(1));
             Assert.That(response.GetProperty("runId").GetString(), Is.EqualTo(created));
             Assert.That(response.GetProperty("start").GetProperty("created").GetBoolean(), Is.True);
             Assert.That(response.GetProperty("start").GetProperty("phase").GetString(), Is.EqualTo("advance"));
             Assert.That(stderr.Result, Is.Empty);
         }
-        else Assert.That(stdout!.Result, Does.Contain("Run: " + created).And.Contain("Creation: saved new run").And.Contain("Initial advance: stopped by an error"));
+        else Assert.That(stdout!.Result, Does.Contain("Run: " + created).And.Contain("Creation: saved new run")
+            .And.Contain(expected == 0 ? "Initial advance: finished" : "Initial advance: stopped by an error"));
         Assert.That(File.ReadAllLines(Effects), Is.EqualTo(new[] { "combined" }));
         Assert.That(File.ReadAllBytes(State(seed)), Is.EqualTo(seedSnapshot));
     }
@@ -188,6 +198,8 @@ internal sealed class StartAdvanceSafetyWorld : IDisposable
             Assert.That(response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo(failure == "request lock" ? "IDENTITY_LOCKED" : "IO_ERROR"));
             Assert.That(response.GetProperty("status").GetString(), Is.EqualTo(failure == "request lock" ? "ready" : "interrupted"));
         }
+        else if (failure == "request lock")
+            Assert.That(stderr!.Result, Does.Contain("IDENTITY_LOCKED").And.Contain("Flow #1: work -> review").And.Not.Contain("overall result: success"));
         else Assert.That(stderr!.Result, Does.Contain("activating").And.Contain("IO_ERROR").And.Not.Contain("saved exit").And.Not.Contain("Flow #").And.Not.Contain("overall result: success"));
     }
 
@@ -216,6 +228,7 @@ internal sealed class StartAdvanceSafetyWorld : IDisposable
 
     private void Concurrent()
     {
+        if (UsabilityAuditWorld.Complementary) format = "text";
         Fixture(true); Seed(); Launch();
         SeedNew(out var same);
         var other = Path.Combine(cli.DirectoryPath, "other.md"); File.WriteAllText(other, FeatureTests.Workflow);
@@ -225,6 +238,7 @@ internal sealed class StartAdvanceSafetyWorld : IDisposable
         File.WriteAllText(cli.FilePath, "source replaced while new run executes");
         File.WriteAllText(Path.Combine(cli.DirectoryPath, "input.json"), "{\"frozen\":false}");
         Finish(0);
+        if (UsabilityAuditWorld.Complementary) { cli.Call("status", created); response = cli.Response; }
         Assert.That(response.GetProperty("status").GetString(), Is.EqualTo("waiting_agent"));
         Assert.That(response.GetProperty("request").GetProperty("prompt").GetString(), Is.EqualTo("Frozen review"));
         Assert.That(response.GetProperty("request").GetProperty("context")[0].GetProperty("value").GetProperty("frozen").GetBoolean(), Is.True);

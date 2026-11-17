@@ -16,6 +16,63 @@ internal sealed class ReadableOutputWorld : IDisposable
     private JsonElement before, receipt;
     private bool verified;
 
+    internal bool StructuredCompanion(FeatureCase scenario)
+    {
+        if (scenario.Steps.Contains("a readable workflow with selected truncated and unavailable context"))
+        {
+            HandoffFixture();
+            UsabilityAuditWorld.Structured(() =>
+            {
+                cli.Call("start", cli.FilePath, "--workspace", cli.DirectoryPath);
+                Assert.That(cli.ExitCode, Is.Zero);
+                runId = cli.Response.GetProperty("runId").GetString()!;
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("ready"));
+                Assert.That(cli.Response.GetProperty("lastActivation").ValueKind, Is.EqualTo(JsonValueKind.Null));
+                cli.ExpectedChildren = 1; cli.Call("advance", runId); cli.ExpectedChildren = 0;
+                Assert.That(cli.ExitCode, Is.Zero);
+                var request = cli.Response.GetProperty("request");
+                requestId = request.GetProperty("id").GetString()!;
+                Assert.That(request.GetProperty("prompt").GetString(), Is.EqualTo("First line\nSecond Grüße\u001b[31m\U000E0001"));
+                Assert.That(request.GetProperty("allowedOutcomes")[0].GetString(), Is.EqualTo("approved"));
+                Assert.That(request.GetProperty("context")[1].GetProperty("truncated").GetBoolean(), Is.True);
+                Assert.That(request.GetProperty("context")[2].GetProperty("available").GetBoolean(), Is.False);
+                Assert.That(cli.Stdout, Does.Not.Contain("SECRET"));
+                cli.Call("complete", runId, "--request", requestId, "--outcome", "approved");
+                Assert.That(cli.ExitCode, Is.Zero);
+                var accepted = cli.Response.GetProperty("receipt").GetRawText();
+                Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo("later"));
+                Assert.That(File.Exists(Path.Combine(cli.DirectoryPath, "effects.txt")), Is.False);
+                cli.Call("complete", runId, "--request", requestId, "--outcome", "approved");
+                Assert.That(cli.Response.GetProperty("receipt").GetRawText(), Is.EqualTo(accepted));
+                Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(2));
+                cli.ExpectedChildren = 1; cli.Call("advance", runId); cli.ExpectedChildren = 0;
+                Assert.That(cli.ExitCode, Is.Zero);
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("completed"));
+                cli.Call("advance", runId);
+                Assert.That(File.ReadAllText(Path.Combine(cli.DirectoryPath, "effects.txt")), Is.EqualTo("later\n"));
+                cli.Raw("status", runId, "--state-dir", cli.State);
+            });
+            return true;
+        }
+        if (scenario.Steps.Contains("a failed readable workflow"))
+        {
+            File.WriteAllText(cli.FilePath, FeatureTests.Workflow.Replace("result: success", "result: failure"));
+            cli.Call("start", cli.FilePath); runId = cli.Response.GetProperty("runId").GetString()!;
+            UsabilityAuditWorld.Structured(() =>
+            {
+                cli.Call("advance", runId); Assert.That(cli.ExitCode, Is.EqualTo(5));
+                Assert.That(cli.ErrorCode, Is.EqualTo("WORKFLOW_FAILURE"));
+                var state = File.ReadAllBytes(Path.Combine(cli.State, runId, "state.json"));
+                cli.Call("status", runId); Assert.That(cli.ExitCode, Is.Zero);
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("failed"));
+                Assert.That(cli.ErrorCode, Is.EqualTo("WORKFLOW_FAILURE"));
+                Assert.That(File.ReadAllBytes(Path.Combine(cli.State, runId, "state.json")), Is.EqualTo(state));
+            });
+            return true;
+        }
+        return false;
+    }
+
     private void Text(params string[] args) => cli.Raw([.. args, "--state-dir", cli.State]);
     private static JsonElement Protocol(CliWorld world)
     {
@@ -139,7 +196,7 @@ internal sealed class ReadableOutputWorld : IDisposable
                 cli.Call("status", runId); break;
             case "both inspections exit zero and preserve the failure reason":
                 Assert.That(cli.ExitCode, Is.Zero);
-                Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("WORKFLOW_FAILURE")); break;
+                Assert.That(cli.ErrorCode, Is.EqualTo("WORKFLOW_FAILURE")); break;
             case "the default response is a readable version with no state or children":
                 Assert.That(cli.ExitCode, Is.Zero);
                 Assert.That(cli.Stdout, Does.StartWith("Merstride ").And.Contain("protocol 1"));

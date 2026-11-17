@@ -54,6 +54,16 @@ try
         writer.WriteString("scenario", scenario.Name);
         writer.WriteStartArray("tags"); foreach (var tag in scenario.Tags) writer.WriteStringValue(tag); writer.WriteEndArray();
         writer.WriteString("platform", System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier);
+        writer.WriteNumber("complementaryCalls", FeatureTests.LastComplementaryCalls);
+        writer.WriteStartArray("operations");
+        foreach (var operation in FeatureTests.Operations)
+        {
+            writer.WriteStartObject(); writer.WriteString("pass", operation.Pass); writer.WriteString("purpose", operation.Purpose);
+            writer.WriteString("command", operation.Command); writer.WriteString("mode", operation.Mode); writer.WriteNumber("exit", operation.Exit);
+            writer.WriteString("variant", operation.Variant);
+            writer.WriteEndObject();
+        }
+        writer.WriteEndArray();
         writer.WriteStartObject("result"); writer.WriteString("status", error is null ? "passed" : "failed");
         if (error is not null) writer.WriteString("error", error);
         writer.WriteEndObject(); writer.WriteEndObject(); writer.Flush();

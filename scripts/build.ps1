@@ -150,6 +150,9 @@ try {
         & strace --seccomp-bpf -f -qq -e trace=execve -o $env:MERSTRIDE_PROCESS_TRACE $suite @suiteArgs
     }
     if ($LASTEXITCODE -ne 0) { throw 'Independent native runtime suite failed.' }
+    Set-BuildPhase 'cross-scenario usability evidence'
+    & ./scripts/usability-audit.ps1
+    if ($LASTEXITCODE -ne 0) { throw 'Cross-scenario usability audit failed.' }
     # Measure native startup before installing/rendering the development browser tool.
     Set-BuildPhase 'native budgets'
     & ./scripts/benchmark.ps1 -Binary $env:MERSTRIDE_BINARY

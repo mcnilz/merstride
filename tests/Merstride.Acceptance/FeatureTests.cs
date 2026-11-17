@@ -15,9 +15,17 @@ public sealed record FeatureCase(string File, string Name, long Line, string[] T
     public override string ToString() => $"{Path.GetFileName(File)}:{Line} {Name}";
 }
 
+internal sealed record OperationEvidence(string Pass, string Purpose, string Command, string Mode, int Exit, string Variant = "direct");
+
 public class FeatureTests
 {
     private readonly Dictionary<string, object> results = new(StringComparer.Ordinal);
+    internal static int LastComplementaryCalls { get; private set; }
+    internal static readonly List<OperationEvidence> Operations = [];
+    internal static void RecordOperation(string command, bool json, int exit, bool observation = false, string variant = "direct")
+    {
+        lock (Operations) Operations.Add(new(UsabilityAuditWorld.Complementary ? "complement" : "original", observation ? "observation" : "action", command, json ? "json" : "text", exit, variant));
+    }
     internal static readonly string Root = FindRoot();
     internal const string Workflow = """
         ```yaml merstride
@@ -68,7 +76,7 @@ public class FeatureTests
         }
     }
 
-    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11" or "@P12" or "@P13" or "@P15" or "@P17" or "@P18" or "@P19" or "@P20" or "@P21");
+    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11" or "@P12" or "@P13" or "@P15" or "@P17" or "@P18" or "@P19" or "@P20" or "@P21" or "@P22");
 
 #if !NATIVE_SUITE
     public static IEnumerable<TestCaseData> RequiredCases() => Cases().Where(c => c.Implemented)
@@ -79,7 +87,7 @@ public class FeatureTests
     [TestCaseSource(nameof(RequiredCases))]
     public void ExecuteFeature(FeatureCase scenario)
     {
-        try { Execute(scenario); results[scenario.ToString()] = new { status = "passed" }; }
+        try { Execute(scenario); results[scenario.ToString()] = new { status = "passed", complementaryCalls = LastComplementaryCalls, operations = Operations.ToArray() }; }
         catch (Exception ex) { results[scenario.ToString()] = new { status = "failed", error = ex.Message }; throw; }
     }
 
@@ -90,15 +98,50 @@ public class FeatureTests
             feature = Path.GetRelativePath(Root, c.File), scenario = c.Name, line = c.Line, tags = c.Tags,
             platform = System.Runtime.InteropServices.RuntimeInformation.RuntimeIdentifier,
             evidenceScope = c.Name == "Accept a contribution without publication privileges" ? "local workflow policy; hosted execution unavailable" : "local execution",
+            steps = c.Steps,
             result = results.GetValueOrDefault(c.ToString(), new { status = c.Implemented ? "required; not run (qualification incomplete)" : "not yet implemented" })
         });
         Directory.CreateDirectory(Path.Combine(Root, "artifacts/tests"));
-        File.WriteAllText(Path.Combine(Root, "artifacts/tests/scenarios.json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(Path.Combine(Root, "artifacts/tests/scenarios.json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
     }
 
 #endif
 
     internal static void Execute(FeatureCase scenario)
+    {
+        LastComplementaryCalls = 0;
+        Operations.Clear();
+        ExecuteSteps(scenario);
+        if (scenario.Tags.Contains("@build") || scenario.Tags.Contains("@P15") ||
+            scenario.Name == "Meet native distribution budgets" ||
+            scenario.Steps.Any(s => s.StartsWith("the published native binary on a clean", StringComparison.Ordinal))) return;
+        using var audit = new UsabilityAuditWorld();
+        if (!ExecuteStructuredCompanion(scenario)) ExecuteSteps(scenario);
+        audit.AssertExecuted();
+        LastComplementaryCalls = audit.Calls;
+    }
+
+    private static bool ExecuteStructuredCompanion(FeatureCase scenario)
+    {
+        if (scenario.Tags.Contains("@P20"))
+        {
+            using var world = new ProgressionWorld();
+            return world.StructuredCompanion(scenario);
+        }
+        if (scenario.Tags.Contains("@P17"))
+        {
+            using var world = new ConsoleActivityWorld();
+            return world.StructuredCompanion(scenario);
+        }
+        if (scenario.Tags.Contains("@P13"))
+        {
+            using var world = new ReadableOutputWorld();
+            return world.StructuredCompanion(scenario);
+        }
+        return false;
+    }
+
+    private static void ExecuteSteps(FeatureCase scenario)
     {
         if (scenario.Tags.Contains("@P21"))
         {
@@ -160,7 +203,7 @@ public class FeatureTests
             foreach (var step in scenario.Steps) completion.Execute(step);
             return;
         }
-        if (scenario.Tags.Contains("@P08"))
+        if (scenario.Tags.Contains("@P08") || scenario.Tags.Contains("@P22"))
         {
             using var usability = new UsabilityWorld();
             foreach (var step in scenario.Steps) usability.Execute(step);
@@ -215,6 +258,16 @@ public class FeatureTests
 
 internal sealed class CliWorld : IDisposable
 {
+    internal static string Command(string[] args)
+    {
+        for (var i = 0; i < args.Length; i++)
+        {
+            if (args[i] == "--state-dir") { i++; continue; }
+            if (args[i].StartsWith('-')) continue;
+            return args[i] is "start" or "advance" or "complete" or "resolve" or "status" or "logs" or "runs" or "use" or "discard" or "validate" or "guide" or "creation-guide" or "version" ? args[i] : "arguments";
+        }
+        return "discovery";
+    }
     internal readonly string DirectoryPath = Path.Combine(Path.GetTempPath(), "merstride-tests-" + Guid.NewGuid().ToString("N"));
     internal string State => Path.Combine(DirectoryPath, "state");
     internal string FilePath => Path.Combine(DirectoryPath, "workflow.md");
@@ -226,6 +279,7 @@ internal sealed class CliWorld : IDisposable
     internal int ExitCode;
     internal int ExpectedChildren;
     internal string Stdout = "", Stderr = "";
+    internal string? ErrorCode;
 
     public CliWorld() => Directory.CreateDirectory(DirectoryPath);
 
@@ -233,8 +287,15 @@ internal sealed class CliWorld : IDisposable
 
     internal void Raw(params string[] args) => Invoke(args, false);
 
-    private void Invoke(string[] args, bool requireProtocol)
+    internal void Direct(string[] args, bool requireProtocol, bool observation = true) => Invoke(args, requireProtocol, false, observation);
+
+    private void Invoke(string[] args, bool requireProtocol, bool audit = true, bool observation = false)
     {
+        if (audit && UsabilityAuditWorld.ConvertJson && args.TakeWhile(a => a != "--").Contains("--json"))
+        {
+            UsabilityAuditWorld.Invoke(this, args);
+            return;
+        }
         var binary = Binary ?? Environment.GetEnvironmentVariable("MERSTRIDE_BINARY")
             ?? Path.Combine(FeatureTests.Root, "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
         var start = new ProcessStartInfo(binary) { WorkingDirectory = WorkingDirectory ?? DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
@@ -250,12 +311,24 @@ internal sealed class CliWorld : IDisposable
         ExitCode = process.ExitCode;
         if (processCount.HasValue) Assert.That(ProcessObserver.TotalProcesses() - processCount, Is.EqualTo(1 + ExpectedChildren), "Observed CLI and declared child process count.");
         Stdout = stdout.Result; Stderr = stderr.Result;
+        var command = Command(args);
+        var options = args.TakeWhile(a => a != "--");
+        if (ExitCode == 0 && options.Any(a => a is "--help" or "-h")) command = "help";
+        else if (command == "start" && options.Any(a => a == "--advance" || a.StartsWith("--advance=", StringComparison.Ordinal))) command = "start-advance";
+        else if (command == "discovery" && options.Contains("--version")) command = "version";
+        FeatureTests.RecordOperation(command, Stdout.StartsWith('{'), ExitCode, observation);
+        ErrorCode = System.Text.RegularExpressions.Regex.Match(Stderr, "(?m)^Error ([A-Z_]+)").Groups[1].Value;
         TestContext.Out.WriteLine($"CLI {string.Join(' ', args)} -> {ExitCode}: {stdout.Result} {stderr.Result}");
-        if (requireProtocol)
+        if (requireProtocol || Stdout.StartsWith('{'))
         {
             Response = JsonDocument.Parse(stdout.Result).RootElement.Clone();
             Assert.That(Response.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+            Assert.That(Stderr, Is.Empty, "Structured integration never mixes human activity or diagnostics into stderr.");
+            Assert.That(Stdout.Split('\n', StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(1));
+            ErrorCode = Response.GetProperty("error").ValueKind == JsonValueKind.Object
+                ? Response.GetProperty("error").GetProperty("code").GetString() : null;
         }
+        if (audit && UsabilityAuditWorld.Complementary) UsabilityAuditWorld.ObserveOriginal(this, args);
     }
 
     internal void Execute(string step)

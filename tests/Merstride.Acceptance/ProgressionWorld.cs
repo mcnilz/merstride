@@ -16,6 +16,61 @@ internal sealed class ProgressionWorld : IDisposable
 
     private void Text(params string[] args) => cli.Raw([.. args, "--state-dir", cli.State]);
 
+    internal bool StructuredCompanion(FeatureCase scenario)
+    {
+        if (scenario.Steps.Contains("I execute the progression loop with explicit JSON")) return false;
+        if (scenario.Steps.Contains("a progression workflow with a looping agent"))
+        {
+            LoopFixture();
+            UsabilityAuditWorld.Structured(() => JsonLoop(rejectBeforeAccept: true));
+            cli.Raw("status", runId, "--state-dir", cli.State);
+            return true;
+        }
+        var process = scenario.Steps.FirstOrDefault(s => s.StartsWith("a progression process with ", StringComparison.Ordinal));
+        if (process is not null)
+        {
+            ProcessFixture(process[27..]);
+            UsabilityAuditWorld.Structured(() =>
+            {
+                if (kind == "unlabeled")
+                {
+                    cli.Call("validate", cli.FilePath);
+                    Assert.That(cli.Response.GetProperty("diagnostics")[0].GetProperty("code").GetString(), Is.EqualTo("IGNORES_PROCESS_FAILURE"));
+                }
+                cli.ExpectedChildren = kind == "spawn_error" ? 0 : 1;
+                cli.Call("advance", runId); cli.ExpectedChildren = 0;
+                var failed = kind is "no-match" or "failure-end" or "loop-limit";
+                Assert.That(cli.ExitCode, Is.EqualTo(failed ? 5 : 0));
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(failed ? "failed" : "completed"));
+                Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo(kind is "no-match" or "loop-limit" ? "work" : "done"));
+                Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(kind == "no-match" ? 0 : 1));
+                var outcome = kind switch { "no-match" or "unlabeled" => "exit_7", "failure-end" or "loop-limit" => "exit_0", _ => kind };
+                Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("outcome").GetString(), Is.EqualTo(outcome));
+                if (failed) Assert.That(cli.ErrorCode, Is.EqualTo(kind switch { "no-match" => "NO_MATCHING_EDGE", "failure-end" => "WORKFLOW_FAILURE", _ => "TRANSITION_LIMIT" }));
+                var state = File.ReadAllBytes(Path.Combine(cli.State, runId, "state.json"));
+                cli.Call("status", runId); Assert.That(cli.ExitCode, Is.Zero);
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(failed ? "failed" : "completed"));
+                Assert.That(File.ReadAllBytes(Path.Combine(cli.State, runId, "state.json")), Is.EqualTo(state));
+            });
+            return true;
+        }
+        if (scenario.Steps.Contains("a progression workflow with two process branches"))
+        {
+            Execute("a progression workflow with two process branches");
+            UsabilityAuditWorld.Structured(() =>
+            {
+                cli.ExpectedChildren = 2; cli.Call("advance", runId); cli.ExpectedChildren = 0;
+                Assert.That(cli.ExitCode, Is.Zero);
+                Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("completed"));
+                Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo("done"));
+                Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(2));
+                Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("outcome").GetString(), Is.EqualTo("exit_7"));
+            });
+            return true;
+        }
+        return false;
+    }
+
     internal void Execute(string step)
     {
         const string recovery = "I recover interrupted progression with ";
@@ -273,7 +328,7 @@ internal sealed class ProgressionWorld : IDisposable
         Assert.That(cli.Stdout, Is.EqualTo(before));
     }
 
-    private void JsonLoop()
+    private void JsonLoop(bool rejectBeforeAccept = false)
     {
         void Call(int children, params string[] args)
         {
@@ -287,6 +342,21 @@ internal sealed class ProgressionWorld : IDisposable
         Call(1, "advance", runId);
         Assert.That(cli.Response.GetProperty("request").GetProperty("prompt").GetString(), Is.EqualTo("Review Grüße\u001b[31m\0\u202e and choose."));
         var first = cli.Response.GetProperty("request").GetProperty("id").GetString()!;
+        if (rejectBeforeAccept)
+        {
+            var stateFile = Path.Combine(cli.State, runId, "state.json");
+            var snapshot = File.ReadAllBytes(stateFile);
+            cli.Call("complete", runId, "--request", first, "--outcome", "invalid");
+            Assert.That(cli.ExitCode, Is.EqualTo(4)); Assert.That(cli.ErrorCode, Is.EqualTo("INVALID_OUTCOME"));
+            Assert.That(File.ReadAllBytes(stateFile), Is.EqualTo(snapshot));
+            using (new RejectedStateSave(stateFile))
+            {
+                cli.Call("complete", runId, "--request", first, "--outcome", "revise");
+                Assert.That(cli.ExitCode, Is.EqualTo(6)); Assert.That(cli.ErrorCode, Is.EqualTo("IO_ERROR"));
+                Assert.That(File.ReadAllBytes(stateFile), Is.EqualTo(snapshot));
+            }
+            Assert.That(File.ReadAllLines(Path.Combine(cli.DirectoryPath, "effects.txt")), Has.Length.EqualTo(1));
+        }
         Call(0, "complete", runId, "--request", first, "--outcome", "revise");
         Assert.That(cli.Response.GetProperty("cursor").GetString(), Is.EqualTo("work"));
         var receipt = cli.Response.GetProperty("receipt").GetRawText();
@@ -299,6 +369,8 @@ internal sealed class ProgressionWorld : IDisposable
         Call(0, "complete", runId, "--request", second, "--outcome", "approved");
         Call(0, "advance", runId);
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("completed"));
+        Call(0, "advance", runId);
+        Assert.That(cli.Response.GetProperty("transitionCount").GetInt32(), Is.EqualTo(4));
         Assert.That(File.ReadAllLines(Path.Combine(cli.DirectoryPath, "effects.txt")), Has.Length.EqualTo(2));
     }
 

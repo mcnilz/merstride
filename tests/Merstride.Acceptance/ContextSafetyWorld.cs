@@ -297,7 +297,8 @@ internal sealed partial class ContextWorld
         var binary = Environment.GetEnvironmentVariable("MERSTRIDE_BINARY") ?? Path.Combine(FeatureTests.Root, "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
         var baseline = ProcessObserver.TotalProcesses();
         var start = new ProcessStartInfo(binary) { WorkingDirectory = cli.DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var arg in new[] { "advance", "--json" }) start.ArgumentList.Add(arg);
+        start.ArgumentList.Add("advance");
+        if (!UsabilityAuditWorld.Complementary) start.ArgumentList.Add("--json");
         using var writer = Process.Start(start)!;
         var output = writer.StandardOutput.ReadToEndAsync(); var error = writer.StandardError.ReadToEndAsync();
         try
@@ -312,7 +313,19 @@ internal sealed partial class ContextWorld
             File.WriteAllText(Path.Combine(cli.DirectoryPath, "context.release"), "release");
             Assert.That(writer.WaitForExit(10000), Is.True, "Native writer watchdog.");
             Assert.That(writer.ExitCode, Is.Zero, error.Result);
-            Assert.That(JsonDocument.Parse(output.Result).RootElement.GetProperty("runId").GetString(), Is.EqualTo(first));
+            FeatureTests.RecordOperation("advance", !UsabilityAuditWorld.Complementary, writer.ExitCode, variant: "selection-race");
+            if (UsabilityAuditWorld.Complementary)
+                Assert.That(output.Result, Does.Contain("Run: " + first).And.Contain("Status: completed").And.Contain("Transitions: 1"));
+            else
+            {
+                var result = JsonDocument.Parse(output.Result).RootElement;
+                Assert.That(result.GetProperty("protocolVersion").GetInt32(), Is.EqualTo(1));
+                Assert.That(result.GetProperty("runId").GetString(), Is.EqualTo(first));
+                Assert.That(result.GetProperty("status").GetString(), Is.EqualTo("completed"));
+                Assert.That(result.GetProperty("transitionCount").GetInt32(), Is.EqualTo(1));
+                Assert.That(output.Result.Split('\n', StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(1));
+                Assert.That(error.Result, Is.Empty);
+            }
             Assert.That(Json("status").GetProperty("runId").GetString(), Is.EqualTo(other));
             Assert.That(File.ReadAllText(Path.Combine(cli.DirectoryPath, "effects.txt")), Is.EqualTo("context\n"));
             Json("discard", first);

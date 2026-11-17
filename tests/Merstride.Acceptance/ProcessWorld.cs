@@ -112,7 +112,7 @@ internal sealed class ProcessWorld : IDisposable
             case "I advance the workflow": Advance(); break;
             case "the run fails with \"NO_MATCHING_EDGE\"":
                 Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("failed"));
-                Assert.That(cli.Response.GetProperty("error").GetProperty("code").GetString(), Is.EqualTo("NO_MATCHING_EDGE")); break;
+                Assert.That(cli.ErrorCode, Is.EqualTo("NO_MATCHING_EDGE")); break;
             case "the CLI exits with code 5": Assert.That(cli.ExitCode, Is.EqualTo(5)); break;
             case "a valid process workflow that would create a marker": Process(["effect", "marker"]); break;
             case "I start the workflow": Start(); break;

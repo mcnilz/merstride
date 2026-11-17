@@ -15,6 +15,8 @@ or interpreter provisioning. Direct command/args execution remains available.
 All commands now default to readable English text, including redirected output;
 agents/scripts explicitly request the unchanged protocol-1 JSON with `--json`.
 Text errors/warnings use stderr; results, offline guides and bounded log tails use stdout.
+Text advance now also shows live activity on stderr after successful state writes;
+explicit JSON suppresses activity and keeps the existing protocol response.
 
 The product uses .NET 11 Native AOT and stable C# 15. Windows x64 and Linux x64
 have local development-host verification. **Release qualification is incomplete
@@ -22,6 +24,27 @@ and publication fails closed.** No clean-target or token-saving claim follows
 from a local build.
 
 ## Verification
+
+P17 adds live text activity on stderr while retaining final stdout summaries and
+the explicit protocol-1 JSON response. A CLI persistence decorator reports only
+successful writes: activation with launch pending, saved outcomes/routes, agent
+waiting and terminal/interrupted state. Completion acceptance follows its save;
+inspection and equivalent retries do not announce new work. Waiting/interrupted
+summaries explain the next caller action. No process/engine/state-schema or
+dependency change is involved.
+
+On 2026-11-17 the Windows x64 gate passed 533 tests / 312 local feature cases
+and all 297 independent native runtime cases without failures/skips. The 13 P17
+cases prove live visibility before releasing a controlled process, ordered chains,
+handoffs/receipts, errors/limits, real interruption, control escaping/raw logs,
+JSON compatibility, failed-save truthfulness and closed activity pipes. README
+process-chain and agent-task examples plus embedded activity guidance passed
+against the published native CLI. Architecture, dependency, distribution,
+privacy and Mermaid checks passed. Both review axes have no remaining findings.
+The repeated final gate includes the reviewed test changes, with no build/publish
+warnings/errors; native size was 5.979 MiB and warm status P95 was 25.03 ms.
+Raw evidence stays under ignored artifacts. No Linux/macOS execution, hosted run,
+publication or release qualification is claimed for this slice.
 
 The P16 human-output follow-up on 2026-11-17 makes README, CLI, recovery and
 general authoring/discovery examples use readable default output. Walkthroughs
@@ -224,7 +247,7 @@ audits and timing records stay under ignored `artifacts/`. See
 - Re-run the verified macOS native and clean-target gates for each exact release
   candidate; NUnit remains a separate .NET-hosted gate.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 284 runtime cases, plus the separately
+  candidate commit and binary hashes: all 297 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.

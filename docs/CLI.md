@@ -11,6 +11,21 @@ with severity, stable code and source location when available. Help hints accomp
 usage errors; stack traces are hidden. A failed run's `status` still exits 0 and
 shows its summary on stdout and failure reason on stderr.
 
+Text `advance` also writes flushed live activity lines to stderr, including when
+redirected. Each identifies the run/node and, when applicable, activation. It shows
+activation (launch pending), saved outcome/route, agent waiting and terminal or
+interrupted state. A saved completion announces acceptance once; retries show the
+receipt without new activity. Inspection and repeated waiting/terminal advances
+never replay transitions. Waiting/interrupted summaries explain the next action.
+
+Use `merstride advance "$run_id" --state-dir "$state_root" >summary.txt 2>activity.txt`
+in Bash to separate the final summary from activity/errors. Ordering is preserved
+within activity.txt; separate streams have no cross-stream ordering guarantee.
+There are no periodic messages or streamed child logs. Activity is bounded by the
+transition limit and uses the same escaping as summaries. A closed activity pipe
+disables further activity without changing execution. See the
+[README transcript](../README.md#quick-start) for a process chain and handoff.
+
 **Existing scripts must add `--json` explicitly.** It returns exactly one unchanged
 protocol-version-1 JSON object on stdout, including for help, version and errors.
 Help/guides use `guide`; version/root `--version` use `version`. JSON errors remain

@@ -16,6 +16,9 @@ Commands print readable English text by default, including redirected output.
 For example, `merstride creation-guide` prints a copyable authoring guide directly.
 Agents and scripts must pass `--json` explicitly for the unchanged protocol-1
 response; existing callers that relied on default JSON must add that flag.
+During `advance`, live activity on stderr identifies the run and active node,
+then shows saved outcomes/routes and agent or terminal transitions. Final summaries
+stay on stdout. This also works when output is redirected; `--json` suppresses activity.
 
 ## Quick start
 
@@ -92,6 +95,25 @@ variants, or the [process chain](examples/process-chain.md) for literal command 
 and separate stdout/stderr logs, or the [review loop](examples/review.md) for
 process/agent routing. Workflows execute with your privileges in the selected
 workspace; review their commands before running them.
+
+For example, advancing the process chain shows these messages as work proceeds
+(IDs abbreviated here; real output includes full run/activation IDs):
+
+```text
+Activity [r_…, node status, activation a_…]: Activating process (launch pending).
+Activity [r_…, node status, activation a_…]: Process outcome saved: exit_0. Route: status -> diff.
+Activity [r_…, node diff, activation a_…]: Activating process (launch pending).
+Activity [r_…, node diff, activation a_…]: Process outcome saved: exit_0. Route: diff -> done.
+Activity [r_…, node done]: Run completed.
+```
+
+For the agent task, `advance` instead reports `Waiting for agent; request q_…`
+and asks you to read the prompt and use `complete`. The stdout summary contains
+that prompt, context and allowed outcomes. A saved completion reports
+`Completion accepted and saved: q_… -> approved. Call advance to execute the next node.`
+Repeating the same completion returns its receipt without new activity.
+Activation is saved before launch, so its message does not claim launch succeeded.
+Process output stays in separate raw logs; use `logs` to read a selected tail.
 
 ## Using Merstride
 

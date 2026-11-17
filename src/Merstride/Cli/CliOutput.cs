@@ -8,6 +8,20 @@ namespace Merstride.Cli;
 
 internal sealed class CliOutput(bool json)
 {
+    private bool activityUnavailable;
+
+    internal void Activity(RunState run, string message, Activation? activation = null)
+    {
+        if (json || activityUnavailable) return;
+        try
+        {
+            Console.Error.WriteLine(Readable($"Activity [{run.RunId}, node {activation?.NodeId ?? run.Cursor}" +
+                (activation is null ? "" : $", activation {activation.Id}") + $"]: {message}"));
+            Console.Error.Flush();
+        }
+        // A closed progress pipe must not turn a saved transition into an execution failure.
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException) { activityUnavailable = true; }
+    }
     internal static bool JsonRequested(string[] args) => args.TakeWhile(a => a != "--")
         .Any(a => a == "--json" || a.StartsWith("--json=", StringComparison.Ordinal));
 
@@ -50,12 +64,15 @@ internal sealed class CliOutput(bool json)
         if (response.LastActivation is { } activation)
             Line("Last activation", $"{activation.Id} (node: {activation.NodeId}, outcome: {activation.Outcome ?? "pending"})");
         if (response.Receipt is { } receipt) Line("Completion", $"{receipt.RequestId} -> {receipt.Outcome} (activation: {receipt.ActivationId})");
+        if (response.Status == "interrupted")
+            Console.WriteLine("Next: inspect external effects, then explicitly resolve --retry or --fail. Advance never replays interrupted work.");
         if (response.Request is not { } request) return;
         Console.WriteLine();
         Line("Request", request.Id);
         Line("Node", request.NodeId);
         Console.WriteLine("Prompt:"); Console.WriteLine(Readable(request.Prompt));
         Line("Allowed outcomes", string.Join(", ", request.AllowedOutcomes));
+        Console.WriteLine("Next: perform the prompt's task, then complete this request with an allowed outcome. Call advance separately afterward.");
         Console.WriteLine("Context:");
         if (request.Context.Length == 0) Console.WriteLine("  (none)");
         foreach (var item in request.Context)

@@ -20,11 +20,13 @@ switch (args[0])
         break;
     case "signal_host":
         Console.CancelKeyPress += (_, e) => e.Cancel = true;
-        using (var engine = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(args[1])
+        var signalStart = new System.Diagnostics.ProcessStartInfo(args[1])
         {
-            ArgumentList = { "advance", args[2], "--state-dir", args[3], "--json" },
+            ArgumentList = { "advance", args[2], "--state-dir", args[3] },
             RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false
-        })!)
+        };
+        if (args.Length <= 4 || args[4] != "text") signalStart.ArgumentList.Add("--json");
+        using (var engine = System.Diagnostics.Process.Start(signalStart)!)
         {
             File.WriteAllText("engine.pid", engine.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
             var output = engine.StandardOutput.ReadToEndAsync();

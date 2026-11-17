@@ -189,7 +189,27 @@ help, guides, run summaries and selected log text go to stdout. Errors and valid
 diagnostics (including warnings) go to stderr, with severity, stable code, message
 and 1-based line/column when available. A failed run's read-only status still exits
 0: its summary goes to stdout and its failure reason to stderr. Usage errors retain
-a help hint. Stack traces are hidden. No colors, ANSI formatting or progress output.
+a help hint. Stack traces are hidden. No colors or ANSI formatting.
+
+Text advance emits live, newline-delimited activity on stderr, also when redirected.
+Each line identifies the run and node, plus activation when applicable. Only after
+a successful authoritative write, report process activation (launch still pending),
+saved process outcome and selected route, agent waiting and terminal/interrupted
+state. Activation does not claim that launch succeeded. A failed save emits no
+saved-transition message. Completion reports acceptance only after saving; equivalent
+retries return the receipt without announcing new acceptance. Inspection, repeated
+waiting/terminal advance, and start do not replay activity. Waiting and interrupted
+summaries explain the next explicit caller action even on inspection.
+
+Activity uses the same escaping as text summaries, contains no prompts or child
+output, and has no periodic polling noise, colors or full history. There are at
+most two lines per executing activation/result write and one per waiting/terminal
+write, bounded by the existing transition limit. Final summaries remain on stdout.
+Redirect stdout and stderr separately to separate results from activity/errors;
+ordering is guaranteed within the activity stream, not across two redirected
+streams. Closed activity pipes disable further activity without changing execution.
+There is no persisted event format, log subsystem, automatic advance or retry.
+Explicit --json suppresses all activity on both streams.
 
 Text run summaries include run ID, state root, status, cursor, transition count
 and the latest activation summary when present. Waiting-agent results additionally

@@ -219,12 +219,12 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         Assert.That(writer.HasExited, Is.False);
     }
 
-    private void StartInterrupt()
+    private void StartInterrupt(bool text = false)
     {
         CreateWorkflow(mode: "interrupt_parent");
         processBaseline = ProcessObserver.TotalProcesses();
         var existing = ProcessObserver.ActiveProcessIds();
-        signalHost = WindowsInterrupt.Start(Helper, Binary, runId, cli.State, cli.DirectoryPath);
+        signalHost = WindowsInterrupt.Start(Helper, Binary, runId, cli.State, cli.DirectoryPath, text);
         WaitFile("parent.ready"); ObserveHelper("parent.pid"); ObserveHelper("child.pid");
         writer = Process.GetProcessById(int.Parse(File.ReadAllText(PathFor("engine.pid")), System.Globalization.CultureInfo.InvariantCulture));
         _ = writer.Handle;
@@ -316,6 +316,27 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(retry ? "ready" : "failed"));
         Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("outcome").GetString(), Is.EqualTo("interrupted"));
         AssertEffects(1);
+    }
+
+    internal void AssertTextInterruption()
+    {
+        StartInterrupt(text: true);
+        Execute("I send the platform's supported user-interrupt signal");
+        Assert.That(cli.ExitCode, Is.EqualTo(130));
+        var text = File.ReadAllText(PathFor("signal.stdout"));
+        var activity = File.ReadAllText(PathFor("signal.stderr"));
+        Assert.That(text, Does.Contain("Status: interrupted").And.Contain("Next: inspect external effects"));
+        Assert.That(activity, Does.Contain("Activating process").And.Contain("Process outcome saved: interrupted")
+            .And.Contain("Run interrupted").And.Contain("resolve --retry or --fail").And.Not.Contain("Route:"));
+        foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
+        Assert.That(signalHost!.WaitForExit(2000), Is.True);
+        if (processBaseline.HasValue)
+            Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo(OperatingSystem.IsWindows() ? 5 : 4));
+        cli.Raw("advance", runId, "--state-dir", cli.State);
+        Assert.That(cli.ExitCode, Is.EqualTo(5));
+        Assert.That(cli.Stderr, Does.Not.Contain("Activity ["));
+        cli.Call("status", runId);
+        Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("interrupted"));
     }
 
     internal void RejectCorruptSnapshot(string defect)

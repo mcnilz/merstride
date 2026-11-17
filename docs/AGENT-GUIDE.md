@@ -7,6 +7,13 @@ To create a workflow, use `merstride creation-guide`: its embedded text
 contains authoring rules, a complete example and a validation checklist, without
 requiring this repository or running any process from the example.
 
+Text advance shows live activity on stderr and final summaries on stdout, even
+when redirected: activation (launch pending), saved outcome/routing, agent waiting
+and terminal/interrupted state. Completion acceptance follows its successful save;
+equivalent retries do not announce new work. Use `--json` for automation: it
+suppresses all activity and retains exactly one protocol-1 response. Activity is
+presentation, not a durable event history or a substitute for status/receipts.
+
 ## Operating loop
 
 1. Read `merstride guide` when unfamiliar with the installed version. Check `version` if protocol compatibility is uncertain. Scripts add `--json` for structured responses.

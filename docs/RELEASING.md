@@ -159,7 +159,7 @@ Windows keeps packages.lock.json. The native driver has one lock file per RID. D
 platform's resolved assets with the other's. Native binaries require OS libraries;
 Linux validation/start needs ICU and OpenSSL in addition to ldd-visible libraries.
 
-The local gate executes 299 actual nonrecursive feature cases plus supplemental
+The local gate executes 312 actual nonrecursive feature cases plus supplemental
 regressions and policy tests. It records native hashes, actual compiler/ILC/link/
 publish inputs, notices, TRX/scenario results and 30-start native
 benchmarks. A dirty checkout is recorded and cannot produce a release package.
@@ -185,7 +185,7 @@ an installed .NET SDK/runtime. Retain image identity and provisioning logs. Copy
 the exact native binary, native fixture, feature sources and an independently
 available native suite driver, then run `pwsh -NoProfile -File scripts/qualify-clean-target.ps1 -Binary
 <binary> -Fixture <fixture> -SuiteDriver <driver> -Commit <sha> -Output <report>`.
-The driver must implement all 284 inventoried nonrecursive runtime cases and emit the scenario array
+The driver must implement all 297 inventoried nonrecursive runtime cases and emit the scenario array
 defined by docs/release-scenario-inventory.json. The build publishes that driver from tests/Merstride.NativeSuite to artifacts/suite;
 it parses the actual feature files and shares their CLI fixture worlds. Its
 assertion adapter supports only the explicitly used constraint subset, fails on
@@ -200,7 +200,7 @@ PATH or treat a hosted SDK runner as a clean image.
 to exercise guide/version/start/status/advance and a native process inside a
 minimal chroot with only OS libraries. It runs the engine as an unprivileged user,
 retains an exhaustive filesystem inventory and removes only its unique temporary
-root. This is genuine no-installed-.NET smoke, **not** the full 284-case runtime suite or
+root. This is genuine no-installed-.NET smoke, **not** the full 297-case runtime suite or
 Windows qualification.
 
 Token experiment: supply an actual external-agent driver to

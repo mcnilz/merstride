@@ -68,7 +68,7 @@ public class FeatureTests
         }
     }
 
-    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11" or "@P12" or "@P13" or "@P15");
+    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11" or "@P12" or "@P13" or "@P15" or "@P17");
 
 #if !NATIVE_SUITE
     public static IEnumerable<TestCaseData> RequiredCases() => Cases().Where(c => c.Implemented)
@@ -100,6 +100,12 @@ public class FeatureTests
 
     internal static void Execute(FeatureCase scenario)
     {
+        if (scenario.Tags.Contains("@P17"))
+        {
+            using var activity = new ConsoleActivityWorld();
+            foreach (var step in scenario.Steps) activity.Execute(step);
+            return;
+        }
         if (scenario.Tags.Contains("@P15"))
         {
             using var observation = new ProcessObservationWorld();

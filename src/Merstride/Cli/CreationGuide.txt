@@ -7,6 +7,9 @@ execution/completion/recovery loop, use merstride guide --json.
 Commands print readable English text by default, including redirected output.
 Use --json explicitly for one stable protocol-version-1 object on stdout; guides
 then appear in its guide string. Text warnings/errors use stderr, results stdout.
+Text advance also reports live activity on stderr: activation (launch pending),
+saved process outcomes/routes, agent waiting and terminal/interrupted states.
+This works when redirected; --json suppresses activity. Raw child logs stay separate.
 
 Pairing and syntax
 - Start executable fences at column 1 with at least three backticks; close with

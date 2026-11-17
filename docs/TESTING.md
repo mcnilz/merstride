@@ -267,6 +267,17 @@ inventory is copied into those public notices.
 The separate hosted macOS clean-target Release job runs `scripts/qualify-macos.py` using
 only the downloaded native suite, helper and extracted product. It verifies actual
 absence of standalone .NET installations, exact arm64/source/run/version/hash
-identities, all 284 runtime scenario identities/statuses and current feature hashes.
+identities, all 297 runtime scenario identities/statuses and current feature hashes.
 It retains raw runtime inventories/traces in job artifacts and emits compact proof
 for release assembly. Reference-machine budgets remain separate mandatory evidence.
+
+P17 executes `17-console-activity.feature` through the published native CLI.
+A native barrier process proves flushed redirected stderr feedback arrives before
+release, while public status reports executing. Cases verify ordered multi-node
+routes/handoffs, no replay on inspection/retries, accepted/rejected completion,
+terminal states, timeout/output limits/launch failure, transition exhaustion,
+control escaping and raw-log preservation, and one unchanged explicit JSON response.
+A read-only authoritative-file fixture rejects the result save and must emit no
+saved-result/completion claim. The real platform signal fixture also runs in text
+mode, retaining attached-tree and exit-130 assertions. These are local runtime
+tests, not clean-target release qualification.

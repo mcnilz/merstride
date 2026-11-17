@@ -64,6 +64,10 @@ internal static class Program
               merstride status <run-id> --state-dir <state-root> --json
               merstride advance <run-id> --state-dir <state-root> --json
               advance stops at waiting_agent, a terminal state or an error.
+              Without --json, live activity goes to stderr and final summaries to stdout,
+              even when redirected. Activation is saved before launch (launch pending).
+              Saved outcomes/routes and agent/terminal transitions follow successful writes.
+              --json suppresses activity; no child output or periodic noise is streamed.
 
             Agent handoffs
             - Read the request ID, literal prompt, selected context and allowed outcomes.
@@ -178,7 +182,11 @@ internal static class Program
                 ? AgentFiles.Completion(resultFile)
                 : (Outcome: options["--outcome"], Data: InlineData(options.GetValueOrDefault("--data")));
             var completed = AgentCompletion.Complete(run, options["--request"], payload.Outcome, payload.Data);
-            if (!ReferenceEquals(run, completed.State)) store.Write(completed.State);
+            if (!ReferenceEquals(run, completed.State))
+            {
+                store.Write(completed.State);
+                output.Activity(completed.State, $"Completion accepted and saved: {completed.Receipt.RequestId} -> {completed.Receipt.Outcome}. Call advance to execute the next node.");
+            }
             return output.Write(Response(completed.State, root) with { Receipt = completed.Receipt });
         }
         using var interruption = new CancellationTokenSource();
@@ -186,7 +194,7 @@ internal static class Program
         Console.CancelKeyPress += cancel;
         try
         {
-            run = WorkflowEngine.Advance(run, store, new ProcessRunner(store.RunDirectory(id), interruption.Token), store, interruption.Token);
+            run = WorkflowEngine.Advance(run, new ConsoleActivity(store, output, run), new ProcessRunner(store.RunDirectory(id), interruption.Token), store, interruption.Token);
             return output.Write(Response(run, root), interruption.IsCancellationRequested ? 130 : run.Status is "failed" or "interrupted" ? 5 : 0);
         }
         catch (Exception ex) when (interruption.IsCancellationRequested && ex is IOException or UnauthorizedAccessException)

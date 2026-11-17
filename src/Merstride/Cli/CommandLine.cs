@@ -27,7 +27,7 @@ internal sealed class CommandLine
         root.Options.Add(help); root.Options.Add(version); root.Options.Add(json); root.Options.Add(state);
         Add(root, "validate", "Validate a marked workflow without executing or creating state.", "file", "merstride validate 'workflow with spaces.md'", ("--workflow", "Select a workflow ID; default: the single pair."));
         Add(root, "start", "Snapshot a workflow and persist a ready run without executing it.", "file", "merstride start 'workflow with spaces.md' --workspace 'C:\\work tree' --json", ("--workspace", "Required existing absolute workspace directory."), ("--workflow", "Select a workflow ID; default: the single pair."), ("--input-file", "JSON object input file; default: {}."));
-        Add(root, "advance", "Execute sequentially until waiting_agent, terminal state, or error.", "run-id", "merstride advance r_example --state-dir 'C:\\work tree\\state' --json");
+        Add(root, "advance", "Execute sequentially until waiting_agent, terminal state, or error. Text activity is live on stderr; --json suppresses it.", "run-id", "merstride advance r_example --state-dir 'C:\\work tree\\state'");
         Add(root, "status", "Inspect a run without executing; failed-run inspection exits 0.", "run-id", "merstride status r_example --state-dir 'C:\\work tree\\state' --json");
         Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "run-id", "merstride complete r_example --request q_example --outcome approved --json", ("--request", "Required request ID from waiting_agent."), ("--outcome", "Preferred: allowed outcome from waiting_agent; mutually exclusive with --result-file."), ("--data", "Optional inline JSON object with --outcome; default: {}."), ("--result-file", "Alternative UTF-8 JSON completion file: outcome and optional object data."));
         Add(root, "resolve", "Resolve interrupted work explicitly; inspect external effects first. Exactly one of --retry or --fail is required.", "run-id", "merstride resolve r_example --retry --json", ("--retry", "Return ready without execution; a later advance attempts again."), ("--fail", "Finish failed without execution; exits 5."));
@@ -136,6 +136,9 @@ internal sealed class CommandLine
         Help is English text; with --json it is one protocol object with a guide string.
         All commands use readable English text by default, including redirected output.
         Scripts/agents must pass --json; text errors/warnings use stderr, text results use stdout.
+        Text advance reports live activation, saved outcomes/routes and handoffs on stderr.
+        Activation is saved before launch; it does not claim a process has started.
+        Redirect stdout for summaries, stderr for activity/errors; --json suppresses activity.
         No workflow/state is read for help/version/guides.
         """;
 

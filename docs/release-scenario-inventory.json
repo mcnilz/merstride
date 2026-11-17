@@ -298,7 +298,20 @@
     "features/13-readable-output.feature:78 Resolve interrupted work as text [fail]",
     "features/13-readable-output.feature:80 Show validation warnings separately from the readable success result",
     "features/13-readable-output.feature:85 Inspect a failed workflow successfully in either mode",
-    "features/15-macos-release.feature:3 Retain short-lived descendant launches through external observation"
+    "features/15-macos-release.feature:3 Retain short-lived descendant launches through external observation",
+    "features/17-console-activity.feature:10 Show every process transition before an agent handoff",
+    "features/17-console-activity.feature:26 Explain process outcomes and routing failures [spawn_error, routed]",
+    "features/17-console-activity.feature:27 Explain process outcomes and routing failures [timeout, routed]",
+    "features/17-console-activity.feature:28 Explain process outcomes and routing failures [exit_7, NO_MATCHING_EDGE]",
+    "features/17-console-activity.feature:29 Explain process outcomes and routing failures [output_limit, routed]",
+    "features/17-console-activity.feature:30 Explain process outcomes and routing failures [exit_0, WORKFLOW_FAILURE]",
+    "features/17-console-activity.feature:32 Preserve one JSON response without progress",
+    "features/17-console-activity.feature:37 Keep terminal controls out of feedback and preserve raw logs",
+    "features/17-console-activity.feature:4 Observe activation before a controlled process finishes",
+    "features/17-console-activity.feature:42 Do not claim a process result was saved when persistence fails",
+    "features/17-console-activity.feature:47 Explain a real user interruption without replay",
+    "features/17-console-activity.feature:51 Explain transition exhaustion without activating more work",
+    "features/17-console-activity.feature:56 Keep execution intact when the activity consumer closes its pipe"
   ],
   "schemaVersion": 1,
   "featureHashes": {
@@ -316,7 +329,8 @@
     "features/11-creation-guide.feature": "4d81ee08110fe6a7afd079a9ca6950bb95839ec61a1db4df5067f0ae554683e0",
     "features/12-inline-scripts.feature": "5a0f1c0dfde73c6d59e607c67e8b4e22a9f4961ff17df70bf296c26001f37945",
     "features/13-readable-output.feature": "2c31e65b0473b1485fdafb5c439a59a6175e427ad24bfe51d631bcc455c7f709",
-    "features/15-macos-release.feature": "e224390cb50c691141959868f0e9d3fd98c53c0cc4d95b36ae627e21158221c9"
+    "features/15-macos-release.feature": "e224390cb50c691141959868f0e9d3fd98c53c0cc4d95b36ae627e21158221c9",
+    "features/17-console-activity.feature": "2d846f03fbbcc60c236ce15ca0bcfcb87504bdfd722e5e18efc8b5df67dd9872"
   },
   "generator": "Official Cucumber Gherkin 43.0.0 via FeatureTests.Cases; excludes only the three recursive ReleaseEnvironment orchestration cases",
   "cleanScenarios": [
@@ -603,6 +617,19 @@
     "features/13-readable-output.feature:78 Resolve interrupted work as text [fail]",
     "features/13-readable-output.feature:80 Show validation warnings separately from the readable success result",
     "features/13-readable-output.feature:85 Inspect a failed workflow successfully in either mode",
-    "features/15-macos-release.feature:3 Retain short-lived descendant launches through external observation"
+    "features/15-macos-release.feature:3 Retain short-lived descendant launches through external observation",
+    "features/17-console-activity.feature:10 Show every process transition before an agent handoff",
+    "features/17-console-activity.feature:26 Explain process outcomes and routing failures [spawn_error, routed]",
+    "features/17-console-activity.feature:27 Explain process outcomes and routing failures [timeout, routed]",
+    "features/17-console-activity.feature:28 Explain process outcomes and routing failures [exit_7, NO_MATCHING_EDGE]",
+    "features/17-console-activity.feature:29 Explain process outcomes and routing failures [output_limit, routed]",
+    "features/17-console-activity.feature:30 Explain process outcomes and routing failures [exit_0, WORKFLOW_FAILURE]",
+    "features/17-console-activity.feature:32 Preserve one JSON response without progress",
+    "features/17-console-activity.feature:37 Keep terminal controls out of feedback and preserve raw logs",
+    "features/17-console-activity.feature:4 Observe activation before a controlled process finishes",
+    "features/17-console-activity.feature:42 Do not claim a process result was saved when persistence fails",
+    "features/17-console-activity.feature:47 Explain a real user interruption without replay",
+    "features/17-console-activity.feature:51 Explain transition exhaustion without activating more work",
+    "features/17-console-activity.feature:56 Keep execution intact when the activity consumer closes its pipe"
   ]
 }

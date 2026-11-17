@@ -6,6 +6,14 @@ if (args.Length == 0) args = ["inline_probe"];
 
 switch (args[0])
 {
+    case "observer_burst":
+        for (var i = 0; i < int.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture); i++)
+        {
+            using var shortLived = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!)
+                { ArgumentList = { "exit", "0" }, UseShellExecute = false })!;
+            if (!shortLived.WaitForExit(5000) || shortLived.ExitCode != 0) return 95;
+        }
+        break;
     case "inline_probe":
         Console.Write(JsonSerializer.Serialize(args[1..], FixtureJson.Default.StringArray));
         Console.Error.Write(Console.In.ReadToEnd());

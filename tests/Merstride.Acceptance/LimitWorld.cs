@@ -1,7 +1,11 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 
 namespace Merstride.Acceptance;
 
@@ -24,7 +28,7 @@ internal sealed class LimitWorld : IDisposable
         File.WriteAllText(cli.FilePath, $"```yaml merstride\nschemaVersion: 1\nid: limits\nentry: {entry}\n{limits}nodes:\n{nodes}\n```\n```mermaid\nflowchart TD\n%% merstride: limits\n{declarations}\n{edges}\n```\n");
 
     private static string ProcessNode(string id, string[] args, int timeout = 5) =>
-        $"  {id}:\n    kind: process\n    command: {JsonSerializer.Serialize(Helper)}\n    args: {JsonSerializer.Serialize(args)}\n    timeoutSeconds: {timeout}\n";
+        $"  {id}:\n    kind: process\n    command: {AcceptanceJson.Serialize(Helper)}\n    args: {AcceptanceJson.Serialize(args)}\n    timeoutSeconds: {timeout}\n";
     private const string EndNode = "  done:\n    kind: end\n    result: success\n";
 
     private void Start()

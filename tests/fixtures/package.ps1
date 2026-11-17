@@ -30,7 +30,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Cannot commit disposable package fixture.' }
     $commit = & git -C $temp rev-parse HEAD
     if ($LASTEXITCODE -ne 0) { throw 'Cannot identify local package fixture commit.' }
-    $runtime = if ($IsWindows) { 'win-x64' } else { 'linux-x64' }
+    . "$source/scripts/platform.ps1"
+    $runtime = Get-NativeRuntime
     $binaryName = if ($IsWindows) { 'merstride.exe' } else { 'merstride' }
     $binary = Join-Path $temp "artifacts/native/$binaryName"
     $candidateBytes = [Text.Encoding]::UTF8.GetBytes('Synthetic package candidate; not a native executable or qualification evidence.')

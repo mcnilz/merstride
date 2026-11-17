@@ -33,7 +33,7 @@ public class ReleaseTests
     public void PackageChecksSourceAndEvidenceFreshness(string defect)
     {
         using var build = new BuildWorld();
-        var rid = OperatingSystem.IsWindows() ? "win-x64" : "linux-x64";
+        var rid = TestPaths.Runtime;
         build.Run("pwsh", "-NoProfile", "-File", "tests/fixtures/package.ps1", "-Defect", defect,
             "-ResultFile", Path.Combine(FeatureTests.Root, "artifacts", "tests", "package", rid + "-" + defect + ".json"));
         Assert.That(build.ExitCode, Is.Zero);
@@ -47,6 +47,20 @@ public class ReleaseTests
     [TestCase("incomplete experiment")]
     [TestCase("failed clean scenario")]
     [TestCase("prerelease draft")]
+    [TestCase("missing macos qualification")]
+    [TestCase("missing macos archive")]
+    [TestCase("wrong macos source")]
+    [TestCase("wrong macos version")]
+    [TestCase("wrong macos run")]
+    [TestCase("failed macos job")]
+    [TestCase("cancelled macos job")]
+    [TestCase("skipped macos job")]
+    [TestCase("stale macos qualification")]
+    [TestCase("wrong macos qualification run")]
+    [TestCase("wrong macos driver")]
+    [TestCase("missing macos runtime inventory")]
+    [TestCase("missing macos reference budget")]
+    [TestCase("hosted macos timing")]
     public void PublicationChecksDraftIdentityAndQualification(string defect)
     {
         using var build = new BuildWorld();

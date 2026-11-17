@@ -262,3 +262,20 @@ Persist an executing activation before launching its process. On completion, clo
 After a lost writer lock, persisted executing means interrupted: the external effect may already have happened. A read-only status projects interrupted without rewriting state; a writer records it. Advance executes nothing in this condition. Resolve --retry returns ready, retains the interrupted activation, and gives the next attempt a fresh activation ID. Resolve --fail executes nothing. No automatic process replay and no exactly-once promise.
 
 Ctrl+C attempts to terminate the process tree, persist interrupted, and exit 130. If persistence fails, executing remains for later detection. Corrupt state produces an error; never overwrite it with an empty run. Atomic-write behavior MUST be tested on supported filesystems; physical disk failure is outside guarantees.
+
+## 9. Release platform evidence
+
+The release candidate set is Windows x64, Linux x64 and macOS 15+ Apple Silicon
+(`osx-arm64`). macOS remains unverified until actual hosted native execution and
+clean-target qualification pass. Each advertised archive MUST have same-source,
+same-version, same-workflow-run build, native acceptance and package evidence.
+Missing, failed, cancelled or skipped macOS jobs MUST block publication along with
+the existing Windows/Linux gates. Product behavior and protocol remain unchanged.
+
+Clean-target runtime scenarios MUST execute through the independently executable
+native suite driver, against the extracted native binary and native helper. An
+SDK-hosted test runner or hiding dotnet on PATH does not prove runtime absence.
+External process observation MUST detect short-lived launches and retain exact
+child-count assertions. Hosted timing does not waive reference-machine budgets,
+and platform automation does not waive the same-agent token experiment. See
+RELEASING.md for identities, prerequisites and remaining qualification.

@@ -1,5 +1,9 @@
 using System.Text.Json;
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 
 namespace Merstride.Acceptance;
 
@@ -101,7 +105,7 @@ internal sealed class InlineScriptWorld : IDisposable
                 Completed("spawn_error"); Assert.That(Log("stderr"), Does.StartWith(diagnostic + ":")); break;
             case "the probe observes exact arguments and UTF-8 stdin without a script file":
                 Completed("exit_0");
-                Assert.That(JsonSerializer.Deserialize<string[]>(Log("stdout")), Is.EqualTo(probeArgs));
+                Assert.That(AcceptanceJson.DeserializeStrings(Log("stdout")), Is.EqualTo(probeArgs));
                 Assert.That(Log("stderr"), Is.EqualTo(ProbeBody));
                 Assert.That(Directory.GetFiles(cli.DirectoryPath, "*", SearchOption.AllDirectories)
                     .Select(p => Path.GetRelativePath(cli.DirectoryPath, p))
@@ -130,7 +134,7 @@ internal sealed class InlineScriptWorld : IDisposable
                 Assert.That(Log("stdout"), Is.EqualTo("Grüße 🌍" + Environment.NewLine));
                 Assert.That(Log("stderr"), Is.EqualTo("separate error" + Environment.NewLine));
                 Assert.That(File.ReadAllText(Path.Combine(cli.DirectoryPath, "cwd.txt")), Is.EqualTo(cli.DirectoryPath));
-                var files = JsonSerializer.Deserialize<string[]>(File.ReadAllText(Path.Combine(cli.DirectoryPath, "files.json")))!;
+                var files = AcceptanceJson.DeserializeStrings(File.ReadAllText(Path.Combine(cli.DirectoryPath, "files.json")))!;
                 Assert.That(files, Is.EquivalentTo(new[] { "workflow.md", "cwd.txt", "state.json", "writer.lock" }
                     .Concat(Directory.GetFiles(Path.Combine(cli.State, runId, "logs")).Select(Path.GetFileName))));
                 cli.ExpectedChildren = 0;

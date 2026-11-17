@@ -18,6 +18,7 @@ Feature: Deliver a usable native agent interface
       | platform       |
       | Windows 11 x64 |
       | Linux x64      |
+      | macOS 15 arm64 |
 
   @A16
   Scenario Outline: Keep inspection commands read-only

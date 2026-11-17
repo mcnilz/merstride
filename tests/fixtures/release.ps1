@@ -17,12 +17,23 @@ try {
     & git -C $git tag $releaseTag
     $output = Join-Path $temp 'assets'; New-Item -ItemType Directory $output | Out-Null
     $platforms = [ordered]@{}
-    foreach ($rid in @('win-x64','linux-x64')) {
+    foreach ($rid in @('win-x64','linux-x64','osx-arm64')) {
         $stage = Join-Path $temp $rid; New-Item -ItemType Directory $stage | Out-Null
         $binary = if ($rid -eq 'win-x64') { 'merstride.exe' } else { 'merstride' }
         # Controlled release-boundary fixture, never claimed to be native behavior evidence.
         "release fixture $rid" | Set-Content "$stage/$binary"
         $record = @{result='passed';commit=$commit;runId='fixture-run';rid=$rid;version=$version;dirty=$false;sdk='11.0.100';binarySha256=(Get-ReleaseHash "$stage/$binary")}
+        if ($rid -eq 'osx-arm64') {
+            $record.fixtureSha256='1' * 64; $record.nativeSuiteSha256='2' * 64
+            switch ($Defect) {
+                'wrong macos source' { $record.commit='a' * 40 }
+                'wrong macos version' { $record.version='9.9.9' }
+                'wrong macos run' { $record.runId='other-run' }
+                'failed macos job' { $record.result='failed' }
+                'cancelled macos job' { $record.result='cancelled' }
+                'skipped macos job' { $record.result='skipped' }
+            }
+        }
         if ($Defect -eq 'an artifact from another commit' -and $rid -eq 'linux-x64') { $record.commit = 'a' * 40 }
         if ($Defect -eq 'a failed required test' -and $rid -eq 'win-x64') { $record.result='failed' }
         $record | ConvertTo-Json | Set-Content "$stage/platform.json"
@@ -49,8 +60,25 @@ try {
             @{feature=$Matches[1];line=[int]$Matches[2];scenario=$Matches[3];result=@{status='passed'}}
         })
         $platforms[$rid] = @{commit=$commit;cleanNoRuntime=$true;allApplicableScenarios=$true;processTree=$true;atomicSnapshots=$true;referenceBudgets=$true;binarySha256=$record.binarySha256;environment=$(if ($rid -eq 'win-x64') {'fixture Windows 11'} else {'fixture Linux'});evidence='controlled fixture only';scenarios=$cases;featureHashes=$inventory.featureHashes}
+        if ($rid -eq 'osx-arm64') {
+            $proof = $platforms[$rid]
+            $proof.rid=$rid; $proof.runId='fixture-run'; $proof.version=$version
+            $proof.fixtureSha256=$record.fixtureSha256; $proof.driverSha256=$record.nativeSuiteSha256
+            $proof.runtimeInventorySha256='3' * 64; $proof.environment='macOS 15.0 arm64; controlled fixture only'
+            $proof.referenceBudget=@{role='reference-machine';environment='controlled fixture reference';evidence='fixture only';commit=$commit;binarySha256=$record.binarySha256;bytes=1024;samples=@(1..30)}
+            switch ($Defect) {
+                'stale macos qualification' { $proof.commit='a' * 40 }
+                'wrong macos qualification run' { $proof.runId='another-run' }
+                'wrong macos driver' { $proof.driverSha256='4' * 64 }
+                'missing macos runtime inventory' { $proof.Remove('runtimeInventorySha256') }
+                'missing macos reference budget' { $proof.Remove('referenceBudget') }
+                'hosted macos timing' { $proof.referenceBudget.role='hosted-build' }
+            }
+        }
     }
     if ($Defect -eq 'a missing advertised platform archive') { Remove-Item -LiteralPath "$output/merstride-0.1.0-linux-x64.tar.gz" }
+    if ($Defect -eq 'missing macos qualification') { $platforms.Remove('osx-arm64') }
+    if ($Defect -eq 'missing macos archive') { Remove-Item -LiteralPath (Join-Path $output (Get-ArchiveName $version 'osx-arm64')) }
     $qualification = Join-Path $temp 'qualification.json'
     $samples = @(foreach ($task in @('deterministic-chain','test-fix-loop')) { foreach ($variant in @('manual','merstride')) { foreach ($i in 1..5) {
         @{task=$task;variant=$variant;iteration=$i;elapsedMilliseconds=1;actual=@{agent='fixture';model='fixture';taskIdentity=$task;equivalentResult=$true;modelCalls=0;cacheEffects='fixture';failures=@();inputTokens=$null;outputTokens=$null}}
@@ -71,6 +99,9 @@ try {
         $env:GITHUB_SHA = $commit
         $env:WINDOWS_QUALIFICATION_JSON = $q.platforms['win-x64'] | ConvertTo-Json -Depth 20 -Compress
         $env:LINUX_QUALIFICATION_JSON = $q.platforms['linux-x64'] | ConvertTo-Json -Depth 20 -Compress
+        $env:MACOS_REFERENCE_BUDGET_JSON = $q.platforms['osx-arm64'].referenceBudget | ConvertTo-Json -Depth 20 -Compress
+        $env:MACOS_QUALIFICATION_FILE = Join-Path $temp 'macos.json'
+        $q.platforms['osx-arm64'] | ConvertTo-Json -Depth 20 | Set-Content $env:MACOS_QUALIFICATION_FILE
         $env:TOKEN_EXPERIMENT_JSON = $q.tokenExperiment | ConvertTo-Json -Depth 20 -Compress
         $qualification = Join-Path $temp 'external.json'
         & pwsh -NoProfile -File "$root/scripts/collect-qualification.ps1" -Output $qualification

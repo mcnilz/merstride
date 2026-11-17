@@ -31,5 +31,5 @@
     }
   ],
   "buildOnlyInventory": "docs/dependency-inventory.json (not shipped)",
-  "systemLibraries": "Linux uses host glibc, libgcc, ICU and system libraries; Windows uses OS libraries. Host libraries are not bundled or relicensed. Exact loader dependencies are retained with platform evidence."
+  "systemLibraries": "Linux uses host glibc, libgcc, ICU and system libraries; Windows uses OS libraries. Host libraries are not bundled or relicensed. Exact loader dependencies are retained with platform evidence. The osx-arm64 candidate uses macOS system libraries; actual loader inputs must be retained by the hosted gate before macOS is advertised."
 }

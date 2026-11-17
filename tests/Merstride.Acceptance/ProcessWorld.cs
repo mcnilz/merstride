@@ -1,5 +1,9 @@
 using System.Text.Json;
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 
 namespace Merstride.Acceptance;
 
@@ -12,7 +16,7 @@ internal sealed class ProcessWorld : IDisposable
 
     private void Chain()
     {
-        var command = JsonSerializer.Serialize(Helper);
+        var command = AcceptanceJson.Serialize(Helper);
         File.WriteAllText(cli.FilePath, $$"""
             ```yaml merstride
             schemaVersion: 1
@@ -56,8 +60,8 @@ internal sealed class ProcessWorld : IDisposable
             nodes:
               first:
                 kind: process
-                command: {{JsonSerializer.Serialize(command ?? Helper)}}
-                args: {{JsonSerializer.Serialize(arguments)}}
+                command: {{AcceptanceJson.Serialize(command ?? Helper)}}
+                args: {{AcceptanceJson.Serialize(arguments)}}
                 timeoutSeconds: 5
             {{string.Join("\n", endIds.Select(id => $"  {id}:\n    kind: end\n    result: success"))}}
             ```
@@ -121,7 +125,7 @@ internal sealed class ProcessWorld : IDisposable
                 Process(["arguments", "two words", "Grüße", "$(touch injected)", "a;b"]); break;
             case "the test process receives those four exact arguments in order":
                 Assert.That(cli.ExitCode, Is.Zero);
-                Assert.That(JsonSerializer.Deserialize<string[]>(File.ReadAllText(Path.Combine(cli.DirectoryPath, "arguments.json"))),
+                Assert.That(AcceptanceJson.DeserializeStrings(File.ReadAllText(Path.Combine(cli.DirectoryPath, "arguments.json"))),
                     Is.EqualTo(new[] { "two words", "Grüße", "$(touch injected)", "a;b" })); break;
             case "no file named \"injected\" exists": Assert.That(File.Exists(Path.Combine(cli.DirectoryPath, "injected")), Is.False); break;
             case "an installed PowerShell 7 and a process node invoking a workspace script through \"pwsh\"":
@@ -240,7 +244,7 @@ internal sealed class ProcessWorld : IDisposable
         string[] arguments = ["", "a\"b", "trailing\\", "C:\\two words\\", "🌍"];
         Process(["arguments", .. arguments], "tools with spaces/helper.exe");
         Advance(); Cursor("done");
-        Assert.That(JsonSerializer.Deserialize<string[]>(File.ReadAllText(Path.Combine(cli.DirectoryPath, "arguments.json"))), Is.EqualTo(arguments));
+        Assert.That(AcceptanceJson.DeserializeStrings(File.ReadAllText(Path.Combine(cli.DirectoryPath, "arguments.json"))), Is.EqualTo(arguments));
     }
 
     internal void UnlabeledEdgeWarnsAndAcceptsFailure()

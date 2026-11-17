@@ -1,6 +1,10 @@
 using System.Diagnostics;
 using System.Text.Json;
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 
 namespace Merstride.Acceptance;
 
@@ -160,7 +164,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
     {
         string Execution(string[] args) => inline
             ? "script: |\n      #!\"" + Helper + "\" " + string.Join(' ', args) + "\n      test-only stdin payload"
-            : "command: " + JsonSerializer.Serialize(Helper) + "\n    args: " + JsonSerializer.Serialize(args);
+            : "command: " + AcceptanceJson.Serialize(Helper) + "\n    args: " + AcceptanceJson.Serialize(args);
         var nodes = string.Join("\n", Enumerable.Range(0, count).Select(i => $$"""
               work{{(count == 1 ? "" : i.ToString(System.Globalization.CultureInfo.InvariantCulture))}}:
                 kind: process

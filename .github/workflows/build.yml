@@ -2,7 +2,7 @@ name: Build
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, codex/p15-macos-native-release]
   workflow_dispatch:
 permissions:
   contents: read

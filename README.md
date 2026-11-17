@@ -21,8 +21,10 @@ response; existing callers that relied on default JSON must add that flag.
 
 For binary downloads and platform requirements, see
 [download and run](docs/RELEASING.md#download-and-run). Releases use SemVer tags
-and GitHub Actions for Windows x64 and Linux x64. macOS distribution is deferred;
-release qualification remains incomplete.
+and GitHub Actions. Windows x64 and Linux x64 have local verification. The macOS
+15+ Apple Silicon build, native acceptance, packaging and extracted-archive tests
+without system .NET passed on GitHub-hosted runners; see [current evidence](docs/STATUS.md).
+Overall release qualification and publication remain incomplete.
 
 Build from source using the [development prerequisites](CONTRIBUTING.md#prerequisites)
 and `pwsh -NoProfile -File scripts/build.ps1`. The examples below use PowerShell

@@ -19,7 +19,9 @@ public sealed partial class RunStore(string root) : IRunPersistence, IContextLog
     public FileStream Lock(string id)
     {
         try { return new FileStream(Path.Combine(RunDirectory(id), "writer.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
-        catch (IOException ex) when ((ex.HResult & 0xffff) is 32 or 33 or 11)
+        // FileShare.None exposes raw EWOULDBLOCK: 11 on Linux, 35 on macOS.
+        catch (IOException ex) when ((ex.HResult & 0xffff) is 32 or 33 or 11 ||
+            OperatingSystem.IsMacOS() && ex.HResult == 35)
         { throw new MerstrideException("RUN_LOCKED", "Another writer holds the run lock.", 4); }
     }
 

@@ -40,14 +40,19 @@ try {
     $binaryName = if ($IsWindows) { 'merstride.exe' } else { 'merstride' }
     $files = @(Get-ChildItem -LiteralPath $NativeDirectory -Recurse -File)
     foreach ($file in $files) {
-        if ($file.Name -notin @($binaryName,'merstride.pdb','merstride.dbg')) { throw "Unexpected native publish content: $($file.Name)" }
+        $relative = [IO.Path]::GetRelativePath([IO.Path]::GetFullPath($NativeDirectory), $file.FullName).Replace('\','/')
+        $allowed = @($binaryName,'merstride.pdb','merstride.dbg')
+        $macSymbol = $IsMacOS -and $relative -cin @('merstride.dSYM/Contents/Info.plist',
+            'merstride.dSYM/Contents/Resources/DWARF/merstride',
+            'merstride.dSYM/Contents/Resources/Relocations/aarch64/merstride.yml')
+        if ($relative -cnotin $allowed -and !$macSymbol) { throw "Unexpected native publish content: $relative" }
         $text = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($file.FullName))
         foreach ($id in $forbidden) { if ($text -match [regex]::Escape($id)) { throw "Analyzer identity in native content: $($file.Name)" } }
     }
     foreach ($file in @('LICENSE','docs/licenses/dotnet-LICENSE.txt','docs/licenses/dotnet-THIRD-PARTY-NOTICES.txt','docs/licenses/YamlDotNet-LICENSE.txt','docs/licenses/System.CommandLine-LICENSE.txt','docs/shipped-dependencies.json')) {
         if (!(Test-Path "$PSScriptRoot/../$file")) { throw "Missing distribution license/inventory: $file" }
     }
-    $runtimeKeys = @($graph.libraries.Keys | Where-Object { $_ -match '^runtime\.(win|linux)-x64\.Microsoft\.DotNet\.ILCompiler/11\.0\.0$' })
+    $runtimeKeys = @($graph.libraries.Keys | Where-Object { $_ -match '^runtime\.(win-x64|linux-x64|osx-arm64)\.Microsoft\.DotNet\.ILCompiler/11\.0\.0$' })
     if ($runtimeKeys.Count -ne 1) { throw 'Expected exactly one native platform runtime notice source.' }
     $packageRoot = @($graph.packageFolders.Keys)[0]
     $runtimeNotice = Join-Path $packageRoot ($graph.libraries[$runtimeKeys[0]].path + '/THIRD-PARTY-NOTICES.TXT')

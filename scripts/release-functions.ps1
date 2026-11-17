@@ -18,7 +18,8 @@ function Assert-ReleaseTag([string]$GitDirectory, [string]$Tag, [string]$Commit)
 }
 function Get-ArchiveName([string]$Version, [string]$Rid) { "merstride-$Version-$Rid" + $(if ($Rid -eq 'win-x64') { '.zip' } else { '.tar.gz' }) }
 function Get-NoticeNames { @('LICENSE','dotnet-LICENSE.txt','dotnet-THIRD-PARTY-NOTICES.txt','YamlDotNet-LICENSE.txt','System.CommandLine-LICENSE.txt','shipped-dependencies.json') }
-function Get-ReleaseAssetNames([string]$Version) { @((Get-ArchiveName $Version 'win-x64'),(Get-ArchiveName $Version 'linux-x64')) + @(Get-NoticeNames) + @('RELEASE-NOTES.md','qualification.json','manifest.json','SHA256SUMS') }
+function Get-ReleaseRuntimes { @('win-x64','linux-x64','osx-arm64') }
+function Get-ReleaseAssetNames([string]$Version) { @(Get-ReleaseRuntimes | ForEach-Object { Get-ArchiveName $Version $_ }) + @(Get-NoticeNames) + @('RELEASE-NOTES.md','qualification.json','manifest.json','SHA256SUMS') }
 function Copy-ReleaseNotices([string]$Destination) {
     Copy-Item -LiteralPath "$PSScriptRoot/../LICENSE" -Destination $Destination
     foreach ($file in @('dotnet-LICENSE.txt','dotnet-THIRD-PARTY-NOTICES.txt','YamlDotNet-LICENSE.txt','System.CommandLine-LICENSE.txt')) { Copy-Item -LiteralPath "$PSScriptRoot/../docs/licenses/$file" -Destination $Destination }
@@ -35,13 +36,13 @@ function Assert-PlatformArchive([string]$Archive, [string]$Rid, [string]$Version
             try { $entries = @($zip.Entries.FullName) } finally { $zip.Dispose() }
         } else {
             $entries = @(& tar -tzf $Archive)
-            if ($LASTEXITCODE -ne 0) { throw 'Cannot list Linux archive.' }
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot list Unix archive.' }
             $permissions = @(& tar -tvzf $Archive)
-            if ($LASTEXITCODE -ne 0 -or @($permissions | Where-Object { $_ -notmatch '^-' }).Count -or !($permissions | Where-Object { $_ -match '^-..x..x..x.* merstride$' })) { throw 'Linux archive requires regular files and executable permissions.' }
+            if ($LASTEXITCODE -ne 0 -or @($permissions | Where-Object { $_ -notmatch '^-' }).Count -or !($permissions | Where-Object { $_ -match '^-..x..x..x.* merstride$' })) { throw 'Unix archive requires regular files and executable permissions.' }
         }
         if ($entries.Count -ne $expected.Count -or (Compare-Object ($entries | Sort-Object) ($expected | Sort-Object))) { throw 'Unexpected/missing archive contents.' }
         if ($Rid -eq 'win-x64') { [IO.Compression.ZipFile]::ExtractToDirectory($Archive, $temp) }
-        else { & tar -xzf $Archive -C $temp; if ($LASTEXITCODE -ne 0) { throw 'Cannot extract Linux archive.' } }
+        else { & tar -xzf $Archive -C $temp; if ($LASTEXITCODE -ne 0) { throw 'Cannot extract Unix archive.' } }
         $gate = Read-ReleaseJson "$temp/platform.json"
         if ($gate.result -cne 'passed' -or $gate.commit -cne $Commit -or $gate.runId -cne $RunId -or $gate.version -cne $Version -or $gate.rid -cne $Rid -or $gate.dirty -or $gate.sdk -cne '11.0.100') { throw 'Platform identity or required local gates differ.' }
         if ((Get-ReleaseHash "$temp/$binary") -cne $gate.binarySha256) { throw 'Archive binary checksum differs from tested binary.' }
@@ -55,6 +56,17 @@ function Assert-PlatformArchive([string]$Archive, [string]$Rid, [string]$Version
         if ([IO.Path]::GetFullPath($temp).StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath())) -and (Split-Path $temp -Leaf) -like 'merstride-archive-*') { Remove-Item -LiteralPath $temp -Recurse -Force }
     }
 }
+function Assert-ReferenceBudget($Budget, [string]$Commit, [string]$BinaryHash) {
+    if (!$Budget -or $Budget.role -cne 'reference-machine' -or !$Budget.environment -or !$Budget.evidence -or
+        $Budget.commit -cne $Commit -or $Budget.binarySha256 -cne $BinaryHash -or
+        $Budget.samples.Count -ne 30 -or ($Budget.bytes -isnot [long] -and $Budget.bytes -isnot [int]) -or
+        $Budget.bytes -le 0 -or $Budget.bytes -gt 25MB) { throw 'Exact-binary reference-machine budget evidence is required.' }
+    foreach ($sample in $Budget.samples) {
+        if ($sample -isnot [ValueType] -or $sample -is [bool] -or ![double]::IsFinite([double]$sample) -or $sample -le 0) { throw 'Invalid reference-machine timing sample.' }
+    }
+    $sorted = @($Budget.samples | Sort-Object)
+    if ($sorted[28] -ge 150) { throw 'Reference-machine P95 exceeds the native latency budget.' }
+}
 function Assert-Qualification([string]$Path, [string]$Commit, $Platforms) {
     $q = Read-ReleaseJson $Path
     if ($q.schemaVersion -ne 1 -or $q.commit -cne $Commit) { throw 'Release qualification is incomplete or belongs to another commit.' }
@@ -67,6 +79,14 @@ function Assert-Qualification([string]$Path, [string]$Commit, $Platforms) {
         if ($proof.binarySha256 -cne $p.binarySha256 -or !$proof.environment -or !$proof.evidence) { throw 'Qualification must identify the tested binary and actual environment/evidence.' }
         if ($proof.commit -cne $Commit) { throw 'Platform qualification source commit differs.' }
         if ($p.rid -eq 'win-x64' -and $proof.environment -notmatch 'Windows 11') { throw 'Windows Server is not Windows 11 qualification.' }
+        if ($p.rid -eq 'osx-arm64') {
+            if ($proof.rid -cne 'osx-arm64' -or $proof.runId -cne $p.runId -or $proof.version -cne $p.version -or
+                $proof.environment -cnotmatch '^macOS (1[5-9]|[2-9][0-9])\..* arm64;' -or
+                $proof.fixtureSha256 -cne $p.fixtureSha256 -or $proof.driverSha256 -cne $p.nativeSuiteSha256 -or
+                $proof.driverSha256 -cnotmatch '^[a-f0-9]{64}$' -or $proof.fixtureSha256 -cnotmatch '^[a-f0-9]{64}$' -or
+                $proof.runtimeInventorySha256 -cnotmatch '^[a-f0-9]{64}$') { throw 'Required same-run macOS native/clean-target identity differs.' }
+            Assert-ReferenceBudget $proof.referenceBudget $Commit $p.binarySha256
+        }
         $inventory = Read-ReleaseJson "$PSScriptRoot/../docs/release-scenario-inventory.json"
         foreach ($feature in $inventory.featureHashes.Keys) {
             if ($proof.featureHashes[$feature] -cne $inventory.featureHashes[$feature] -or $inventory.featureHashes[$feature] -cne (Get-ReleaseHash "$PSScriptRoot/../$feature")) { throw 'Qualification feature-source identity differs.' }
@@ -97,8 +117,8 @@ function Assert-ReleaseSet([string]$Directory, [string]$Version, [string]$Commit
     $actual = @((Get-ChildItem -LiteralPath $Directory -File).Name | Sort-Object)
     if (Compare-Object $expected $actual) { throw 'Release asset set is incomplete or contains unexpected files.' }
     $manifest = Read-ReleaseJson "$Directory/manifest.json"
-    if ($manifest.schemaVersion -ne 1 -or $manifest.version -cne $Version -or $manifest.tag -cne "v$Version" -or $manifest.commit -cne $Commit -or $manifest.runId -cne $RunId -or $manifest.platforms.Count -ne 2) { throw 'Release manifest identity differs.' }
-    $platforms = @('win-x64','linux-x64') | ForEach-Object { Assert-PlatformArchive (Join-Path $Directory (Get-ArchiveName $Version $_)) $_ $Version $Commit $RunId }
+    if ($manifest.schemaVersion -ne 1 -or $manifest.version -cne $Version -or $manifest.tag -cne "v$Version" -or $manifest.commit -cne $Commit -or $manifest.runId -cne $RunId -or $manifest.platforms.Count -ne @(Get-ReleaseRuntimes).Count) { throw 'Release manifest identity differs.' }
+    $platforms = Get-ReleaseRuntimes | ForEach-Object { Assert-PlatformArchive (Join-Path $Directory (Get-ArchiveName $Version $_)) $_ $Version $Commit $RunId }
     foreach ($platform in $platforms) {
         $record = @($manifest.platforms | Where-Object { $_.rid -ceq $platform.rid })
         if ($record.Count -ne 1) { throw 'Manifest platform set differs from archives.' }

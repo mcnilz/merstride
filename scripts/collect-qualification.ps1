@@ -1,15 +1,23 @@
-param([string]$Output = "$PSScriptRoot/../artifacts/qualification/input.json")
+param([string]$Output = "$PSScriptRoot/../artifacts/qualification/input.json", [string]$MacOsQualification = $env:MACOS_QUALIFICATION_FILE)
 $ErrorActionPreference = 'Stop'
+. "$PSScriptRoot/release-functions.ps1"
 # Reports are external data, never script text. Keeping them outside the commit
 # avoids a circular requirement to embed a commit's own SHA in a tracked file.
-foreach ($name in @('WINDOWS_QUALIFICATION_JSON','LINUX_QUALIFICATION_JSON','TOKEN_EXPERIMENT_JSON')) {
+foreach ($name in @('WINDOWS_QUALIFICATION_JSON','LINUX_QUALIFICATION_JSON','MACOS_REFERENCE_BUDGET_JSON','TOKEN_EXPERIMENT_JSON')) {
     if (![Environment]::GetEnvironmentVariable($name)) { throw "Required external release evidence unavailable: $name" }
 }
+if (!$MacOsQualification -or !(Test-Path -LiteralPath $MacOsQualification -PathType Leaf)) { throw 'Same-run native macOS qualification is unavailable.' }
+$macos = Read-ReleaseJson $MacOsQualification
+$budget = $env:MACOS_REFERENCE_BUDGET_JSON | ConvertFrom-Json -AsHashtable
+Assert-ReferenceBudget $budget $env:GITHUB_SHA $macos.binarySha256
+$macos.referenceBudget = $budget
+$macos.referenceBudgets = $true
 $report = [ordered]@{
     schemaVersion=1;commit=$env:GITHUB_SHA
     platforms=@{
         'win-x64'=($env:WINDOWS_QUALIFICATION_JSON | ConvertFrom-Json -AsHashtable)
         'linux-x64'=($env:LINUX_QUALIFICATION_JSON | ConvertFrom-Json -AsHashtable)
+        'osx-arm64'=$macos
     }
     tokenExperiment=($env:TOKEN_EXPERIMENT_JSON | ConvertFrom-Json -AsHashtable)
 }

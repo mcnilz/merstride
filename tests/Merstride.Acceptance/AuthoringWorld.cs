@@ -1,6 +1,10 @@
 using System.Text;
 using System.Text.Json;
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 
 namespace Merstride.Acceptance;
 
@@ -19,7 +23,7 @@ internal sealed class AuthoringWorld : IDisposable
         nodes:
           work:
             kind: process
-            command: {{JsonSerializer.Serialize(TestPaths.Helper)}}
+            command: {{AcceptanceJson.Serialize(TestPaths.Helper)}}
             args: [arguments, "123", "true", "null"]
             timeoutSeconds: 5
           review:
@@ -118,7 +122,7 @@ internal sealed class AuthoringWorld : IDisposable
             case "the prompt equals the decoded YAML string including its final newline":
                 Assert.That(cli.Response.GetProperty("request").GetProperty("prompt").GetString(), Is.EqualTo("Review the changes.\nKeep the final newline.\n")); break;
             case "validation preserves every argument as a string":
-                Assert.That(JsonSerializer.Deserialize<string[]>(File.ReadAllText(Path.Combine(cli.DirectoryPath, "arguments.json"))),
+                Assert.That(AcceptanceJson.DeserializeStrings(File.ReadAllText(Path.Combine(cli.DirectoryPath, "arguments.json"))),
                     Is.EqualTo(new[] { "123", "true", "null" })); break;
             case "a document with a valid workflow and a four-backtick fenced example containing three-backtick workflow fences":
                 Source = FeatureTests.Workflow + "\n````markdown\n" + TaskWorkflow + "\n````\n"; break;

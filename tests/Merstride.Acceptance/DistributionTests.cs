@@ -5,6 +5,32 @@ namespace Merstride.Acceptance;
 
 public class DistributionTests
 {
+    [TestCase("relocations")]
+    [TestCase("unexpected-symbol-file")]
+    [TestCase("analyzer-in-relocations")]
+    public void DistributionGateChecksMacSymbolRelocations(string fixture)
+    {
+        var temp = Path.Combine(FeatureTests.Root, "artifacts", "audit-fixtures", Guid.NewGuid().ToString("N"));
+        var audit = Path.Combine(temp, "audit");
+        var native = Path.Combine(temp, "native");
+        Directory.CreateDirectory(audit); Directory.CreateDirectory(native);
+        try
+        {
+            foreach (var file in Directory.GetFiles(Path.Combine(FeatureTests.Root, "artifacts/audit"), "*.txt"))
+                File.Copy(file, Path.Combine(audit, Path.GetFileName(file)));
+            var binary = Environment.GetEnvironmentVariable("MERSTRIDE_BINARY") ?? Path.Combine(FeatureTests.Root,
+                "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
+            File.Copy(binary, Path.Combine(native, Path.GetFileName(binary)));
+            var symbol = Path.Combine(native, "merstride.dSYM", "Contents", "Resources", "Relocations", "aarch64",
+                fixture == "unexpected-symbol-file" ? "unexpected.yml" : "merstride.yml");
+            Directory.CreateDirectory(Path.GetDirectoryName(symbol)!);
+            File.WriteAllText(symbol, fixture == "analyzer-in-relocations" ? "NsDepCop" : "symbol relocation fixture");
+            using var build = new BuildWorld();
+            build.Run("pwsh", "-NoProfile", "-File", "scripts/distribution-audit.ps1", "-NativeDirectory", native, "-AuditDirectory", audit);
+            Assert.That(build.ExitCode == 0, Is.EqualTo(OperatingSystem.IsMacOS() && fixture == "relocations"));
+        }
+        finally { Directory.Delete(temp, true); }
+    }
     [TestCase("compiler")]
     [TestCase("ilc")]
     [TestCase("link")]

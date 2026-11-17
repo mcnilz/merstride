@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <PublishAot>true</PublishAot>
     <NuGetLockFilePath Condition="'$(RuntimeIdentifier)' == 'linux-x64'">packages.linux-x64.lock.json</NuGetLockFilePath>
+    <NuGetLockFilePath Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">packages.osx-arm64.lock.json</NuGetLockFilePath>
     <AssemblyName>test-process</AssemblyName>
   </PropertyGroup>
 </Project>

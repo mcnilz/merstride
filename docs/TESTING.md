@@ -2,7 +2,7 @@
 
 The `.feature` files are the reviewable behavioral contract. The NUnit
 runner executes local cases from these files against the published
-native executable. The two clean-platform orchestration cases remain mandatory
+native executable. The three clean-platform orchestration cases remain mandatory
 separate release qualification and fail explicitly without actual evidence. See STATUS.md
 for current evidence and limitations.
 
@@ -214,3 +214,59 @@ explicit recovery are checked alongside JSON compatibility. Raw log/state bytes
 are compared before/after read-only output. The existing CliWorld/benchmark,
 release and clean-Linux JSON consumers request --json explicitly; mixed-mode P11
 checks retain their scenario tags. No renderer-internal test seam is introduced.
+
+
+## P15 native suite and macOS observation
+
+The full build also publishes `tests/Merstride.NativeSuite` to `artifacts/suite`
+and executes its independent Native AOT driver against the published CLI and
+fixture. It reads the actual Gherkin files, preserves tags/outline rows, excludes
+only `@build` and the three recursive release-environment orchestrators, and fails
+on unimplemented/undefined steps or any assertion. NUnit 4 remains the managed
+host; a deliberately limited native assertion adapter avoids NUnit's unsupported
+reflection/dynamic-code paths. Negative controls guard mismatched values,
+collection multiplicity/order, conjunction/negation, lengths and bounds. Shared
+fixture JSON uses generated metadata; no Native AOT warnings are suppressed.
+Every native scenario result is written to `artifacts/tests/native-scenarios.json`.
+The internal native-driver artifact retains project/.NET notices and the MIT
+licenses for Gherkin 43.0.0 and Cucumber.Messages 35.0.0, fetched from their
+reviewed source commits. These test-only components are excluded from product
+archives and the shipped-product inventory.
+
+P15's runtime scenario launches one native fixture with 32 immediate-exit children
+and requires all 33 launches after exit. It runs on every platform. Windows Job
+and Linux execve/proc accounting are retained. macOS runs the unprivileged suite
+through `python3 scripts/observe-macos.py TRACE -- EXECUTABLE ...`: an initial
+stopped-child barrier attaches an external privileged DTrace observer before
+execution. Successful execs are retained; fork/exit events identify live ancestry.
+Fresh kernel heartbeats drain buffered events, and errors, event loss or stale
+heartbeats fail. No process polling or relaxed count is substituted. Actual hosted
+probe availability and macOS execution passed in hosted run 44024602627 for
+commit `39f864d`; new candidates must pass the same gates.
+Freshness compares newly appended heartbeat records with the preceding snapshot
+and a 100 ms local monotonic drain interval, without comparing wall clocks across
+the kernel and managed runtime. Missing heartbeat errors include bounded counts
+and readiness state, never raw trace content.
+The observer uses a positional root PID instead of DTrace process attachment.
+The launch barrier releases only after kernel probes are ready; the root's kernel
+exit event ends observation. This keeps observation independent of host execs.
+The macOS harness supplies a physical `TMPDIR` so PowerShell and .NET use the
+same workspace spelling. Its Python fixture uses the installed framework's
+`Python.app` interpreter when available, avoiding the extra exec performed by
+the framework's bin launcher; `MERSTRIDE_TEST_PYTHON` still takes precedence.
+The one-interpreter launch assertion is unchanged.
+
+Mac builds first execute that single short-lived-launch scenario under the same
+external observer, with a 120-second outer harness watchdog. Failure stops the
+build and reports its bounded assertion message; success is followed by the full
+unchanged managed and native suites. The preflight is never release qualification
+and omits no required scenario. GitHub phase notices identify the last started
+build boundary even if the job is forcibly cancelled; no raw logs or environment
+inventory is copied into those public notices.
+
+The separate hosted macOS clean-target Release job runs `scripts/qualify-macos.py` using
+only the downloaded native suite, helper and extracted product. It verifies actual
+absence of standalone .NET installations, exact arm64/source/run/version/hash
+identities, all 284 runtime scenario identities/statuses and current feature hashes.
+It retains raw runtime inventories/traces in job artifacts and emits compact proof
+for release assembly. Reference-machine budgets remain separate mandatory evidence.

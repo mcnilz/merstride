@@ -25,10 +25,11 @@ to create releases with the final job's `contents: write` permission. Fork/PR
 builds retain read-only permissions and cannot publish.
 
 1. Prepare the candidate commit on `main`, update release notes, and choose an
-   unused SemVer version. Verify the full Windows/Linux gates for that source.
+   unused SemVer version. Verify the full Windows/Linux/macOS gates for that source.
 2. Collect the exact-commit/binary qualification and experiment reports described
    below. Configure `MERSTRIDE_WINDOWS_QUALIFICATION`,
-   `MERSTRIDE_LINUX_QUALIFICATION` and `MERSTRIDE_TOKEN_EXPERIMENT` as repository
+   `MERSTRIDE_LINUX_QUALIFICATION`, `MERSTRIDE_MACOS_REFERENCE_BUDGET` and
+   `MERSTRIDE_TOKEN_EXPERIMENT` as repository
    variables. A green hosted SDK build is insufficient qualification.
 3. After explicit release authorization, fetch `origin/main`, create an annotated
    tag on the qualified commit and push only that tag. For example, replacing
@@ -40,8 +41,9 @@ builds retain read-only permissions and cannot publish.
    git push origin refs/tags/v1.2.3
    ```
 
-4. The tag push starts Release: validate tag, build/test/package Windows and
-   Linux, aggregate their results, verify the same-run assets and qualification,
+4. The tag push starts Release: validate tag, build/test/package Windows, Linux
+   and macOS, qualify the extracted macOS archive without system dotnet, aggregate
+   their results, verify the same-run assets and qualification,
    then create a draft, verify uploaded bytes and publish. Prerelease tags produce
    GitHub prereleases. Every checkout uses the event's exact source commit.
 5. Check the workflow result and the release manifest/checksums. Missing proof or
@@ -63,7 +65,7 @@ than the latest stable release. The current distribution targets are:
 | --- | --- | --- |
 | Windows x64 | `merstride-VERSION-win-x64.zip` | Windows 11 x64; no installed .NET runtime |
 | Linux x64 | `merstride-VERSION-linux-x64.tar.gz` | Compatible glibc Linux x64, ICU and OpenSSL; no installed .NET runtime |
-| macOS | Not currently released | See the feasibility decision below |
+| macOS 15+ Apple Silicon candidate | `merstride-VERSION-osx-arm64.tar.gz` once qualified | Hosted native/clean-target path verified; no installed .NET runtime |
 
 Download `SHA256SUMS` alongside the archive and compare its entry before
 extraction. PowerShell: `Get-FileHash ./merstride-1.2.3-win-x64.zip -Algorithm SHA256`.
@@ -75,29 +77,67 @@ On Windows, extract the ZIP and run `./merstride.exe version` and
 `./merstride.exe guide`. On Linux, extract with
 `tar -xzf merstride-1.2.3-linux-x64.tar.gz`, then run `./merstride version` and
 `./merstride guide`. The archive preserves executable permissions. Keep the
-included notices. Add `--json` for scripts; use an absolute state directory to
+included notices. A qualified macOS archive uses the same extraction/run commands
+with `osx-arm64` in its filename; verify it with `shasum -a 256`. Add `--json` for scripts; use an absolute state directory to
 resume runs from another working directory. Workflow commands may require their
 own tools; the Merstride engine does not install them.
 
-## macOS feasibility and reference review
+## macOS hosted candidate and reference review
 
-Native AOT supports macOS x64/Arm64 with Xcode Command Line Tools, but does not
-support cross-OS compilation from this Windows environment. See Microsoft's
-[Native AOT prerequisites](https://learn.microsoft.com/dotnet/core/deploying/native-aot/#prerequisites)
-and [cross-compilation constraints](https://learn.microsoft.com/dotnet/core/deploying/native-aot/cross-compile).
-No macOS runner was available for this implementation. More concretely, the
-current build treats every non-Windows host as Linux and requires `strace`;
-process observation uses `/proc`, and package locks, audits, manifests and
-qualification collection currently cover only `win-x64` and `linux-x64`.
-Consequently adding a macOS job would fail the mandatory acceptance path.
+P15 prepares `osx-arm64` on the standard GitHub-hosted `macos-15` Apple Silicon
+runner, with Xcode 16.4 and SDK 11.0.100 installed by the existing pinned official
+setup action. The minimum candidate OS is macOS 15; Native AOT's target triple is
+explicitly bound to 15.0. The runner checks architecture and actual tooling before
+building. No personal Mac or self-hosted runner is required.
 
-macOS distribution is deferred. A follow-up must select `osx-arm64` as the first
-target, provide real macOS process/interruption observation and full native
-acceptance, review target-specific dependency locks/notices, extend the archive/
-manifest/qualification policies and collect clean-target evidence on macOS.
-Only then may the required job and matching release asset be added together.
-macOS process variant names in authored workflows do not imply a released binary.
-Signing/notarization remains outside P14's scope.
+To conserve hosted resources, macOS build/package and clean-target jobs run only
+in the tag Release workflow. Ordinary push, pull-request and manual Build runs
+require Windows and Linux, including on `codex/p15-macos-native-release`.
+The P15 branch's push trigger remains available for those checks. Release requires
+all three platform builds and the separate macOS clean-target job; prior branch
+artifacts cannot authorize a new release candidate.
+
+Hosted run [44024602627](https://github.com/mcnilz/merstride/actions/runs/44024602627)
+passed the actual build, managed/native suites, package, separate no-system-.NET
+extracted-archive qualification and aggregate gate for commit `39f864d` on
+2026-11-17. This supersedes P14's missing macOS execution-path deferral. It does
+not authorize publication or supply the outstanding Windows/Linux clean-target,
+exact-binary reference-budget or external token-experiment evidence. Every release
+candidate still requires its own same-source, same-run platform evidence.
+The macOS job and archive are mandatory in the prepared release graph; they cannot
+be omitted to publish just Windows/Linux. Intel/universal binaries, signing and
+notarization remain outside this scope.
+
+The build runs the existing managed acceptance suite and the independent native
+runtime suite under external DTrace process lifecycle observation. A separate
+`macos-clean` job downloads the same-run archive, native fixture and native driver.
+It removes only approved standalone .NET installation roots on that disposable
+host, inventories all runtime/host locations under the writable system roots using
+sudo, and fails on a remaining installation or incomplete scan. It checks the
+arm64 Mach-O headers, archive entries/permissions, source/run/version and input
+hashes, runs the extracted binary, then executes every inventoried runtime case
+using the native driver. PowerShell's private self-contained runtime is a declared
+interpreter prerequisite and does not host the suite. Missing DTrace privileges,
+probes or events fail the job; no polling fallback or disabled assertion is allowed.
+
+The clean report is collected from the current run's `macos-clean` artifact.
+Configure `MERSTRIDE_MACOS_REFERENCE_BUDGET` separately with exact-commit/binary
+reference-machine evidence: `role: reference-machine`, `environment`, `evidence`,
+`commit`, `binarySha256`, executable `bytes`, and 30 positive millisecond `samples`.
+The 25 MiB and P95 <150 ms budgets remain enforced; hosted build timings cannot
+substitute for that designated reference measurement. Windows/Linux clean reports
+and the token experiment remain required. Raw traces, runtime scans and provenance
+stay in job artifacts; review them before sharing because they contain local paths.
+
+Reviewed runner labels, image tooling and pricing on 2026-11-16 against the official
+[runner reference](https://docs.github.com/en/actions/reference/runners/github-hosted-runners),
+[Apple Silicon image inventory](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md)
+and [Actions pricing](https://docs.github.com/en/billing/reference/actions-runner-pricing).
+Standard public-repository runners are free; private-repository usage consumes
+plan allowance and can incur charges (the published standard macOS rate was
+USD 0.062/minute). Only the release workflow uses the two macOS jobs,
+each bounded to 30 minutes. Check account allowance and current prices before
+authorizing hosted runs. No new marketplace action or product dependency is added.
 
 Reviewed [DailyWingetNotify's release workflow](https://github.com/mcnilz/DailyWingetNotify/blob/c8007fbffd9b9ea704e6c382afce5edb193ebeac/.github/workflows/release.yml)
 and its MIT license at revision `c8007fbffd9b9ea704e6c382afce5edb193ebeac` on
@@ -109,15 +149,16 @@ the reference's asset replacement behavior.
 
 ## Verification and qualification
 
-Run `pwsh -NoProfile -File scripts/build.ps1` on Windows or Linux with SDK 11.0.100,
+Run `pwsh -NoProfile -File scripts/build.ps1` on Windows, Linux or a qualified macOS host with SDK 11.0.100,
 PowerShell 7, native compiler/linker, Node/npm and a headless browser. Linux also
 requires strace; set `MERSTRIDE_BROWSER=/usr/bin/google-chrome`. Keep platform
 checkouts, obj/bin, package lock and artifacts paths separate. Linux uses
-packages.linux-x64.lock.json; Windows keeps packages.lock.json. Do not replace one
+packages.linux-x64.lock.json; macOS uses packages.osx-arm64.lock.json;
+Windows keeps packages.lock.json. The native driver has one lock file per RID. Do not replace one
 platform's resolved assets with the other's. Native binaries require OS libraries;
 Linux validation/start needs ICU and OpenSSL in addition to ldd-visible libraries.
 
-The local gate executes 220 actual nonrecursive feature cases plus supplemental
+The local gate executes 299 actual nonrecursive feature cases plus supplemental
 regressions and policy tests. It records native hashes, actual compiler/ILC/link/
 publish inputs, notices, TRX/scenario results and 30-start native
 benchmarks. A dirty checkout is recorded and cannot produce a release package.
@@ -127,12 +168,15 @@ stay under ignored `artifacts/`; version only reviewed summaries without private
 paths or machine identities. Benchmarks record RID, binary identity and timings,
 without hardware/security inventories. CI uploads compact test outcomes (including
 failed runs), gate and benchmark summaries;
-release platform uploads additionally include only the required platform archives.
+release platform uploads include the required platform archives. The internal
+macOS verification artifact also carries the native helper, suite driver and
+their notices; the separate clean-target job retains raw qualification evidence.
 
-Run `scripts/build.ps1 -ReleaseQualification` to include the two clean-target
+Run `scripts/build.ps1 -ReleaseQualification` to include the three clean-target
 orchestration cases. Without independently collected reports these **fail**;
 there are no skipped/pending/undefined required steps or implicit approval.
-`MERSTRIDE_CLEAN_WINDOWS_REPORT` and `MERSTRIDE_CLEAN_LINUX_REPORT` identify those
+`MERSTRIDE_CLEAN_WINDOWS_REPORT`, `MERSTRIDE_CLEAN_LINUX_REPORT` and
+`MERSTRIDE_CLEAN_MACOS_REPORT` identify those
 reports. A successful local gate alone is not release readiness.
 
 Clean-target collection: provision a new Windows 11 x64 or Linux x64 VM without
@@ -140,9 +184,12 @@ an installed .NET SDK/runtime. Retain image identity and provisioning logs. Copy
 the exact native binary, native fixture, feature sources and an independently
 available native suite driver, then run `scripts/qualify-clean-target.ps1 -Binary
 <binary> -Fixture <fixture> -SuiteDriver <driver> -Commit <sha> -Output <report>`.
-The driver must implement all 205 inventoried nonrecursive runtime cases and emit the scenario array
-defined by docs/release-scenario-inventory.json. This repository does not currently
-provide that full native driver; its NUnit host requires .NET. The 15 build-only
+The driver must implement all 284 inventoried nonrecursive runtime cases and emit the scenario array
+defined by docs/release-scenario-inventory.json. The build publishes that driver from tests/Merstride.NativeSuite to artifacts/suite;
+it parses the actual feature files and shares their CLI fixture worlds. Its
+assertion adapter supports only the explicitly used constraint subset, fails on
+unsupported operations, and includes negative controls; NUnit remains the managed
+host. Both runners execute the same runtime scenarios during every local gate. The 15 build-only
 cases run independently on the build host and stay mandatory. The harness is
 concrete collection/validation scaffolding, not completed clean-suite evidence.
 PowerShell is a collection tool, not an engine dependency. Do not hide dotnet on
@@ -152,7 +199,7 @@ PATH or treat a hosted SDK runner as a clean image.
 to exercise guide/version/start/status/advance and a native process inside a
 minimal chroot with only OS libraries. It runs the engine as an unprivileged user,
 retains an exhaustive filesystem inventory and removes only its unique temporary
-root. This is genuine no-installed-.NET smoke, **not** the full 205-case runtime suite or
+root. This is genuine no-installed-.NET smoke, **not** the full 284-case runtime suite or
 Windows qualification.
 
 Token experiment: supply an actual external-agent driver to

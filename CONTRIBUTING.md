@@ -9,6 +9,10 @@ Build and test on the matching target platform with:
 - Windows x64: Visual Studio Build Tools with Desktop development with C++ and
   a Windows SDK for Native AOT.
 - Linux x64: a Native AOT compiler/linker toolchain, ICU, OpenSSL and `strace`.
+- macOS 15+ arm64 candidate: Xcode 16.4, Python 3.12+, Bash, PowerShell 7 and
+  sudo access to DTrace process probes; `scripts/setup-macos.sh` checks hosted
+  tooling. Hosted native and clean-target execution passed for the source recorded
+  in [current status](docs/STATUS.md); new candidates still require their own gates.
 - Node >=22.12.0, npm and an installed Chromium browser for development-only
   Mermaid verification. Windows uses Edge by default; set `MERSTRIDE_BROWSER`
   to the browser executable on Linux or to override it.

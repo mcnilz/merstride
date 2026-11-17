@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <PublishAot>true</PublishAot>
+    <AssemblyName>native-suite</AssemblyName>
+    <DefineConstants>$(DefineConstants);NATIVE_SUITE</DefineConstants>
+    <NuGetLockFilePath Condition="'$(RuntimeIdentifier)' != ''">packages.$(RuntimeIdentifier).lock.json</NuGetLockFilePath>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Merstride.Acceptance/*World.cs" Link="Worlds/%(Filename)%(Extension)" />
+    <Compile Include="../Merstride.Acceptance/FeatureTests.cs" Link="FeatureTests.cs" />
+    <Compile Include="../Merstride.Acceptance/AcceptanceJson.cs" Link="AcceptanceJson.cs" />
+    <Compile Include="../Merstride.Acceptance/ProcessObserver.cs" Link="ProcessObserver.cs" />
+    <Compile Include="../Merstride.Acceptance/MacProcessObserver.cs" Link="MacProcessObserver.cs" />
+    <Compile Include="../Merstride.Acceptance/TestPaths.cs" Link="TestPaths.cs" />
+    <Compile Include="../Merstride.Acceptance/WindowsInterrupt.cs" Link="WindowsInterrupt.cs" />
+    <PackageReference Include="Gherkin" Version="43.0.0" />
+  </ItemGroup>
+</Project>

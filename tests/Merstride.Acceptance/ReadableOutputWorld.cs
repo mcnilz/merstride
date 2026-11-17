@@ -1,6 +1,10 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 
 namespace Merstride.Acceptance;
 
@@ -189,7 +193,7 @@ internal sealed class ReadableOutputWorld : IDisposable
         nodes:
           work:
             kind: process
-            command: {{JsonSerializer.Serialize(TestPaths.Helper)}}
+            command: {{AcceptanceJson.Serialize(TestPaths.Helper)}}
             args: [context_output]
             timeoutSeconds: 5
           review:
@@ -198,7 +202,7 @@ internal sealed class ReadableOutputWorld : IDisposable
             context: [input, nodes.work.stdoutTail, nodes.later.stdoutTail]
           later:
             kind: process
-            command: {{JsonSerializer.Serialize(TestPaths.Helper)}}
+            command: {{AcceptanceJson.Serialize(TestPaths.Helper)}}
             args: [effect, later]
             timeoutSeconds: 5
           done:
@@ -229,7 +233,7 @@ internal sealed class ReadableOutputWorld : IDisposable
             nodes:
               work:
                 kind: process
-                command: {{JsonSerializer.Serialize(TestPaths.Helper)}}
+                command: {{AcceptanceJson.Serialize(TestPaths.Helper)}}
                 args: [{{(content == "raw" ? "raw" : "streams")}}]
                 timeoutSeconds: 5
               done:

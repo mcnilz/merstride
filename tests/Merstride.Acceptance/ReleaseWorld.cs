@@ -1,4 +1,8 @@
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 using System.Text.Json;
 
 namespace Merstride.Acceptance;
@@ -26,7 +30,7 @@ internal sealed class ReleaseWorld : IDisposable
             nodes:
               work:
                 kind: process
-                command: {{JsonSerializer.Serialize(TestPaths.Helper)}}
+                command: {{AcceptanceJson.Serialize(TestPaths.Helper)}}
                 args: [streams]
                 timeoutSeconds: 5
               done:
@@ -61,14 +65,17 @@ internal sealed class ReleaseWorld : IDisposable
         {
             case "the published native binary on a clean Windows 11 x64 with no .NET SDK or runtime":
             case "the published native binary on a clean Linux x64 with no .NET SDK or runtime":
+            case "the published native binary on a clean macOS 15 arm64 with no .NET SDK or runtime":
                 var windows = step.Contains("Windows 11", StringComparison.Ordinal);
-                var reportPath = Environment.GetEnvironmentVariable(windows ? "MERSTRIDE_CLEAN_WINDOWS_REPORT" : "MERSTRIDE_CLEAN_LINUX_REPORT");
+                var macos = step.Contains("macOS", StringComparison.Ordinal);
+                var reportPath = Environment.GetEnvironmentVariable(windows ? "MERSTRIDE_CLEAN_WINDOWS_REPORT" : macos ? "MERSTRIDE_CLEAN_MACOS_REPORT" : "MERSTRIDE_CLEAN_LINUX_REPORT");
                 Assert.That(reportPath is not null && File.Exists(reportPath), Is.True,
                     "RELEASE QUALIFICATION UNAVAILABLE: no independently provisioned clean target/full native suite report. SDK/WSL and PATH hiding are not clean-runtime proof. Run scripts/qualify-clean-target.ps1 with an actual native suite driver.");
                 cleanReport = JsonDocument.Parse(File.ReadAllText(reportPath!)).RootElement.Clone();
                 Assert.That(cleanReport.GetProperty("cleanNoRuntime").GetBoolean(), Is.True);
                 if (windows) Assert.That(cleanReport.GetProperty("environment").GetString(), Does.Contain("Windows 11"));
-                if (windows == OperatingSystem.IsWindows())
+                if (macos) Assert.That(cleanReport.GetProperty("environment").GetString(), Does.StartWith("macOS 15"));
+                if (windows ? OperatingSystem.IsWindows() : macos ? OperatingSystem.IsMacOS() : OperatingSystem.IsLinux())
                 {
                     var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Environment.GetEnvironmentVariable("MERSTRIDE_BINARY")!)));
                     Assert.That(cleanReport.GetProperty("binarySha256").GetString(), Is.EqualTo(hash));

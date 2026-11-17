@@ -23,7 +23,7 @@ try {
     New-Item -ItemType Directory -Force $Directory | Out-Null
     if ($Mode -in @('Validate','Publish') -and !$PSBoundParameters.ContainsKey('Qualification')) { $Qualification = Join-Path $Directory 'qualification.json' }
     if ($Mode -eq 'Package') {
-        if ($Runtime -notin @('win-x64','linux-x64')) { throw 'Unsupported release platform.' }
+        if ($Runtime -cnotin @(Get-ReleaseRuntimes)) { throw 'Unsupported release platform.' }
         $root = [IO.Path]::GetFullPath("$PSScriptRoot/..")
         $gate = Read-ReleaseJson "$root/artifacts/local-gate.json"
         if ($gate.result -cne 'passed' -or $gate.commit -cne $Commit -or $gate.runId -cne $RunId -or $gate.rid -cne $Runtime -or $gate.version -cne $version -or $gate.dirty) { throw 'Package requires a clean, successfully tested same-run/version/commit/platform candidate.' }
@@ -51,15 +51,19 @@ try {
         if (Test-Path $archive) { throw 'Refusing to overwrite a platform archive.' }
         if ($Runtime -eq 'win-x64') { [IO.Compression.ZipFile]::CreateFromDirectory($stage, $archive) }
         else {
-            & tar -czf $archive -C $stage -- @((Get-ChildItem $stage -File).Name | Sort-Object)
-            if ($LASTEXITCODE -ne 0) { throw 'Platform tar creation failed.' }
+            $copyfile = $env:COPYFILE_DISABLE
+            try {
+                if ($IsMacOS) { $env:COPYFILE_DISABLE = '1' }
+                & tar -czf $archive -C $stage -- @((Get-ChildItem $stage -File).Name | Sort-Object)
+                if ($LASTEXITCODE -ne 0) { throw 'Platform tar creation failed.' }
+            } finally { $env:COPYFILE_DISABLE = $copyfile }
         }
         Assert-PlatformArchive $archive $Runtime $version $Commit $RunId | Out-Null
         Write-Output "RELEASE: packaged $archive"
         exit 0
     }
     if ($Mode -eq 'Assemble') {
-        $platforms = @('win-x64','linux-x64') | ForEach-Object {
+        $platforms = Get-ReleaseRuntimes | ForEach-Object {
             Assert-PlatformArchive (Join-Path $Directory (Get-ArchiveName $version $_)) $_ $version $Commit $RunId
         }
         Assert-Qualification $Qualification $Commit $platforms

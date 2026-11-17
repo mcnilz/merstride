@@ -9,6 +9,7 @@ public class ToolchainTests
     [TestCase("src/Merstride")]
     [TestCase("tests/Merstride.Acceptance")]
     [TestCase("tests/Merstride.TestProcess")]
+    [TestCase("tests/Merstride.NativeSuite")]
     public void PublicBuildUsesNet11AndStableCSharp15(string project)
     {
         var info = new ProcessStartInfo("dotnet")

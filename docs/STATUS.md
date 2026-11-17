@@ -23,6 +23,70 @@ from a local build.
 
 ## Verification
 
+Hosted Build run [44024602627](https://github.com/mcnilz/merstride/actions/runs/44024602627)
+passed on 2026-11-17 for commit `39f864d` and internal version `0.1.0`:
+actual macOS 15+ arm64 native publishes, managed acceptance, independent native
+acceptance, package audit/budgets/Mermaid, and packaging all succeeded. The separate
+`macos-clean` job extracted the same-run archive, verified actual standalone .NET
+absence and native input/source/version identities, and passed all 284 inventoried
+runtime scenarios through the native driver. The aggregate gate succeeded.
+Windows/Linux were intentionally skipped in that historical verification run.
+The final resource policy restores both for every ordinary Build and runs macOS
+build/package plus independent clean-target qualification only for tag releases.
+Release retains its mandatory all-platform and no-system-.NET checks.
+The final resource-policy change passed the complete Windows gate: 520 tests and
+all 284 native runtime cases, no failures/skips, with both review axes clear.
+
+P15 is complete within its hosted macOS implementation/verification scope. This
+supersedes the earlier missing macOS path, not P07's outstanding Windows/Linux
+clean-target reports, exact-binary reference-budget evidence or external token
+experiment. No release tag or publication was created. The evidence applies to
+the tested commit; subsequent candidates need fresh same-source/same-run gates.
+
+Earlier macOS diagnosis runs exposed an exact SDK debug-symbol allowlist omission,
+a DTrace process attachment ending across launcher exec, raw macOS lock errno 35
+being misclassified, and interpreter/temporary-path fixture differences. The final
+fixes preserve exact child accounting, timeouts, interruption/recovery and snapshot
+assertions. The observer retains short-lived kernel events, uses a positional root
+PID with a READY barrier, and fails on stale heartbeats, errors or lost events.
+The rebuilt Windows native binary also passed all 97 affected regressions. Both
+incremental review axes reported no outstanding findings. Raw evidence remains
+in ignored artifacts and the GitHub run's retained artifacts.
+
+The Windows x64 local gate on 2026-11-16 passed 506 tests / 299 local feature
+cases, plus all 284 runtime cases through the independently published Native AOT
+suite driver. No failures/skips or native build/publish warnings/errors occurred.
+Architecture, dependency, distribution, privacy and Mermaid gates passed. Size
+was 5.974 MiB; warm status P95 was 30.334 ms. Native-driver assertion failures
+were detected in its first run, corrected and reverified. The new short-lived
+launch case observes one helper and all 32 children after exit.
+
+Linux x64 passed its complete 502-test / 299-local-feature gate and all 284 native
+runtime cases with no failures/skips or native build/publish warnings/errors.
+All policy, dependency, distribution, privacy, budget and Mermaid checks passed;
+size was 6.064 MiB and warm status P95 13.349 ms. The final native-driver and
+tag-free-workflow follow-ups passed separately: all 284 native runtime cases and
+33 affected driver/workflow/package checks, with no failures/skips or native
+publish warnings/errors. Windows also passed all 33 affected checks. Independent
+Standards and Spec reviews of the implementation and follow-up found no
+actionable findings on either axis.
+
+Initial read-only Build verification exercised the separate macOS no-system-.NET
+stage using an internal 0.1.0 package. That path supplied the evidence above;
+the final resource policy confines both macOS jobs to tag Release. Native driver artifacts retain the additional
+Cucumber MIT notices; product archives keep their existing runtime notices.
+
+The prepared macOS path checks real arm64/tooling, retains external DTrace events,
+preserves existing interruption/limits/recovery/snapshot assertions, and verifies
+the extracted archive with actual standalone-runtime absence and exact same-run
+native product/helper/driver identities. Publication requires all three platform
+archives and separate reference-machine budget evidence. Controlled release and
+workflow regressions passed; they do not establish macOS or hosted qualification.
+Official osx-arm64 compiler package metadata/hash/MIT license and complete notices
+were reviewed; Windows/Linux product lock contents are unchanged. Raw evidence
+remains under ignored artifacts. The authorized P15 branch pushes and hosted runs
+are recorded above; no publication occurred.
+
 On 2026-11-16, the P12 Linux CI correction passed the complete Windows x64 and
 Linux x64 local gates: each executed 480 tests / 298 local feature cases with no
 failures/skips or native build/publish warnings/errors. The six Linux failures in
@@ -116,10 +180,10 @@ audits and timing records stay under ignored `artifacts/`. See
 
 ## Outstanding release work
 
-- Implement the independent native clean-target suite driver. The NUnit host
-  requires .NET and cannot serve as the no-runtime driver.
+- Re-run the verified macOS native and clean-target gates for each exact release
+  candidate; NUnit remains a separate .NET-hosted gate.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 283 runtime cases, plus the separately
+  candidate commit and binary hashes: all 284 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.
@@ -127,6 +191,6 @@ audits and timing records stay under ignored `artifacts/`. See
   policy checks and simulated release fixtures do not prove hosted outcomes.
 
 Use [release verification](RELEASING.md) for collection commands and provenance.
-The two release-environment scenarios fail explicitly with
+The three release-environment scenarios fail explicitly with
 `RELEASE QUALIFICATION UNAVAILABLE` while independent evidence is absent. They
 remain mandatory; local success does not waive them.

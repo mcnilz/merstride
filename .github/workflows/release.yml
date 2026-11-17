@@ -87,9 +87,76 @@ jobs:
             artifacts/local-gate.json
             artifacts/benchmark.json
           if-no-files-found: error
+  macos:
+    needs: [tag]
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      TESTINGPLATFORM_TELEMETRY_OPTOUT: '1'
+      MERSTRIDE_BROWSER: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify Apple Silicon native tooling
+        shell: bash
+        run: bash scripts/setup-macos.sh
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+      - shell: pwsh
+        run: ./scripts/build.ps1 -Version $env:RELEASE_VERSION
+      - shell: pwsh
+        run: ./scripts/release.ps1 -Mode Package -Runtime osx-arm64
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-macos
+          path: |
+            artifacts/release/*.zip
+            artifacts/release/*.tar.gz
+            artifacts/test-summary.json
+            artifacts/local-gate.json
+            artifacts/benchmark.json
+            artifacts/fixture/test-process
+            artifacts/suite/native-suite
+            artifacts/suite/LICENSE
+            artifacts/suite/dotnet-LICENSE.txt
+            artifacts/suite/dotnet-THIRD-PARTY-NOTICES.txt
+            artifacts/suite/Gherkin-LICENSE.txt
+            artifacts/suite/Cucumber.Messages-LICENSE.txt
+          if-no-files-found: error
+  macos-clean:
+    needs: [tag, macos]
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-macos
+          path: artifacts/download/macos
+      - name: Qualify extracted native binaries without a system dotnet installation
+        shell: bash
+        run: python3 scripts/qualify-macos.py --archive "artifacts/download/macos/release/merstride-$RELEASE_VERSION-osx-arm64.tar.gz" --fixture artifacts/download/macos/fixture/test-process --driver artifacts/download/macos/suite/native-suite --output artifacts/qualification/macos.json --remove-hosted-dotnet
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-clean
+          path: artifacts/qualification/
+          if-no-files-found: error
   gate:
     if: always()
-    needs: [tag, windows, linux]
+    needs: [tag, windows, linux, macos, macos-clean]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}
@@ -99,10 +166,14 @@ jobs:
           TAG_RESULT: ${{ needs.tag.result }}
           BUILD_RESULT: ${{ needs.windows.result }}
           LINUX_RESULT: ${{ needs.linux.result }}
+          MACOS_RESULT: ${{ needs.macos.result }}
+          MACOS_CLEAN_RESULT: ${{ needs.macos-clean.result }}
         run: |
           if ($env:TAG_RESULT -ne 'success') { throw 'Required tag validation did not succeed.' }
           if ($env:BUILD_RESULT -ne 'success') { throw 'Required build did not succeed.' }
           if ($env:LINUX_RESULT -ne 'success') { throw 'Required Linux build did not succeed.' }
+          if ($env:MACOS_RESULT -ne 'success') { throw 'Required macOS build did not succeed.' }
+          if ($env:MACOS_CLEAN_RESULT -ne 'success') { throw 'Required macOS clean-target suite did not succeed.' }
   verify:
     needs: [gate]
     runs-on: ubuntu-24.04
@@ -120,15 +191,26 @@ jobs:
         with:
           name: release-linux
           path: artifacts/download/linux
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-macos
+          path: artifacts/download/macos
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-clean
+          path: artifacts/download/macos-clean
       - shell: pwsh
         env:
           WINDOWS_QUALIFICATION_JSON: ${{ vars.MERSTRIDE_WINDOWS_QUALIFICATION }}
           LINUX_QUALIFICATION_JSON: ${{ vars.MERSTRIDE_LINUX_QUALIFICATION }}
+          MACOS_QUALIFICATION_FILE: artifacts/download/macos-clean/macos.json
+          MACOS_REFERENCE_BUDGET_JSON: ${{ vars.MERSTRIDE_MACOS_REFERENCE_BUDGET }}
           TOKEN_EXPERIMENT_JSON: ${{ vars.MERSTRIDE_TOKEN_EXPERIMENT }}
         run: |
           New-Item -ItemType Directory -Force artifacts/release | Out-Null
           Copy-Item artifacts/download/windows/release/*.zip artifacts/release/
           Copy-Item artifacts/download/linux/release/*.tar.gz artifacts/release/
+          Copy-Item artifacts/download/macos/release/*.tar.gz artifacts/release/
           ./scripts/collect-qualification.ps1
           ./scripts/release.ps1 -Mode Assemble -Qualification artifacts/qualification/input.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

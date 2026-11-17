@@ -1,5 +1,7 @@
 param([Parameter(Mandatory)][string]$Binary, [string]$Output = "$PSScriptRoot/../artifacts/benchmark.json")
 $ErrorActionPreference = 'Stop'
+. "$PSScriptRoot/platform.ps1"
+$runtime = Get-NativeRuntime
 $binaryPath = (Resolve-Path -LiteralPath $Binary).Path
 $repo = (Resolve-Path "$PSScriptRoot/..").Path
 $temp = Join-Path ([IO.Path]::GetTempPath()) ("merstride-benchmark-" + [Guid]::NewGuid().ToString('N'))
@@ -46,7 +48,7 @@ try {
     $bytes = (Get-Item -LiteralPath $binaryPath).Length
     $report = [ordered]@{
         measuredOn = [DateTime]::UtcNow.ToString('yyyy-MM-dd'); binary = [IO.Path]::GetFileName($binaryPath); sha256 = (Get-FileHash $binaryPath -Algorithm SHA256).Hash.ToLowerInvariant()
-        version = (Invoke-Cli -Arguments @('version')).response.version; rid = $(if ($IsWindows) { 'win-x64' } else { 'linux-x64' }); bytes = $bytes; mib = $bytes / 1MB
+        version = (Invoke-Cli -Arguments @('version')).response.version; rid = $runtime; bytes = $bytes; mib = $bytes / 1MB
         sizeTarget15MiB = $bytes -le 15MB; sizeGate25MiB = $bytes -le 25MB
         firstStartMilliseconds = $initial.milliseconds; firstStatusMilliseconds = $first.milliseconds; warmStatusMilliseconds = $samples
         p95Milliseconds = $sorted[[Math]::Ceiling(0.95 * $samples.Count) - 1]; latencyGate150ms = $sorted[28] -lt 150

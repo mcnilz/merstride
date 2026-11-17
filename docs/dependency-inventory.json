@@ -363,5 +363,19 @@
     "contentHash": "swNpSTl0iYJeBuvYYfaY+VxzZ5YC8wklwkqDCNOq2aTQqJzjauJfh/O3Zw93nwxspWrxvZTjT45f8VPR0ParEA==",
     "dependencies": {},
     "aotEvidence": "P08 actual native publish and public CLI scenarios; see docs/STATUS.md for final Windows/Linux results. net10.0 asset selected by net11.0; no transitive runtime packages. netstandard2.0-only System.Memory is not selected."
+  },
+  "runtime.osx-arm64.Microsoft.DotNet.ILCompiler/11.0.0": {
+    "upstream": "https://github.com/dotnet/dotnet",
+    "license": "MIT",
+    "purpose": "Official .NET Native AOT compiler/linker and platform toolchain selected by the pinned SDK.",
+    "classification": "build-only",
+    "maintenanceEvidence": "Microsoft stable .NET 11.0.0 released 2026-11-10, SDK 11.0.100; official release metadata and restored NuGet MIT license/repository commit inspected 2026-11-15.",
+    "reviewedOn": "2026-11-16",
+    "provenance": "https://api.nuget.org/v3-flatcontainer/runtime.osx-arm64.microsoft.dotnet.ilcompiler/11.0.0/runtime.osx-arm64.microsoft.dotnet.ilcompiler.nuspec",
+    "sourceCommit": "297acf930fb0f5c07fd4e51d78e521b4ad2e5d1f",
+    "contentHash": "QWuxf01ws1E+3w6fzpbOQ3lhiRKIqUqi1Pf/ZIBlSvpAybsYMPoCYOssuBC/JrzJ8BcCObGHEYmEs7x1O3KVjg==",
+    "downloadedNupkgSha512": "8e677913f3290e06501cdb882ef3f3656c26a0ed01d59a7314ed14664397e24c2f39566d155e90283f1646b354fe4737292f2420c120b25e9c75f514c93e8e4e",
+    "dependencies": {},
+    "aotEvidence": "P15 restored osx-arm64 compiler/runtime inputs only; official MIT nuspec/source identity, package hash and complete third-party notices reviewed. No macOS execution or qualification is claimed until hosted gates pass."
   }
 }

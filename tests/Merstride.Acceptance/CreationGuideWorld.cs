@@ -1,7 +1,11 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 
 namespace Merstride.Acceptance;
 

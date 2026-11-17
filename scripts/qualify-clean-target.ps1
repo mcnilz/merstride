@@ -7,11 +7,12 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 # Run inside a newly provisioned Windows 11 / Linux VM, not on the SDK build host.
-# SuiteDriver is an independently supplied native driver of all runtime scenarios;
-# it writes scenario results linked to actual feature names/rows. No driver is invented here.
+# SuiteDriver is the independently executable Merstride.NativeSuite output. Hosted
+# macOS additionally uses qualify-macos.py for exhaustive removal/absence evidence.
 $locations = if ($IsWindows) {
     @("$env:ProgramFiles/dotnet", "${env:ProgramFiles(x86)}/dotnet", "$env:LOCALAPPDATA/Microsoft/dotnet", "$env:USERPROFILE/.dotnet")
-} else { @('/usr/share/dotnet','/usr/lib/dotnet','/usr/local/share/dotnet',"$env:HOME/.dotnet") }
+} elseif ($IsMacOS) { @('/usr/local/share/dotnet','/usr/local/lib/dotnet','/opt/homebrew/share/dotnet',"$env:HOME/.dotnet") }
+else { @('/usr/share/dotnet','/usr/lib/dotnet','/usr/local/share/dotnet',"$env:HOME/.dotnet") }
 if ((Get-Command dotnet -ErrorAction SilentlyContinue) -or @($locations | Where-Object { Test-Path $_ }).Count) { throw 'Target has a discoverable .NET installation; PATH hiding is insufficient.' }
 $environment = [Runtime.InteropServices.RuntimeInformation]::OSDescription
 if ($IsWindows) {
@@ -35,5 +36,5 @@ foreach ($feature in Get-ChildItem "$PSScriptRoot/../features/*.feature") { $fea
     cleanNoRuntime=$true;allApplicableScenarios=$true;environment=$environment;
     checkedRuntimeLocationsCount=$locations.Count;driverSha256=(Get-FileHash $SuiteDriver).Hash.ToLowerInvariant();
     scenariosSha256=(Get-FileHash $scenarioOutput).Hash.ToLowerInvariant();scenarios=$results;
-    limitation='Installation-location checks supplement clean VM image provenance; retain the VM image identity and provisioning log. This harness requires an actual native suite driver; none is fabricated.'
+    limitation='Installation-location checks supplement clean VM image provenance; retain the VM image identity and provisioning log. The native suite runs independently of the managed test host.'
 } | ConvertTo-Json -Depth 15 | Set-Content $Output

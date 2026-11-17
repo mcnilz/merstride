@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net11.0": {
+      "Gherkin": {
+        "type": "Direct",
+        "requested": "[43.0.0, )",
+        "resolved": "43.0.0",
+        "contentHash": "MibnuxJ3fKWKQHYkcD4PTWBx58RpehxhdKFVSt2gZf277Cb9EFLJFgAYLGUU1gKuUUNKxnCjsKLKBIxyPJqoRQ==",
+        "dependencies": {
+          "Cucumber.Messages": "35.0.0"
+        }
+      },
+      "Microsoft.DotNet.ILCompiler": {
+        "type": "Direct",
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "lw6gUL92db6XPwYsQwaGwrJxgRM0X0qQKl0QkwuZIACMtgH0eFu6jmq6W+/L8qTxQZwggfV/dGjICyMqVHdehg=="
+      },
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "gK2aq4XvChj5kvozpPHrkfKkr7zc5Z4xoTrJb4GPZzDEPMlCk0TX632bwY3LsWcX2UVcVRQBBGzsBGC2lq6YhA=="
+      },
+      "Cucumber.Messages": {
+        "type": "Transitive",
+        "resolved": "35.0.0",
+        "contentHash": "TXgi5eonuCc6H/cU/tFZBuqR61eP4+SreAEswCRU1wk49+MIIc6A3nJQMZzojrSuUWhS0krsdSffMAXLXuxpog=="
+      }
+    },
+    "net11.0/linux-x64": {
+      "Microsoft.DotNet.ILCompiler": {
+        "type": "Direct",
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "lw6gUL92db6XPwYsQwaGwrJxgRM0X0qQKl0QkwuZIACMtgH0eFu6jmq6W+/L8qTxQZwggfV/dGjICyMqVHdehg==",
+        "dependencies": {
+          "runtime.linux-x64.Microsoft.DotNet.ILCompiler": "11.0.0"
+        }
+      },
+      "runtime.linux-x64.Microsoft.DotNet.ILCompiler": {
+        "type": "Transitive",
+        "resolved": "11.0.0",
+        "contentHash": "HMCCGxJ1Q41NF31M+yWB7h0OAWr0XpiS8ZYMOi/V5IU/864Yi00rLq3M1K3AhE2+q86YJA4V9KZ28NXE+Q/uxA=="
+      }
+    }
+  }
+}

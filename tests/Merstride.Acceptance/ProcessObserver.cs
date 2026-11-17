@@ -12,6 +12,7 @@ internal static class ProcessObserver
 
     internal static uint? TotalProcesses()
     {
+        if (OperatingSystem.IsMacOS()) return MacProcessObserver.TotalProcesses();
         if (!OperatingSystem.IsWindows())
         {
             var trace = Environment.GetEnvironmentVariable("MERSTRIDE_PROCESS_TRACE")
@@ -29,6 +30,7 @@ internal static class ProcessObserver
 
     internal static int[] ActiveProcessIds()
     {
+        if (OperatingSystem.IsMacOS()) return MacProcessObserver.ActiveProcessIds();
         if (!OperatingSystem.IsWindows())
         {
             var parents = new Dictionary<int, int>();

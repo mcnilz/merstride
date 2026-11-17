@@ -6,5 +6,6 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <Deterministic>true</Deterministic>
+    <AppleMinOSVersion Condition="'$(RuntimeIdentifier)' == 'osx-arm64'">15.0</AppleMinOSVersion>
   </PropertyGroup>
 </Project>

@@ -2,7 +2,11 @@ using System.Diagnostics;
 using System.Text.Json;
 using Gherkin;
 using Gherkin.Ast;
+#if NATIVE_SUITE
+using Merstride.NativeTesting;
+#else
 using NUnit.Framework;
+#endif
 
 namespace Merstride.Acceptance;
 
@@ -64,8 +68,9 @@ public class FeatureTests
         }
     }
 
-    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11" or "@P12" or "@P13");
+    private static bool IsImplemented(string[] tags) => tags.Any(t => t is "@P01" or "@P02" or "@P03" or "@P04" or "@P05" or "@P06" or "@P07" or "@P08" or "@P09" or "@P11" or "@P12" or "@P13" or "@P15");
 
+#if !NATIVE_SUITE
     public static IEnumerable<TestCaseData> RequiredCases() => Cases().Where(c => c.Implemented)
         .Select(c => new TestCaseData(c).SetName(c.ToString()).SetProperty("Requirements", string.Join(' ', c.Tags))
             .SetCategory(c.Steps.Any(s => s.StartsWith("the published native binary on a clean", StringComparison.Ordinal))
@@ -91,8 +96,16 @@ public class FeatureTests
         File.WriteAllText(Path.Combine(Root, "artifacts/tests/scenarios.json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
     }
 
-    private static void Execute(FeatureCase scenario)
+#endif
+
+    internal static void Execute(FeatureCase scenario)
     {
+        if (scenario.Tags.Contains("@P15"))
+        {
+            using var observation = new ProcessObservationWorld();
+            foreach (var step in scenario.Steps) observation.Execute(step);
+            return;
+        }
         if (scenario.Tags.Contains("@P13"))
         {
             using var readable = new ReadableOutputWorld();

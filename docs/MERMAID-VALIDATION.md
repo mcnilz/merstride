@@ -53,7 +53,7 @@ changed package entries until their inventory is deliberately reviewed.
 
 Run the full build script, or these focused checks after installing Node and Edge:
 
-```powershell
+```bash
 node tools/mermaid/policy.mjs
 npm ci --prefix tools/mermaid --ignore-scripts --no-audit --no-fund
 node tools/mermaid/check.mjs

@@ -27,22 +27,30 @@ without system .NET passed on GitHub-hosted runners; see [current evidence](docs
 Overall release qualification and publication remain incomplete.
 
 Build from source using the [development prerequisites](CONTRIBUTING.md#prerequisites)
-and `pwsh -NoProfile -File scripts/build.ps1`. The examples below use PowerShell
-7.3+ from the repository root and the resulting Windows executable. On Linux,
-use `artifacts/native/merstride` instead. Release qualification is still incomplete;
+and `pwsh -NoProfile -File scripts/build.ps1`. The examples below use Bash and
+`jq` from the repository root (Git Bash on Windows). On Linux/macOS, use the
+matching native build; on Windows, select `merstride.exe` as shown below. `jq`
+is a caller-side JSON utility, not an engine dependency. Release qualification is still incomplete;
 see [current status](docs/STATUS.md) before considering distribution.
 
 First run a workflow with a single successful end node:
 
-```powershell
-$binary = (Resolve-Path artifacts/native/merstride.exe).Path
-$workspace = (Get-Location).Path
-$state = Join-Path $workspace '.merstride/runs'
-& $binary --help
-& $binary validate examples/single-end.md --json
-$run = & $binary start examples/single-end.md --workspace $workspace --state-dir $state --json | ConvertFrom-Json
-& $binary status $run.runId --state-dir $run.stateRoot --json
-& $binary advance $run.runId --state-dir $run.stateRoot --json
+```bash
+set -euo pipefail
+workspace=$(pwd -P)
+binary="$workspace/artifacts/native/merstride"
+if [[ -f "$binary.exe" ]]; then
+    binary="$binary.exe"
+    workspace=$(pwd -W) # Git Bash: native Windows path for --workspace/--state-dir.
+fi
+state="$workspace/.merstride/runs"
+"$binary" --help
+"$binary" validate examples/single-end.md --json
+run=$("$binary" start examples/single-end.md --workspace "$workspace" --state-dir "$state" --json)
+run_id=$(jq -er '.runId' <<< "$run")
+state_root=$(jq -er '.stateRoot' <<< "$run")
+"$binary" status "$run_id" --state-dir "$state_root" --json
+"$binary" advance "$run_id" --state-dir "$state_root" --json
 ```
 
 `start` saves a ready run and executes nothing. `status` inspects it. `advance`
@@ -50,19 +58,23 @@ executes the selected node; this example returns `completed`.
 
 For an existing-agent handoff, use the [agent task example](examples/agent-task.md):
 
-```powershell
-$run = & $binary start examples/agent-task.md --workspace $workspace --state-dir $state --json | ConvertFrom-Json
-$current = & $binary advance $run.runId --state-dir $run.stateRoot --json | ConvertFrom-Json
-$current.request | ConvertTo-Json -Depth 20
+```bash
+run=$("$binary" start examples/agent-task.md --workspace "$workspace" --state-dir "$state" --json)
+run_id=$(jq -er '.runId' <<< "$run")
+state_root=$(jq -er '.stateRoot' <<< "$run")
+current=$("$binary" advance "$run_id" --state-dir "$state_root" --json)
+jq -e '.status == "waiting_agent"' <<< "$current"
+jq '.request' <<< "$current"
+request_id=$(jq -er '.request.id' <<< "$current")
 ```
 
 The response is `waiting_agent`. Read `request.id`, `prompt`, `context` and
 `allowedOutcomes`, then perform the requested review. Once the review is complete
 and `approved` is the appropriate allowed outcome, return it directly:
 
-```powershell
-& $binary complete $run.runId --request $current.request.id --outcome approved --state-dir $run.stateRoot --json
-& $binary advance $run.runId --state-dir $run.stateRoot --json
+```bash
+"$binary" complete "$run_id" --request "$request_id" --outcome approved --state-dir "$state_root" --json
+"$binary" advance "$run_id" --state-dir "$state_root" --json
 ```
 
 Optional result data goes in one JSON argument, for example
@@ -70,7 +82,9 @@ Optional result data goes in one JSON argument, for example
 saves a receipt and moves the cursor; the subsequent `advance` executes it.
 Repeated inspection while waiting returns the same request. If a completion
 response is lost, retry the same request ID with equivalent data. Inspect every
-exit code and returned status in an integration; see the [agent operating loop](docs/AGENT-GUIDE.md).
+exit code and returned status in an integration; the setup enables Bash fail-fast
+handling for this success path. See the [agent operating loop](docs/AGENT-GUIDE.md)
+for handling failures and other statuses explicitly.
 
 Try the [inline scripts](examples/inline-scripts.md) for shared scripts and platform
 variants, or the [process chain](examples/process-chain.md) for literal command arguments

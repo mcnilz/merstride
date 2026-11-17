@@ -23,6 +23,26 @@ from a local build.
 
 ## Verification
 
+P16's documentation verification on 2026-11-17 passed on Windows x64 with
+Bash 5.3.15 (`OSTYPE=cygwin`), jq 1.7 (`jq-1.7-dirty` as reported by the installed
+utility), PowerShell 7 and SDK 11.0.100. The README, CLI and agent-guide Bash
+blocks executed against the published native CLI, including paths containing
+spaces, run/request extraction, inline completion and quoted multiline Unicode
+JSON. Invalid run/JSON calls retained exit 4. Both recovery alternatives passed
+against actual interrupted fixture runs after inspecting their external effects.
+The Bash Mermaid commands and PowerShell privacy entry point also passed.
+General examples now use Bash; PowerShell scripts and deliberate interpreter/
+platform examples remain available. No runtime dependency or behavior changed.
+
+The complete Windows local gate passed 520 tests / 299 local feature cases and
+all 284 independent native runtime cases, with no failures/skips or build/publish
+warnings/errors. Architecture, dependency, distribution, privacy and Mermaid
+checks passed; native size was 5.974 MiB and warm status P95 was 29.477 ms.
+Independent Standards and Spec reviews found no actionable findings. Raw logs
+remain under ignored artifacts. No Linux/macOS execution, hosted run, publication
+or new release qualification is claimed for P16; the three independent
+clean-target orchestration cases remain separately required.
+
 Hosted Build run [44024602627](https://github.com/mcnilz/merstride/actions/runs/44024602627)
 passed on 2026-11-17 for commit `39f864d` and internal version `0.1.0`:
 actual macOS 15+ arm64 native publishes, managed acceptance, independent native

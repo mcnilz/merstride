@@ -69,38 +69,54 @@ must precede it. For an option value beginning with `-`, use the equals form:
 abbreviations and single-character option bundles are disabled. An at-sign path
 is an ordinary filename. Nothing implicitly launches a shell.
 
-PowerShell example for inspection and a complete existing-agent loop:
+Bash example using `jq`, with `merstride` on PATH and a reviewed workflow named
+`workflow with spaces.md`. For a source build, add `artifacts/native` to PATH or
+replace `merstride` below with `"$binary"` after the
+[README setup](../README.md#quick-start). These are caller prerequisites; the engine
+needs neither Bash nor `jq` for direct process workflows.
 
-```powershell
-$binary = 'C:\tools\merstride.exe'
-$workspace = (Get-Location).Path
-$state = Join-Path $workspace '.merstride/runs'
-& $binary --help
-& $binary start --help --json
-& $binary --json validate -- 'workflow with spaces.md'
-$run = & $binary start 'workflow with spaces.md' --workspace $workspace --state-dir $state --json | ConvertFrom-Json
-$current = & $binary advance $run.runId --state-dir $run.stateRoot --json | ConvertFrom-Json
-& $binary status $run.runId --state-dir $run.stateRoot --json
-# If waiting_agent: perform the literal requested task with your existing agent.
-# Return an allowed outcome directly; --data is optional and defaults to {}.
-& $binary complete $run.runId --request $current.request.id --outcome approved --data '{"summary":"Review completed"}' --state-dir $run.stateRoot --json
-& $binary advance $run.runId --state-dir $run.stateRoot --json
-# If interrupted: inspect external effects, then choose exactly one explicit resolution.
-& $binary resolve $run.runId --retry --state-dir $run.stateRoot --json
-& $binary advance $run.runId --state-dir $run.stateRoot --json
+```bash
+set -euo pipefail
+workspace=$(pwd -P)
+case "$OSTYPE" in msys*|cygwin*) workspace=$(cygpath -am "$workspace") ;; esac
+state="$workspace/.merstride/runs"
+merstride --help
+merstride start --help --json
+merstride --json validate -- 'workflow with spaces.md'
+run=$(merstride start 'workflow with spaces.md' --workspace "$workspace" --state-dir "$state" --json)
+run_id=$(jq -er '.runId' <<< "$run")
+state_root=$(jq -er '.stateRoot' <<< "$run")
+current=$(merstride advance "$run_id" --state-dir "$state_root" --json)
+merstride status "$run_id" --state-dir "$state_root" --json
+jq '.status, .request' <<< "$current"
+```
+
+Only if `status` is `waiting_agent`, perform the literal task with your existing
+agent. After completing the review, if `approved` is the appropriate allowed
+outcome, submit it (using the same Bash session):
+
+```bash
+jq -e '.status == "waiting_agent" and (.request.allowedOutcomes | index("approved") != null)' <<< "$current"
+request_id=$(jq -er '.request.id' <<< "$current")
+merstride complete "$run_id" --request "$request_id" --outcome approved --data '{"summary":"Review completed"}' --state-dir "$state_root" --json
+merstride advance "$run_id" --state-dir "$state_root" --json
 ```
 
 Use `resolve --fail` instead of `--retry` to finish failed without executing.
 Do not complete a run unless its response contains a waiting request, or resolve
 unless it is interrupted. `start` creates ready without executing; `complete`
 moves only the cursor. Reuse the returned absolute `stateRoot` on subsequent calls.
-On Linux use an absolute Linux workspace/state path; ordinary single-quoted paths
-work in PowerShell there too. The workflow's process arguments remain literal.
+The examples stop on a nonzero CLI or `jq` exit; a failed/interrupted advance must
+be inspected before continuing. See the [agent guide](AGENT-GUIDE.md#bash-example)
+for explicit error/status handling and [recovery](../examples/recovery.md) for
+the separate interruption decision. Use native absolute paths on each OS;
+Git Bash/Cygwin's `cygpath -am` supplies Windows paths. Workflow process arguments remain literal.
 
 Prefer `complete <run-id> --request <id> --outcome <allowed-outcome>` for agent
 feedback. Add `--data <json-object>` only when result data is needed. Pass the JSON
-as one literal argument: in PowerShell 7.3+ with standard native argument passing,
-use single quotes around JSON or build a value with `ConvertTo-Json -Compress`.
+as one literal argument: in Bash, use single quotes around literal JSON. For
+dynamic strings, build the object with `data=$(jq -cn --arg summary "$summary"
+'{summary: $summary}')` and pass `--data "$data"`; `jq --arg` handles JSON escaping.
 This creates no completion file. Data uses the existing 16 KiB compact UTF-8,
 depth-16 and safe-number limits. Invalid JSON/data or a rejected request/outcome
 exits 4 without changing state; invalid option combinations exit 2.

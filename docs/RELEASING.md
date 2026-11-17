@@ -35,7 +35,7 @@ builds retain read-only permissions and cannot publish.
    tag on the qualified commit and push only that tag. For example, replacing
    the example version and commit with the reviewed values:
 
-   ```sh
+   ```bash
    git fetch origin main --tags
    git tag -a v1.2.3 QUALIFIED_COMMIT_SHA -m "Merstride 1.2.3"
    git push origin refs/tags/v1.2.3
@@ -172,7 +172,7 @@ release platform uploads include the required platform archives. The internal
 macOS verification artifact also carries the native helper, suite driver and
 their notices; the separate clean-target job retains raw qualification evidence.
 
-Run `scripts/build.ps1 -ReleaseQualification` to include the three clean-target
+Run `pwsh -NoProfile -File scripts/build.ps1 -ReleaseQualification` to include the three clean-target
 orchestration cases. Without independently collected reports these **fail**;
 there are no skipped/pending/undefined required steps or implicit approval.
 `MERSTRIDE_CLEAN_WINDOWS_REPORT`, `MERSTRIDE_CLEAN_LINUX_REPORT` and
@@ -182,7 +182,7 @@ reports. A successful local gate alone is not release readiness.
 Clean-target collection: provision a new Windows 11 x64 or Linux x64 VM without
 an installed .NET SDK/runtime. Retain image identity and provisioning logs. Copy
 the exact native binary, native fixture, feature sources and an independently
-available native suite driver, then run `scripts/qualify-clean-target.ps1 -Binary
+available native suite driver, then run `pwsh -NoProfile -File scripts/qualify-clean-target.ps1 -Binary
 <binary> -Fixture <fixture> -SuiteDriver <driver> -Commit <sha> -Output <report>`.
 The driver must implement all 284 inventoried nonrecursive runtime cases and emit the scenario array
 defined by docs/release-scenario-inventory.json. The build publishes that driver from tests/Merstride.NativeSuite to artifacts/suite;
@@ -203,7 +203,7 @@ root. This is genuine no-installed-.NET smoke, **not** the full 284-case runtime
 Windows qualification.
 
 Token experiment: supply an actual external-agent driver to
-`scripts/token-experiment.ps1 -Driver <driver> -Output <report>`. It runs two tasks
+`pwsh -NoProfile -File scripts/token-experiment.ps1 -Driver <driver> -Output <report>`. It runs two tasks
 (deterministic-chain, test-fix-loop), manual/engine variants, five runs each,
 alternating order. The same agent/model/task identity and equivalent results are
 required. Record real calls, available input/output token counts (null if

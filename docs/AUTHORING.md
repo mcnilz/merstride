@@ -35,7 +35,9 @@ script:
   timeoutSeconds: 60
 ```
 
-These are node-map fragments, not full workflows. Arguments are literal strings. Quote values such as `"123"` and `"true"`. Do not add shell quoting around a path containing spaces: an array item already represents one argument. Use an explicit shell only when the workflow needs it. Programs inherit the start workspace and environment; process output does not become a command.
+These are node-map fragments, not full workflows. The `pwsh` fragment deliberately
+selects PowerShell and requires that interpreter plus the named script.
+Arguments are literal strings. Quote values such as `"123"` and `"true"`. Do not add shell quoting around a path containing spaces: an array item already represents one argument. Use an explicit shell only when the workflow needs it. Programs inherit the start workspace and environment; process output does not become a command.
 
 Route normal success with `exit_0`, specific failures with `exit_1`, and remaining outcomes with `default`. Use explicit failure handling; an unlabeled edge also follows failures. An unavailable executable is a runtime `spawn_error`, not a validation-time process probe.
 

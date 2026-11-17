@@ -5,7 +5,9 @@
 Build and test on the matching target platform with:
 
 - .NET SDK 11.0.100 (pinned in `global.json`), using stable C# 15.
-- PowerShell 7.3+ for scripts and native JSON argument examples.
+- Bash (Git Bash on Windows) and `jq` for the general documentation examples.
+- PowerShell 7.3+ for repository build/verification scripts and explicit
+  PowerShell workflow cases.
 - Windows x64: Visual Studio Build Tools with Desktop development with C++ and
   a Windows SDK for Native AOT.
 - Linux x64: a Native AOT compiler/linker toolchain, ICU, OpenSSL and `strace`.
@@ -26,11 +28,12 @@ separate; preserve both platform lock files. See [native verification](docs/RELE
 
 From the repository root:
 
-```powershell
+```bash
 pwsh -NoProfile -File scripts/build.ps1
 ```
 
-This restores locked dependencies, builds and publishes the native executable
+The script requires PowerShell 7 even when invoked from Bash. It restores locked
+dependencies, builds and publishes the native executable
 and test helper, runs the local acceptance suite, checks architecture and
 dependency/release policies, audits distribution inputs/notices, measures native
 budgets and renders the supported Mermaid examples. The executable is under
@@ -52,6 +55,9 @@ continue from the current ticket rather than repeating repository setup.
 Implement one approved scope at a time with the installed `implement`, `tdd` and
 `code-review` skills; use `to-tickets` when breaking down newly approved work.
 Skills are external development tools and are not bundled with Merstride.
+Use Bash for general documentation examples; keep interpreter-specific workflows
+and platform-dependent instructions explicit. Agents may adapt commands to their
+available shell. Declare additional caller tools such as `jq` where used.
 Behavior tests invoke the published CLI and observe JSON, exit codes and process/
 filesystem effects. Architecture and policy tests use the public build boundary.
 Use English for development artifacts and CLI messages, NUnit 4 without
@@ -74,7 +80,7 @@ all third-party notices.
 
 Before committing, run:
 
-```powershell
+```bash
 pwsh -NoProfile -File scripts/repository-privacy.ps1
 ```
 

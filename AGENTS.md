@@ -10,6 +10,8 @@ code-review for implementation. Behavior tests use the published native CLI;
 architecture/policy tests use the public build boundary. Required Gherkin steps
 must fail if undefined, ambiguous, pending or skipped. Preserve scenario tags.
 Use English for development artifacts and CLI messages.
+Use Bash for general documentation examples; retain explicit platform/interpreter
+examples. Agents may adapt commands to the available shell.
 
 Local tickets and their history remain in `.scratch/merstride/issues/`; see
 docs/agents/issue-tracker.md and docs/agents/triage-labels.md. Follow the assigned

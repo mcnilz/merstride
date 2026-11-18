@@ -25,18 +25,21 @@ public sealed class ProcessRunner(string runDirectory, CancellationToken interru
         var args = selected?.Args ?? node.Args;
         if (script is not null && !Path.IsPathFullyQualified(command) && !command.Contains('/') && !command.Contains('\\'))
         {
-            var resolved = FindInterpreter(command, workspace);
+            var resolved = FindOnPath(command, workspace);
             if (resolved is null)
                 return LaunchFailure(activation, stderr, "INTERPRETER_UNAVAILABLE: Shebang interpreter was not found on PATH.");
             command = resolved;
         }
         if (!Path.IsPathFullyQualified(command) && (command.Contains('/') || command.Contains('\\')))
             command = Path.GetFullPath(command, workspace);
-        var start = new ProcessStartInfo(command)
+        var rtk = node.UseRtk && script is null ? FindOnPath("rtk", workspace, executableOnly: true) : null;
+        var rtkCommand = rtk is null ? null : CommandForRtk(command, workspace);
+        var start = new ProcessStartInfo(rtkCommand is null ? command : rtk!)
         {
             UseShellExecute = false, WorkingDirectory = workspace,
             RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true
         };
+        if (rtkCommand is not null) start.ArgumentList.Add(rtkCommand);
         foreach (var argument in args) start.ArgumentList.Add(argument);
         using var process = new Process { StartInfo = start };
         if (interruption.IsCancellationRequested)
@@ -88,19 +91,50 @@ public sealed class ProcessRunner(string runDirectory, CancellationToken interru
         return activation with { FinishedAt = DateTimeOffset.UtcNow, Outcome = "spawn_error", StderrBytes = bytes.Length };
     }
 
-    private static string? FindInterpreter(string name, string workspace)
+    private static string? FindOnPath(string name, string workspace, bool executableOnly = false)
     {
         foreach (var entry in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
         {
-            if (string.IsNullOrWhiteSpace(entry)) continue;
-            var directory = Path.GetFullPath(entry.Trim('"'), workspace);
+            var path = entry.Trim('"');
+            if (string.IsNullOrWhiteSpace(path)) continue;
+            var directory = Path.GetFullPath(path, workspace);
             foreach (var suffix in OperatingSystem.IsWindows() && !Path.HasExtension(name) ? new[] { ".exe", ".com" } : new[] { "" })
             {
                 var candidate = Path.Combine(directory, name + suffix);
-                if (File.Exists(candidate)) return candidate;
+                if (File.Exists(candidate) && (!executableOnly || IsExecutable(candidate))) return candidate;
             }
         }
         return null;
+    }
+
+    private static string? CommandForRtk(string command, string workspace)
+    {
+        if (Path.IsPathFullyQualified(command)) return command;
+        var executable = FindOnPath(command, workspace, executableOnly: true);
+        if (executable is null) return null;
+
+        // Bare names select RTK subcommands. Only use that dispatch for filters
+        // intended for the executable of the same name. A path ensures passthrough
+        // for other executables, including ones named like RTK's own operations.
+        return command switch
+        {
+            "ast-grep" or "bun" or "bunx" or "cargo" or "ctest" or "curl" or "deno" or "docker" or "dotnet" or
+            "find" or "gh" or "git" or "glab" or "go" or "grep" or "jest" or "kubectl" or "ls" or "mvn" or
+            "npm" or "npx" or "php" or "pip" or "playwright" or "pnpm" or "prettier" or "prisma" or "psql" or
+            "pytest" or "rg" or "ruff" or "tsc" or "vitest" or "wc" or "wget" => command,
+            _ => executable
+        };
+    }
+
+    private static bool IsExecutable(string path)
+    {
+        if (OperatingSystem.IsWindows()) return true;
+        try
+        {
+            const UnixFileMode execute = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+            return (File.GetUnixFileMode(path) & execute) != 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 
     private static async Task FeedAsync(Process process, string? script, CancellationToken cancellation)

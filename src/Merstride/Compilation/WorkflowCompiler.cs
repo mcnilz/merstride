@@ -27,7 +27,7 @@ public static partial class WorkflowCompiler
             if (block.Info == "yaml merstride")
             {
                 var root = ParseYaml(block);
-                var fields = Map(root, "schemaVersion", "id", "entry", "nodes", "limits");
+                var fields = Map(root, "schemaVersion", "id", "entry", "nodes", "limits", "rtk");
                 var id = Identifier(Required(fields, "id", root.Location));
                 if (!metadata.TryAdd(id, root)) throw Invalid("Duplicate workflow metadata.", root.Location);
             }
@@ -76,11 +76,12 @@ public static partial class WorkflowCompiler
 
     private static Workflow CompilePair(Value root, Block diagram)
     {
-        var fields = Map(root, "schemaVersion", "id", "entry", "nodes", "limits");
+        var fields = Map(root, "schemaVersion", "id", "entry", "nodes", "limits", "rtk");
         var version = Required(fields, "schemaVersion", root.Location);
         if (!Integer(version, out var schemaVersion) || schemaVersion != 1) throw Invalid("Unsupported schema version; expected integer 1.", version.Location);
         var id = Identifier(Required(fields, "id", root.Location));
         var entry = Identifier(Required(fields, "entry", root.Location));
+        var useRtk = RtkSetting(fields) ?? true;
         var transitions = 100;
         if (fields.TryGetValue("limits", out var limits))
         {
@@ -96,7 +97,7 @@ public static partial class WorkflowCompiler
         foreach (var (nodeId, node) in nodes.Fields)
         {
             if (!Id().IsMatch(nodeId)) throw Invalid("Invalid node identifier.", node.Location);
-            var n = Map(node, "kind", "result", "command", "args", "timeoutSeconds", "prompt", "context", "script", "variants");
+            var n = Map(node, "kind", "result", "command", "args", "timeoutSeconds", "prompt", "context", "script", "variants", "rtk");
             var kind = String(Required(n, "kind", node.Location));
             if (kind == "end")
             {
@@ -107,7 +108,7 @@ public static partial class WorkflowCompiler
             }
             else if (kind == "process")
             {
-                definitions.Add(ProcessNode(nodeId, node));
+                definitions.Add(ProcessNode(nodeId, node, useRtk));
             }
             else if (kind == "agent")
             {

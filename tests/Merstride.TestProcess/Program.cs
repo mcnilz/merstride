@@ -2,6 +2,16 @@ using System.Text.Json;
 
 Console.OutputEncoding = new System.Text.UTF8Encoding(false);
 Console.InputEncoding = new System.Text.UTF8Encoding(false);
+if (Path.GetFileNameWithoutExtension(Environment.ProcessPath) == "rtk")
+{
+    File.AppendAllText("rtk-arguments.json", JsonSerializer.Serialize(args, FixtureJson.Default.StringArray) + "\n");
+    if (Environment.GetEnvironmentVariable("MERSTRIDE_RTK_FIXTURE_FAIL") == "1") return 7;
+    var start = new System.Diagnostics.ProcessStartInfo(args[0]) { UseShellExecute = false };
+    foreach (var argument in args[1..]) start.ArgumentList.Add(argument);
+    using var child = System.Diagnostics.Process.Start(start)!;
+    child.WaitForExit();
+    return child.ExitCode;
+}
 if (args.Length == 0) args = ["inline_probe"];
 
 switch (args[0])

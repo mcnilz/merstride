@@ -13,6 +13,7 @@ try
             throw new ArgumentException("Expected --binary FILE --fixture FILE --results FILE --exclude-release-environment-orchestrator.");
     }
     if (!exclude || options.Count != 3) throw new ArgumentException("All native suite options are required.");
+    Environment.SetEnvironmentVariable("PATH", TestPaths.RtkFreePath(Environment.GetEnvironmentVariable("PATH")));
     foreach (var key in new[] { "--binary", "--fixture" })
     {
         var path = Path.GetFullPath(options[key]);

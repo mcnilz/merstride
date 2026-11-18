@@ -36,6 +36,9 @@ This is a schema illustration, not a complete workflow. See `examples/review.md`
 
 Required root fields: `schemaVersion`, `id`, `entry`, `nodes`. IDs are case-sensitive and match `[a-z][a-z0-9_]{0,63}`. Unknown fields, duplicate keys, and wrong types are errors, including nested mappings. Only fields documented for each node kind are allowed. `limits.maxTransitions` is optional, defaults to 100, and accepts integers 1..10000.
 
+Optional root field `rtk` accepts a YAML boolean and defaults to `true` for new
+runs. A process node may override it as described below.
+
 Use a constrained YAML 1.2 core profile: a single mapping document; string mapping keys; scalar strings, booleans, null, finite numbers, sequences, mappings, and block strings. Reject anchors, aliases, merge keys, explicit/custom tags, and multiple documents. No object construction, file includes, environment expansion, or executable expressions. Required strings MUST be strings; numeric or boolean arguments MUST be quoted. Dates remain strings. Null is invalid for required fields. Reject malformed UTF-8. JSON input/result files reject duplicate properties and non-finite numbers as well. Validation never launches or downloads anything.
 
 ## 2. Mermaid subset
@@ -96,6 +99,26 @@ semantics apply (including exit 5 / `NO_MATCHING_EDGE` without a matching route)
 Resolve bare program names through PATH and relative program paths against the absolute workspace selected at start. Child cwd is that workspace. Inherit the parent environment unchanged and close stdin. Pass each argument using the OS process API without shell interpretation, globbing, interpolation, or manual quoting. Never insert workflow output into arguments or environment variables.
 
 PowerShell is explicit: `command: pwsh` and `args: [-NoProfile, -NonInteractive, -File, scripts/check.ps1]`. The engine itself does not require PowerShell or another shell.
+
+A process node's optional YAML boolean `rtk` overrides the workflow setting.
+The effective setting freezes with the run. A saved definition predating RTK
+support uses direct execution. For `command`/`args`, including a selected command
+variant, an enabled setting resolves `rtk` through the inherited PATH at execution
+time. Merstride uses the first executable candidate, ignoring empty PATH entries
+and resolving relative entries against the workspace. On Windows it looks for
+`rtk.exe` then `rtk.com` in each entry. If no candidate is found, the command runs
+directly without an RTK diagnostic. Validation and ordinary start do not probe RTK.
+
+RTK receives the command and arguments as separate OS arguments. Merstride
+applies the same workspace, environment, closed stdin and process limits. The
+wrapper's exit and streams determine the activation outcome and logs. Merstride
+never replays a command after attempting an RTK launch. Inline `script` forms
+always invoke their interpreter directly, including in variants. A script
+invoked through `command` follows command rules and may opt out with `rtk: false`.
+For an executable specified by path, or a bare executable without a supported
+same-name RTK filter, RTK receives the resolved path for passthrough. An unresolved
+bare command follows normal direct launch behavior. This keeps executable names
+such as `init` from dispatching RTK's own operations.
 
 For inline execution, `#!INTERPRETER [ARG ...]` selects an installed executable,
 including on Windows; native OS shebang dispatch is never needed. ASCII space/tab

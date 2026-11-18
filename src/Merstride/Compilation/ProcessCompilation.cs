@@ -7,16 +7,28 @@ public static partial class WorkflowCompiler
 {
     private static readonly string[] Platforms = ["windows", "macos", "linux"];
 
-    private static Node ProcessNode(string id, Value node)
+    private static bool? RtkSetting(Dictionary<string, Value> fields)
     {
-        var fields = Map(node, "kind", "command", "args", "script", "variants", "timeoutSeconds");
+        if (!fields.TryGetValue("rtk", out var value)) return null;
+        return value switch
+        {
+            { Plain: true, Text: "true" or "True" or "TRUE" } => true,
+            { Plain: true, Text: "false" or "False" or "FALSE" } => false,
+            _ => throw Invalid("rtk must be a YAML boolean.", value.Location)
+        };
+    }
+
+    private static Node ProcessNode(string id, Value node, bool workflowRtk)
+    {
+        var fields = Map(node, "kind", "command", "args", "script", "variants", "timeoutSeconds", "rtk");
+        var useRtk = RtkSetting(fields) ?? workflowRtk;
         var timeout = Required(fields, "timeoutSeconds", node.Location);
         if (!Integer(timeout, out var seconds) || seconds is < 1 or > 3600)
             throw Invalid("timeoutSeconds must be an integer from 1 to 3600.", timeout.Location);
         if (!fields.TryGetValue("variants", out var variants))
         {
             var execution = Execution(fields, node.Location, []);
-            return new(id, "process", null, execution.Command, execution.Args, seconds, Script: execution.Script);
+            return new(id, "process", null, execution.Command, execution.Args, seconds, Script: execution.Script, UseRtk: useRtk);
         }
         if (fields.ContainsKey("command") || fields.ContainsKey("args") || fields.ContainsKey("script"))
             throw Invalid("variants cannot be combined with command, args or script.", variants.Location);
@@ -38,7 +50,7 @@ public static partial class WorkflowCompiler
                 if (!covered.Add(platform)) throw Invalid($"Overlapping process variants for {platform}.", variant.Location);
             executions.Add(Execution(v, variant.Location, platforms));
         }
-        return new(id, "process", null, null, [], seconds, Variants: executions.ToArray());
+        return new(id, "process", null, null, [], seconds, Variants: executions.ToArray(), UseRtk: useRtk);
     }
 
     private static ProcessExecution Execution(Dictionary<string, Value> fields, SourceLocation location, string[] platforms)

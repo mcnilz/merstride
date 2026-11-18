@@ -39,6 +39,16 @@ These are node-map fragments, not full workflows. The `pwsh` fragment deliberate
 selects PowerShell and requires that interpreter plus the named script.
 Arguments are literal strings. Quote values such as `"123"` and `"true"`. Do not add shell quoting around a path containing spaces: an array item already represents one argument. Use an explicit shell only when the workflow needs it. Programs inherit the start workspace and environment; process output does not become a command.
 
+When Rust Token Killer (RTK) is on `PATH`, new runs use it for `command`/`args`,
+including command variants. Without RTK, the command runs directly. Use the YAML
+boolean `rtk: false` at the workflow root to disable it, or on a process node to
+opt that command out. A node can set `rtk: true` to override a disabled workflow.
+RTK can change captured output and exit behavior. Set `rtk: false` for commands
+that require their original logs or exit behavior. Inline `script` blocks always
+run directly. A script invoked via `command` follows the command setting.
+Use a bare command such as `git` for RTK filtering. Explicit executable paths
+and names without a supported same-name filter pass through RTK by executable path.
+
 Route normal success with `exit_0`, specific failures with `exit_1`, and remaining outcomes with `default`. Use explicit failure handling; an unlabeled edge also follows failures. An unavailable executable is a runtime `spawn_error`, not a validation-time process probe.
 
 ## Inline scripts and platforms

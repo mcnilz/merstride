@@ -11,7 +11,8 @@ the preferred completion path; file completion remains compatible. The embedded
 workflow and validation checklist without external content files.
 Process authoring also supports shebang-selected inline scripts over UTF-8 stdin
 and disjoint Windows/macOS/Linux execution variants, with no script-file transport
-or interpreter provisioning. Direct command/args execution remains available.
+or interpreter provisioning. New runs can use an installed RTK for command/args
+with workflow and process-node overrides. Inline scripts and pre-RTK runs stay direct.
 All commands now default to readable English text, including redirected output;
 agents/scripts explicitly request protocol-1 JSON with `--json`.
 Text errors/warnings use stderr; results, offline guides and bounded log tails use stdout.
@@ -38,6 +39,24 @@ and publication fails closed.** No clean-target or token-saving claim follows
 from a local build.
 
 ## Verification
+
+On 2026-11-18, P23 passed the Windows x64 development gate with **702 tests,
+465 local feature cases and 450 independent native cases**, with zero failures
+or skips. The usability inventory accounts for 468 rows, including the three
+external release environments. All 20 P23 cases exercised both CLI output modes.
+They cover runtime availability, YAML inheritance and overrides, frozen and
+legacy definitions, command and script forms, literal arguments, executable
+dispatch, failure routing and validation. The complete gate passed architecture,
+dependency, distribution, privacy, native budgets and Mermaid checks. Native
+size was **6.290 MiB** and warm status P95 was **25.076 ms**.
+
+A readable walkthrough with installed RTK 1.1.0 verified filtered Git output,
+direct fallback when RTK was disabled or absent, literal dispatch to an
+executable named `init`, and updated offline authoring help. The test hosts
+isolate ambient RTK directories, which requires separate PATH entries for
+co-located test tools. The local issue records the review. This is Windows
+development-host evidence. Linux, macOS, clean-target and hosted verification
+for P23 remain outstanding. Raw evidence stays under ignored `artifacts/`.
 
 P22 audits the complete scenario set against the accepted P19–P21 baseline
 `910b7e7de053c5275dd7fd0b2216bb4b2c098877` plus the reviewed P22 verification
@@ -491,7 +510,7 @@ audits and timing records stay under ignored `artifacts/`. See
 - Re-run the verified macOS native and clean-target gates for each exact release
   candidate; NUnit remains a separate .NET-hosted gate.
 - Collect actual Windows 11 x64 and Linux x64 clean-platform reports for the exact
-  candidate commit and binary hashes: all 430 runtime cases, plus the separately
+  candidate commit and binary hashes: all 450 runtime cases, plus the separately
   mandatory 15 build-only cases. A minimal Linux chroot smoke is insufficient.
 - Run the real external-agent token experiment with the same agent/model/task
   and equivalent results. No token totals or savings percentage are established.

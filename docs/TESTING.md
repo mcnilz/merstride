@@ -28,6 +28,11 @@ When adding behavior, report remaining scenarios separately from executed cases.
 
 The accepted behavioral seam is the public CLI: invoke the actual executable; assert JSON, exit codes, logs, process effects, and public status. Isolate each scenario in a temporary workspace and state directory. The separately published native test helper can echo arguments, emit bytes on both streams, choose an exit code, create a marker, wait on an explicit barrier, and spawn an attached child. It is test-only.
 
+Both test hosts omit ambient RTK directories from their subprocess PATH so raw
+process fixtures have repeatable streams and child counts. Install any required
+test tools in PATH directories without RTK. The RTK scenarios supply a controlled
+PATH and a native wrapper fixture of their own.
+
 Architecture and policy checks use the public build boundary. The native
 helper is `tests/Merstride.TestProcess`, published separately to `artifacts/fixture`.
 It records effects/arguments, chooses exits, emits normal/raw/flood output,

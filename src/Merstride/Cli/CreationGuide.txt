@@ -80,6 +80,7 @@ Pairing and syntax
 YAML schema
 - Required root fields: schemaVersion: 1, id, entry, nodes (a mapping by node ID).
   Optional limits: {maxTransitions: 20}; default 100, integer range 1..10000.
+  Optional rtk: true or rtk: false; default true for new runs.
   A document is at most 1 MiB; a graph at most 100 nodes and 250 edges.
 - Process fields: kind: process, timeoutSeconds (integer 1..3600), and exactly one
   of command/args, script, or variants. command is nonempty; args is an array of
@@ -90,6 +91,11 @@ YAML schema
   absolute workspace. Child cwd is that workspace; environment is inherited and
   direct stdin closed. A shell is explicit, e.g. command: pwsh and
   args: [-NoProfile, -NonInteractive, -File, scripts/check.ps1].
+- Rust Token Killer (RTK) wraps command/args when enabled and on PATH at advance.
+  If unavailable, the command runs directly. Set rtk: false to run directly and
+  preserve the command's own output and exit behavior. A process node can override
+  the workflow setting with either boolean. Command variants follow this setting.
+  Inline script blocks always run directly. Scripts invoked via command follow its setting.
 - Inline script: use a multiline literal block (script: |) beginning with a shebang.
   Example node-map fragments (indent beneath the node, retain timeoutSeconds):
     script: |

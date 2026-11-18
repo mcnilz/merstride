@@ -197,18 +197,20 @@ internal sealed partial class ContextWorld : IDisposable
                     });
                     verified = true; break;
                 }
-                foreach (var args in new[] { new[] { "start", OtherFile }, new[] { "start", cli.FilePath }, new[] { "status" }, new[] { "advance" } })
+                foreach (var args in new[] { new[] { "start", OtherFile }, new[] { "start", cli.FilePath }, new[] { "status" } })
                 {
                     cli.Raw(args); Assert.That(cli.ExitCode, Is.Zero, cli.Stderr);
                     Assert.That(cli.Stdout, Does.Contain("Run: r_").And.Not.StartWith("{"));
                 }
+                cli.Raw("advance"); Assert.That(cli.ExitCode, Is.Zero, cli.Stderr);
+                Assert.That(cli.Stdout, Does.StartWith("Paused at Review (run r_").And.Contain("Review this workflow."));
                 var displayedRequest = System.Text.RegularExpressions.Regex.Match(cli.Stdout, "Request: (q_[0-9a-f]{6})\\b").Groups[1].Value;
                 Assert.That(displayedRequest, Is.Not.Empty);
                 cli.Raw("complete", "--request", displayedRequest, "--outcome", "approved");
                 Assert.That(cli.ExitCode, Is.Zero, cli.Stderr);
                 Assert.That(cli.Stdout, Does.Contain("Status: ready").And.Contain("Completion: " + displayedRequest));
                 cli.Raw("advance"); Assert.That(cli.ExitCode, Is.Zero, cli.Stderr);
-                Assert.That(cli.Stdout, Does.Contain("Status: completed"));
+                Assert.That(cli.Stdout, Does.StartWith("Finished successfully (1 step, run r_"));
                 verified = true;
                 break;
             default: throw new AssertionException("Undefined required context step: " + step);

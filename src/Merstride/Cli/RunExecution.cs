@@ -12,10 +12,13 @@ internal static class RunExecution
     {
         try
         {
+            if (output.CompactExecution && run.Status == "ready")
+                output.Activity(run, $"{(run.Activations.Length == 0 ? "Starting" : "Continuing")} {ExecutionNarration.WorkflowName(run)} (run {run.RunId}).");
             var retained = (options.ContainsKey("--save-stdout") ? ProcessLogs.Stdout : ProcessLogs.None) |
                 (options.ContainsKey("--save-stderr") ? ProcessLogs.Stderr : ProcessLogs.None);
             run = WorkflowEngine.Advance(run, new ConsoleActivity(store, output, run),
                 output.ProcessRunner(store.RunDirectory(run.RunId), interruption), store, new IdentityAllocator(store), retained, interruption);
+            if (output.CompactExecution) output.ExecutionResult = run;
             return (Response(run, store.Root), interruption.IsCancellationRequested ? 130 : run.Status is "failed" or "interrupted" ? 5 : 0);
         }
         catch (Exception ex) when (interruption.IsCancellationRequested && ex is IOException or UnauthorizedAccessException)

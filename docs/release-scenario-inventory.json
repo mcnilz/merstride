@@ -470,10 +470,15 @@
     "features/24-console-first-process-output.feature:23 Retain only the requested streams [stdout and stderr]",
     "features/24-console-first-process-output.feature:25 Route a timeout when the caller stops reading stdout",
     "features/24-console-first-process-output.feature:4 Receive both streams while the process is still running",
-    "features/24-console-first-process-output.feature:9 Keep both streams when the process fails"
+    "features/24-console-first-process-output.feature:9 Keep both streams when the process fails",
+    "features/25-plain-language-run-output.feature:14 Make the paused task easy to find and complete",
+    "features/25-plain-language-run-output.feature:19 Explain a handled failure and repeated step",
+    "features/25-plain-language-run-output.feature:4 Name the workflow and its steps and summarize success once",
+    "features/25-plain-language-run-output.feature:9 Explain why a command stopped the workflow"
   ],
   "schemaVersion": 1,
   "featureHashes": {
+    "features/25-plain-language-run-output.feature": "cae6a933a0979af8dc879e5823f9942cb89d15ce17c96b9fed368fa7f0b98295",
     "features/24-console-first-process-output.feature": "afa0577d264159efee24a66974f1b783ecfadfb72874e6475bc0100f048e1f87",
     "features/00-bootstrap.feature": "78c7648c59786cd1c25526eb12d011afcc1a52c52dd7e5cc0160379d1eb87942",
     "features/01-authoring.feature": "3e98c261532e432aa40a9b4f294a8f72da5c96ee5fe3e3a0415c0f854126a3d0",
@@ -955,6 +960,10 @@
     "features/24-console-first-process-output.feature:23 Retain only the requested streams [stdout and stderr]",
     "features/24-console-first-process-output.feature:25 Route a timeout when the caller stops reading stdout",
     "features/24-console-first-process-output.feature:4 Receive both streams while the process is still running",
-    "features/24-console-first-process-output.feature:9 Keep both streams when the process fails"
+    "features/24-console-first-process-output.feature:9 Keep both streams when the process fails",
+    "features/25-plain-language-run-output.feature:14 Make the paused task easy to find and complete",
+    "features/25-plain-language-run-output.feature:19 Explain a handled failure and repeated step",
+    "features/25-plain-language-run-output.feature:4 Name the workflow and its steps and summarize success once",
+    "features/25-plain-language-run-output.feature:9 Explain why a command stopped the workflow"
   ]
 }

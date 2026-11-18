@@ -219,15 +219,23 @@ and 1-based line/column when available. A failed run's read-only status still ex
 a help hint. Stack traces are hidden. No colors or ANSI formatting.
 
 Text advance (including `start --advance`) emits live, newline-delimited activity on stderr, also when redirected.
-Each line starts with `[<run-id>]`. Process lines identify the node and visit number
-and explain activation (launch still pending) or the saved process outcome in English
-alongside its routing token. Separate `Flow #<transition-count>: <source> -> <destination>`
-lines explain exact outcome, default fallback or unlabeled routing. Revisited targets
-show the next visit number, including self-loops. Node IDs are the authoritative
-names; diagram labels are not displayed or newly persisted. Run-status lines separately
-explain waiting, terminal success/failure or interruption and its next action. An
-exit code or routed outcome is not an overall run result. No-route results explicitly
-say the flow stays at the cursor; interruption never invents a route.
+Default text names the workflow and run at execution start, names each process
+before launch, and explains fallbacks, failed commands the workflow handles, and
+repeated step visits. The summary names the overall result and run. Pauses and
+failures identify the affected step and the next action. Interruption explains
+uncertainty about external effects and offers explicit retry or failure.
+
+For a document with one workflow, the first level-one ATX heading outside code
+fences supplies its display name. Mermaid labels supply step names. Trim and
+bound each name to 120 UTF-16 code units and freeze it with the workflow. A
+missing or blank display name falls back to the workflow or node ID, including
+when reading older saved runs. Identity and routing continue to use IDs.
+
+Use `--details` on `advance` or `start --advance` for the diagnostic layout.
+Its run-prefixed activity names saved outcomes and numbered cursor movements
+with exact, fallback or unlabeled route reasons. Summaries expose the source and
+state root. `status --json` can inspect the latest activation ID, cursor and saved
+outcome afterward without executing anything.
 
 Only report saved activity after a successful authoritative write. Activation does
 not claim that launch succeeded. A failed save emits no saved-result, route or
@@ -250,7 +258,7 @@ streams. Closed activity pipes disable further activity without changing executi
 There is no persisted event format, log subsystem, automatic advance or retry.
 Explicit --json suppresses all activity on both streams.
 
-Text run summaries include run ID, state root, status, cursor, transition count
+Detailed run summaries and status inspection include run ID, state root, status, cursor, transition count
 and a distinct overall result (`not finished`, `success`, `failure`, or `unresolved`).
 Status tokens have English explanations; next actions distinguish advance, completion,
 terminal runs and explicit recovery. The latest process or agent outcome is separate
@@ -357,9 +365,10 @@ advance does; its error explicitly says the recovery save failed.
 before the combined handler (argument parsing/project discovery). Protocol version
 stays 1; consumers with strict response allowlists must accept this additive field.
 No saved-state schema migration is needed. JSON suppresses all human activity.
-Text adds one saved-creation activity line before advance, then the usual bounded
-activity; stdout distinguishes creation, phase, initial-advance outcome and final
-run status/next action. Creation never claims selection or execution succeeded.
+Default text names the workflow, its steps and their result. The `--details`
+layout adds a saved-creation line and distinguishes creation, phase,
+initial-advance outcome and final run status. Creation never claims selection
+or execution succeeded.
 See [ADR 0017](adr/0017-p21.md).
 
 `creation-guide` follows `guide` output conventions: directly readable instructions
@@ -375,8 +384,9 @@ from cwd to the nearest directory containing a `.merstride` or `.git` entry
 use cwd. This boundary supplies the default workspace and `.merstride/runs` state
 root. Explicit absolute `--workspace` changes only the workspace; explicit absolute
 `--state-dir` changes only storage. There are no configuration/environment sources.
-Relative workflow paths remain relative to the caller. Start and run summaries
-report the resolved absolute state root. Help/version/guides ignore storage.
+Relative workflow paths remain relative to the caller. Status, detailed text and
+JSON report the resolved absolute state root when available. Help, version and
+guides ignore storage.
 
 Existing cwd-relative `.merstride` directories remain boundaries and are found
 from their subdirectories. Outside a project, first start establishes a cwd

@@ -36,6 +36,9 @@ internal static class Program
         }
         var command = parsed.Command;
         var options = parsed.Options;
+        output.ExplicitStateRoot = options.ContainsKey("--state-dir");
+        if (!options.ContainsKey("--details") && (command == "advance" || command == "start" && options.ContainsKey("--advance")))
+            output.UseCompactExecution();
         var positional = parsed.Positional;
         var retry = options.ContainsKey("--retry");
         if (command == "version") return output.Write(new(Version: Version));
@@ -64,7 +67,7 @@ internal static class Program
               All start options still apply. This may execute multiple nodes until
               waiting_agent, terminal state or error. Plain start remains nonexecuting.
               Exactly the created ID is advanced, independent of changing selection.
-              Text separates creation, initial advance and resulting status/next action.
+              Text names the workflow and its steps. Use --details for creation and advance phases.
               --json returns one protocol-1 object with additive start metadata:
               created; phase creation|selection|advance; advance not_started|finished|
               interrupted|error. Other responses have null start; update strict allowlists.
@@ -114,11 +117,10 @@ internal static class Program
               merstride advance <run-id> --state-dir <state-root> --json
               advance stops at waiting_agent, a terminal state or an error.
               Without --json, live activity goes to stderr and final summaries to stdout,
-              even when redirected. Activation is saved before launch (launch pending).
-              Saved outcomes/routes and agent/terminal transitions follow successful writes.
-              Process results are separate from Flow #<n>: source -> destination via
-              exact/default/unlabeled routing, and from run status and overall Result.
-              Visits identify loops; no-route/waiting means staying at the cursor.
+              even when redirected. Text names each step before launch and summarizes
+              the result once. Fallbacks, handled failures and repeated visits are explained.
+              Use --details for saved outcomes, numbered routes and state paths.
+              Use status --json to inspect the latest activation and its outcome.
               Completion moves only the cursor. Resolution changes only run status.
               Full activation IDs are secondary log selectors, not repeated on live lines.
               Child stdout and stderr stream to their matching text channels.

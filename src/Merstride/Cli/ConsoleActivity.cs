@@ -11,6 +11,12 @@ internal sealed class ConsoleActivity(IRunPersistence persistence, CliOutput out
         persistence.Write(state);
         var activation = state.Activations.LastOrDefault();
         var prior = previous.Activations.LastOrDefault();
+        if (output.CompactExecution)
+        {
+            CompactActivity(state, activation, prior);
+            previous = state;
+            return;
+        }
         if (state.Status == "executing" && activation is not null && activation.Id != prior?.Id)
             output.Activity(state, $"{Process(state, activation)}: activating (launch pending).");
         if (activation?.FinishedAt is not null && (activation.Id != prior?.Id || prior.FinishedAt is null))
@@ -18,10 +24,13 @@ internal sealed class ConsoleActivity(IRunPersistence persistence, CliOutput out
             output.Activity(state, $"{Process(state, activation)}: saved {CliOutput.Outcome(activation)}.");
             if (state.TransitionCount > previous.TransitionCount)
             {
-                var edges = state.Definition.Edges.Where(e => e.Source == activation.NodeId).ToArray();
-                var reason = edges.Any(e => e.Outcome == activation.Outcome) ? $"exact outcome {activation.Outcome}"
-                    : edges.Any(e => e.Outcome == "default") ? $"default (no exact match for {activation.Outcome})"
-                    : $"unlabeled edge (accepts any process outcome, including failures)";
+                var route = state.Definition.ProcessRoute(activation.NodeId, activation.Outcome);
+                var reason = route?.Outcome switch
+                {
+                    "default" => $"default (no exact match for {activation.Outcome})",
+                    null => "unlabeled edge (accepts any process outcome, including failures)",
+                    _ => $"exact outcome {activation.Outcome}"
+                };
                 Movement(output, state, activation.NodeId, reason);
             }
             else output.Activity(state, $"Flow stays at {state.Cursor}; no route taken. " +
@@ -29,7 +38,7 @@ internal sealed class ConsoleActivity(IRunPersistence persistence, CliOutput out
                     : state.Error?.Message));
         }
         if (state.Status == "waiting_agent" && state.Request?.Id != previous.Request?.Id)
-            output.Activity(state, $"Run {previous.Status} -> waiting_agent at {state.Cursor} (visit {Visits(state, state.Cursor)}): " +
+            output.Activity(state, $"Run {previous.Status} -> waiting_agent at {state.Cursor} (visit {ExecutionNarration.Visits(state, state.Cursor)}): " +
                 $"waiting for agent; request {state.Request!.Id}. Flow stays here. Next: read the prompt on stdout and complete this request with an allowed outcome.");
         if (state.Status is "completed" or "failed" or "interrupted" && state.Status != previous.Status)
             output.Activity(state, $"Run {previous.Status} -> {state.Status} at {state.Cursor}: " + (state.Status == "completed"
@@ -39,9 +48,30 @@ internal sealed class ConsoleActivity(IRunPersistence persistence, CliOutput out
         previous = state;
     }
 
+    private void CompactActivity(RunState state, Activation? activation, Activation? prior)
+    {
+        if (activation is null) return;
+        var step = ExecutionNarration.Step(state, activation.NodeId);
+        if (state.Status == "executing" && activation.Id != prior?.Id)
+        {
+            var visit = ExecutionNarration.Visits(state, activation.NodeId);
+            output.Activity(state, $"Starting {step}{(visit > 1 ? $" (visit {visit})" : "")}.");
+        }
+        else if (activation.FinishedAt is not null && prior?.FinishedAt is null && state.TransitionCount > previous.TransitionCount)
+        {
+            var fallback = state.Definition.ProcessRoute(activation.NodeId, activation.Outcome)?.Outcome == "default";
+            if (fallback || activation.Outcome != "exit_0")
+            {
+                var destination = ExecutionNarration.Step(state, state.Cursor);
+                var next = fallback ? $"The fallback leads to {destination}." : $"The workflow continues to {destination}.";
+                output.Activity(state, $"{step} {ExecutionNarration.ProcessResult(activation)}. {next}");
+            }
+        }
+    }
+
     internal static void Completion(CliOutput output, RunState before, RunState state, CompletionReceipt receipt)
     {
-        output.Activity(state, $"Agent {before.Cursor} (visit {Visits(before, before.Cursor)}): completion {receipt.RequestId} accepted and saved ({receipt.Outcome}).");
+        output.Activity(state, $"Agent {before.Cursor} (visit {ExecutionNarration.Visits(before, before.Cursor)}): completion {receipt.RequestId} accepted and saved ({receipt.Outcome}).");
         Movement(output, state, before.Cursor, $"agent outcome {receipt.Outcome}",
             " Run waiting_agent -> ready; next node has not executed. Next: merstride advance " + state.RunId + ".");
     }
@@ -54,11 +84,10 @@ internal sealed class ConsoleActivity(IRunPersistence persistence, CliOutput out
 
     private static void Movement(CliOutput output, RunState state, string source, string reason, string next = "")
     {
-        var visits = Visits(state, state.Cursor);
+        var visits = ExecutionNarration.Visits(state, state.Cursor);
         output.Activity(state, $"Flow #{state.TransitionCount}: {source} -> {state.Cursor} via {reason}." +
             (visits > 0 ? $" Revisit: next visit {visits + 1}." : "") + next);
     }
 
-    private static int Visits(RunState state, string node) => state.Activations.Count(a => a.NodeId == node);
-    private static string Process(RunState state, Activation activation) => $"Process {activation.NodeId} (visit {Visits(state, activation.NodeId)})";
+    private static string Process(RunState state, Activation activation) => $"Process {activation.NodeId} (visit {ExecutionNarration.Visits(state, activation.NodeId)})";
 }

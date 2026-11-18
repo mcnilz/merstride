@@ -3,9 +3,20 @@ using System.Text.Json.Serialization;
 
 namespace Merstride.Domain;
 
-public sealed record Workflow(string Id, string Entry, Node[] Nodes, Edge[] Edges, int MaxTransitions, Diagnostic[] Diagnostics);
+public sealed record Workflow(string Id, string Entry, Node[] Nodes, Edge[] Edges, int MaxTransitions, Diagnostic[] Diagnostics,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? DisplayName = null)
+{
+    public Edge? ProcessRoute(string source, string? outcome)
+    {
+        var outgoing = Edges.Where(edge => edge.Source == source).ToArray();
+        return outgoing.SingleOrDefault(edge => edge.Outcome == outcome)
+            ?? outgoing.SingleOrDefault(edge => edge.Outcome == "default")
+            ?? outgoing.SingleOrDefault(edge => edge.Outcome is null);
+    }
+}
 public sealed record Node(string Id, string Kind, string? Result, string? Command, string[] Args, int TimeoutSeconds,
-    AgentTask? Agent = null, string? Script = null, ProcessExecution[]? Variants = null, bool UseRtk = false);
+    AgentTask? Agent = null, string? Script = null, ProcessExecution[]? Variants = null, bool UseRtk = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? DisplayName = null);
 public sealed record ProcessExecution(string Command, string[] Args, string? Script, string[] Platforms);
 public sealed record AgentTask(string Prompt, string[] Context);
 public sealed record AgentRequest(string Id, string ActivationId, string NodeId, string Prompt, string[] AllowedOutcomes, ContextItem[] Context);

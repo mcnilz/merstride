@@ -98,6 +98,8 @@ internal sealed class UsabilityAuditWorld : IDisposable
         Assert.That(text + activity, Does.Not.Contain('\u001b').And.Not.Contain('\0'));
         Assert.That(text.Length + activity.Length, Is.LessThan(1000000), "Readable output remains bounded.");
         var match = Regex.Match(text, "(?m)^Run: (r_[0-9a-f]+)\\r?$");
+        var compactMatch = Regex.Match(text, "(?m)^(?:Finished successfully|Paused at |Failed at |Interrupted at )[^\\r\\n]*\\brun (r_[0-9a-f]+)\\)\\.\\r?$");
+        var compact = !match.Success && compactMatch.Success;
         var mutating = !help && command is "start" or "advance" or "resolve" or "use";
         var children = cli.ExpectedChildren;
         try
@@ -111,11 +113,17 @@ internal sealed class UsabilityAuditWorld : IDisposable
                 // real pre-discard status and independently assert postconditions.
                 cli.Stdout = prior.GetRawText(); cli.Stderr = "";
             }
-            else if (mutating && match.Success)
+            else if (mutating && (match.Success || compact))
             {
-                var root = Regex.Match(text, "(?m)^State root: (.+)\\r?$").Groups[1].Value.TrimEnd('\r');
-                Assert.That(root, Is.Not.Empty);
-                cli.Direct(["status", match.Groups[1].Value, "--state-dir", root, "--json"], true);
+                var selector = (compact ? compactMatch : match).Groups[1].Value;
+                var state = StateOption(args);
+                if (!compact)
+                {
+                    var root = Regex.Match(text, "(?m)^State root: (.+)\\r?$").Groups[1].Value.TrimEnd('\r');
+                    Assert.That(root, Is.Not.Empty);
+                    state = ["--state-dir", root];
+                }
+                cli.Direct(["status", selector, .. state, "--json"], true);
                 session.probes++;
                 Assert.That(cli.ExitCode, Is.Zero, cli.Stdout + cli.Stderr);
             }
@@ -134,7 +142,7 @@ internal sealed class UsabilityAuditWorld : IDisposable
                 Assert.That(errorCode, Is.Not.Empty, "The original readable failure has an actionable code.");
                 cli.Response = default;
             }
-            if (cli.Response.ValueKind == JsonValueKind.Object) CheckText(text, activity, cli.Response, help && exit == 0 ? "help" : command, exit);
+            if (cli.Response.ValueKind == JsonValueKind.Object) CheckText(text, activity, cli.Response, help && exit == 0 ? "help" : command, exit, compact);
             cli.ExitCode = exit;
             cli.ErrorCode = errorCode;
         }
@@ -147,7 +155,7 @@ internal sealed class UsabilityAuditWorld : IDisposable
         return index < 0 ? [] : ["--state-dir", args[index + 1]];
     }
 
-    private static void CheckText(string text, string activity, JsonElement response, string command, int exit)
+    private static void CheckText(string text, string activity, JsonElement response, string command, int exit, bool compact = false)
     {
         if (command == "discard" && exit == 0) return;
         if (response.GetProperty("error") is { ValueKind: JsonValueKind.Object } error)
@@ -173,12 +181,28 @@ internal sealed class UsabilityAuditWorld : IDisposable
         }
         else if (response.GetProperty("runId") is { ValueKind: JsonValueKind.String } id)
         {
-            Assert.That(text, Does.Contain("Run: " + id.GetString()).And.Contain("Next:"));
-            foreach (var field in new[] { ("status", "Status"), ("cursor", "Cursor") })
-                if (response.GetProperty(field.Item1).ValueKind == JsonValueKind.String)
-                    Assert.That(text, Does.Contain(field.Item2 + ": " + response.GetProperty(field.Item1).GetString()));
-            if (response.GetProperty("transitionCount").ValueKind == JsonValueKind.Number)
-                Assert.That(text, Does.Contain("Transitions: " + response.GetProperty("transitionCount").GetInt32().ToString(CultureInfo.InvariantCulture)));
+            if (compact)
+            {
+                var result = response.GetProperty("status").GetString() switch
+                {
+                    "completed" => "Finished successfully",
+                    "waiting_agent" => "Paused at ",
+                    "interrupted" => "Interrupted at ",
+                    "failed" => "Failed at ",
+                    _ => throw new AssertionException("Unexpected compact execution status.")
+                };
+                Assert.That(text, Does.Contain(result).And.Contain("run " + id.GetString() + ")."));
+                if (result != "Finished successfully") Assert.That(text, Does.Contain("Next:"));
+            }
+            else
+            {
+                Assert.That(text, Does.Contain("Run: " + id.GetString()).And.Contain("Next:"));
+                foreach (var field in new[] { ("status", "Status"), ("cursor", "Cursor") })
+                    if (response.GetProperty(field.Item1).ValueKind == JsonValueKind.String)
+                        Assert.That(text, Does.Contain(field.Item2 + ": " + response.GetProperty(field.Item1).GetString()));
+                if (response.GetProperty("transitionCount").ValueKind == JsonValueKind.Number)
+                    Assert.That(text, Does.Contain("Transitions: " + response.GetProperty("transitionCount").GetInt32().ToString(CultureInfo.InvariantCulture)));
+            }
             if (response.GetProperty("request") is { ValueKind: JsonValueKind.Object } request)
             {
                 Assert.That(text.Replace("\r\n", "\n"), Does.Contain("Request: " + request.GetProperty("id").GetString())

@@ -146,7 +146,7 @@ internal sealed class StartAdvanceSafetyWorld : IDisposable
     {
         var binary = Environment.GetEnvironmentVariable("MERSTRIDE_BINARY") ?? Path.Combine(FeatureTests.Root, "artifacts", "native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride");
         var start = new ProcessStartInfo(binary) { WorkingDirectory = cli.DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var arg in new[] { "start", cli.FilePath, "--advance", "--workspace", cli.DirectoryPath, "--state-dir", cli.State,
+        foreach (var arg in new[] { "start", cli.FilePath, "--advance", "--details", "--workspace", cli.DirectoryPath, "--state-dir", cli.State,
             "--input-file", Path.Combine(cli.DirectoryPath, "input.json") }) start.ArgumentList.Add(arg);
         if (format == "json") start.ArgumentList.Add("--json");
         File.WriteAllText(Path.Combine(cli.DirectoryPath, "input.json"), "{\"frozen\":true}");

@@ -236,6 +236,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         var start = new ProcessStartInfo(Binary)
         { WorkingDirectory = cli.DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var arg in new[] { command, runId, "--state-dir", cli.State }) start.ArgumentList.Add(arg);
+        if (command == "advance") start.ArgumentList.Add("--details");
         if (!readable && (!UsabilityAuditWorld.Complementary || command == "status")) start.ArgumentList.Add("--json");
         return Process.Start(start)!;
     }
@@ -253,14 +254,14 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         Assert.That(writer.HasExited, Is.False);
     }
 
-    private void StartInterrupt(bool text = false, bool combined = false)
+    private void StartInterrupt(bool text = false, bool combined = false, bool detailed = true)
     {
         combinedSignal = combined;
         CreateWorkflow(mode: "interrupt_parent");
         processBaseline = ProcessObserver.TotalProcesses();
         probeBaseline = UsabilityAuditWorld.Probes;
         var existing = ProcessObserver.ActiveProcessIds();
-        signalHost = WindowsInterrupt.Start(Helper, Binary, combined ? cli.FilePath : runId, cli.State, cli.DirectoryPath, text, combined);
+        signalHost = WindowsInterrupt.Start(Helper, Binary, combined ? cli.FilePath : runId, cli.State, cli.DirectoryPath, text, combined, detailed);
         WaitFile("parent.ready"); ObserveHelper("parent.pid"); ObserveHelper("child.pid");
         writer = Process.GetProcessById(int.Parse(File.ReadAllText(PathFor("engine.pid")), System.Globalization.CultureInfo.InvariantCulture));
         _ = writer.Handle;
@@ -434,7 +435,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         Assert.That(cli.ExitCode, Is.Zero);
         Assert.That(cli.Stderr, Does.Not.Contain("[" + runId + "]"));
         Assert.That(cli.Stdout, Does.Contain("Result: unresolved").And.Contain("external effects uncertain").And.Contain("Next: inspect external effects"));
-        cli.Raw("advance", runId, "--state-dir", cli.State);
+        cli.Raw("advance", runId, "--details", "--state-dir", cli.State);
         Assert.That(cli.ExitCode, Is.EqualTo(5));
         Assert.That(cli.Stderr, Does.Contain("Flow stays at work; no route taken").And.Contain("Run executing -> interrupted").And.Not.Contain("activating"));
         using (new RejectedStateSave(StateFile))
@@ -455,7 +456,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         File.WriteAllText(PathFor("effect.release"), "release");
         foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
         cli.ExpectedChildren = 1;
-        cli.Raw("advance", runId, "--state-dir", cli.State); cli.ExpectedChildren = 0;
+        cli.Raw("advance", runId, "--details", "--state-dir", cli.State); cli.ExpectedChildren = 0;
         Assert.That(cli.ExitCode, Is.Zero);
         Assert.That(cli.Stderr, Does.Contain("Process work (visit 2): activating").And.Contain("Flow #1: work -> done").And.Contain("overall result: success"));
         AssertEffects(2);
@@ -500,7 +501,7 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
     internal void AssertCombinedInterruption(bool text, bool retry)
     {
         if (UsabilityAuditWorld.Complementary) text = !text;
-        StartInterrupt(text, combined: true);
+        StartInterrupt(text, combined: true, detailed: false);
         Execute("I send the platform's supported user-interrupt signal");
         Assert.That(cli.ExitCode, Is.EqualTo(130), File.ReadAllText(PathFor("signal.stderr")));
         foreach (var helper in helpers) Assert.That(helper.WaitForExit(2000), Is.True);
@@ -509,7 +510,12 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
             Assert.That(ProcessObserver.TotalProcesses() - processBaseline, Is.EqualTo((OperatingSystem.IsWindows() ? 6 : 5) + UsabilityAuditWorld.Probes - probeBaseline));
         var result = File.ReadAllText(PathFor("signal.stdout"));
         if (text)
-            Assert.That(result, Does.Contain("Run: " + runId).And.Contain("Creation: saved new run").And.Contain("Initial advance: interrupted").And.Contain("Status: interrupted"));
+        {
+            Assert.That(result, Does.Contain("Interrupted at ").And.Contain($"(run {runId}).")
+                .And.Contain("Inspect external effects").And.Contain($"merstride resolve {runId} --retry")
+                .And.Contain($"merstride resolve {runId} --fail"));
+            Assert.That(File.ReadAllText(PathFor("signal.stderr")), Does.Contain("The step may already have had external effects."));
+        }
         else
         {
             var response = JsonDocument.Parse(result).RootElement;
@@ -528,6 +534,15 @@ internal sealed class RecoveryWorld(bool inline = false) : IDisposable
         Assert.That(cli.ExitCode, Is.EqualTo(retry ? 0 : 5));
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(retry ? "ready" : "failed"));
         Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("id").GetString(), Is.EqualTo(priorActivation));
+        if (!retry)
+        {
+            var saved = File.ReadAllBytes(StateFile);
+            cli.Raw("advance", runId, "--state-dir", cli.State);
+            Assert.That(cli.ExitCode, Is.EqualTo(5));
+            Assert.That(cli.Stdout, Does.Contain("Inspect external effects before starting a new run.")
+                .And.Not.Contain("--retry").And.Not.Contain("--fail"));
+            Assert.That(File.ReadAllBytes(StateFile), Is.EqualTo(saved));
+        }
         cli.Call("runs");
         Assert.That(cli.Response.GetProperty("runs").GetArrayLength(), Is.EqualTo(2));
         var seed = cli.Response.GetProperty("runs").EnumerateArray().Single(r => r.GetProperty("runId").GetString() != runId);

@@ -98,9 +98,7 @@ public static class WorkflowEngine
                     store.Write(run);
                     return run;
                 }
-                var edges = run.Definition.Edges.Where(e => e.Source == node.Id).ToArray();
-                var route = edges.SingleOrDefault(e => e.Outcome == activation.Outcome)
-                    ?? edges.SingleOrDefault(e => e.Outcome == "default") ?? edges.SingleOrDefault(e => e.Outcome is null);
+                var route = run.Definition.ProcessRoute(node.Id, activation.Outcome);
                 run = route is null
                     ? run with { Status = "failed", Error = new("NO_MATCHING_EDGE", $"No route matches {activation.Outcome} at {node.Id}.") }
                     : run with { Status = "ready", Cursor = route.Target, TransitionCount = run.TransitionCount + 1 };

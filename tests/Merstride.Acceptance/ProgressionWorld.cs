@@ -14,7 +14,7 @@ internal sealed class ProgressionWorld : IDisposable
     private ConsoleActivityWorld? barrier;
     private bool verified;
 
-    private void Text(params string[] args) => cli.Raw([.. args, "--state-dir", cli.State]);
+    private void Text(params string[] args) => cli.Raw([.. args, .. args[0] == "advance" ? new[] { "--details" } : [], "--state-dir", cli.State]);
 
     internal bool StructuredCompanion(FeatureCase scenario)
     {

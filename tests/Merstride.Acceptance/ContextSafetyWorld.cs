@@ -315,7 +315,7 @@ internal sealed partial class ContextWorld
             Assert.That(writer.ExitCode, Is.Zero, error.Result);
             FeatureTests.RecordOperation("advance", !UsabilityAuditWorld.Complementary, writer.ExitCode, variant: "selection-race");
             if (UsabilityAuditWorld.Complementary)
-                Assert.That(output.Result, Does.Contain("Run: " + first).And.Contain("Status: completed").And.Contain("Transitions: 1"));
+                Assert.That(output.Result.Trim(), Is.EqualTo($"Finished successfully (1 step, run {first})."));
             else
             {
                 var result = JsonDocument.Parse(output.Result).RootElement;

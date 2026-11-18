@@ -19,7 +19,7 @@ public static partial class WorkflowCompiler
         string source;
         try { source = new UTF8Encoding(false, true).GetString(bytes).TrimStart('\uFEFF'); }
         catch (DecoderFallbackException) { throw Invalid("Document must be valid UTF-8.", new(1, 1)); }
-        var blocks = Scan(source);
+        var blocks = Scan(source, out var documentTitle);
         var metadata = new Dictionary<string, Value>(StringComparer.Ordinal);
         var diagrams = new Dictionary<string, Block>(StringComparer.Ordinal);
         foreach (var block in blocks)
@@ -47,7 +47,7 @@ public static partial class WorkflowCompiler
         if (selected is null && metadata.Count != 1) throw Invalid("Select a workflow with --workflow <id>.", new(1, 1));
         var chosen = selected ?? metadata.Keys.Single();
         if (!metadata.TryGetValue(chosen, out var selectedRoot)) throw Invalid("Selected workflow does not exist.", new(1, 1));
-        return CompilePair(selectedRoot, diagrams[chosen]);
+        return CompilePair(selectedRoot, diagrams[chosen], metadata.Count == 1 ? documentTitle : null);
     }
 
     private static Value ParseYaml(Block block)
@@ -74,7 +74,7 @@ public static partial class WorkflowCompiler
         return root;
     }
 
-    private static Workflow CompilePair(Value root, Block diagram)
+    private static Workflow CompilePair(Value root, Block diagram, string? displayName)
     {
         var fields = Map(root, "schemaVersion", "id", "entry", "nodes", "limits", "rtk");
         var version = Required(fields, "schemaVersion", root.Location);
@@ -139,12 +139,14 @@ public static partial class WorkflowCompiler
                 sourceNode.Kind == "process" && parts[2] is "exitCode" or "stdoutTail" or "stderrTail"))
                 throw Invalid($"Invalid context selector '{selector}'.", selectorValue.Location);
         }
-        var (edges, warnings) = ValidateDiagram(diagram, id, entry, definitions);
-        return new(id, entry, definitions.ToArray(), edges, transitions, warnings);
+        var (compiledNodes, edges, warnings) = ValidateDiagram(diagram, id, entry, definitions);
+        return new(id, entry, compiledNodes, edges, transitions, warnings, displayName);
     }
 
-    private static List<Block> Scan(string source)
+    private static List<Block> Scan(string source, out string? documentTitle)
     {
+        documentTitle = null;
+        var foundTitle = false;
         var blocks = new List<Block>();
         var lines = source.Replace("\r\n", "\n").Split('\n');
         char fence = '\0'; int length = 0, start = 0; string info = ""; var body = new StringBuilder();
@@ -155,6 +157,14 @@ public static partial class WorkflowCompiler
             var count = trimmed.TakeWhile(c => c == (fence == '\0' ? trimmed.FirstOrDefault() : fence)).Count();
             if (fence == '\0')
             {
+                if (!foundTitle && DocumentHeading().Match(line) is { Success: true } heading)
+                {
+                    foundTitle = true;
+                    var title = heading.Groups[1].Value.Trim();
+                    var withoutMarker = title.TrimEnd('#');
+                    if (withoutMarker.Length == 0 || withoutMarker[^1] is ' ' or '\t') title = withoutMarker;
+                    documentTitle = DisplayName(title);
+                }
                 if (count < 3 || trimmed[0] is not ('`' or '~')) continue;
                 fence = trimmed[0]; length = count; start = i + 2;
                 info = line == trimmed && fence == '`' ? trimmed[count..].Trim() : "";
@@ -245,13 +255,12 @@ public static partial class WorkflowCompiler
         return true;
     }
 
-    private static (Edge[] Edges, Diagnostic[] Warnings) ValidateDiagram(Block diagram, string id, string entry, List<Node> definitions)
+    private static (Node[] Nodes, Edge[] Edges, Diagnostic[] Warnings) ValidateDiagram(Block diagram, string id, string entry, List<Node> definitions)
     {
         bool header = false, marker = false;
-        HashSet<string> declared = [with(StringComparer.Ordinal)];
         var edges = new List<Edge>();
         var edgeLocations = new List<SourceLocation>();
-        var nodeLocations = new Dictionary<string, SourceLocation>(StringComparer.Ordinal);
+        var declarations = new Dictionary<string, (SourceLocation Location, string? Label)>(StringComparer.Ordinal);
         var warnings = new List<Diagnostic>();
         var lines = diagram.Text.Split('\n');
         for (var i = 0; i < lines.Length; i++)
@@ -278,9 +287,9 @@ public static partial class WorkflowCompiler
             {
                 if (match.Groups[1].Value is "end" or "subgraph" or "style" or "class" or "flowchart" or "graph" or "interpolate")
                     throw Invalid("Node identifier is reserved by Mermaid; choose an alternative such as finish or work.", location);
-                if (!declared.Add(match.Groups[1].Value)) throw Invalid("Duplicate graph node.", location);
-                nodeLocations.Add(match.Groups[1].Value, location);
-                if (declared.Count > 100) throw Invalid("Workflow exceeds 100 nodes.", location);
+                if (!declarations.TryAdd(match.Groups[1].Value, (location, DisplayName(match.Groups[2].Value))))
+                    throw Invalid("Duplicate graph node.", location);
+                if (declarations.Count > 100) throw Invalid("Workflow exceeds 100 nodes.", location);
                 continue;
             }
             var edge = EdgePattern().Match(line);
@@ -292,6 +301,7 @@ public static partial class WorkflowCompiler
             if (edges.Count > 250) throw Invalid("Workflow exceeds 250 edges.", location);
         }
         var loc = new SourceLocation(diagram.Line, 1);
+        var declared = declarations.Keys.ToHashSet(StringComparer.Ordinal);
         if (!header || !marker || !declared.SetEquals(definitions.Select(n => n.Id))) throw Invalid("Graph and metadata nodes must match exactly.", loc);
         for (var i = 0; i < edges.Count; i++)
             if (!declared.Contains(edges[i].Source) || !declared.Contains(edges[i].Target))
@@ -299,7 +309,7 @@ public static partial class WorkflowCompiler
         foreach (var node in definitions)
         {
             var outgoing = edges.Where(e => e.Source == node.Id).ToArray();
-            var nodeLocation = nodeLocations[node.Id];
+            var nodeLocation = declarations[node.Id].Location;
             if (node.Kind == "end" && outgoing.Length != 0) throw Invalid("End nodes cannot have outgoing edges.", nodeLocation);
             if (node.Kind == "agent" && outgoing.Any(e => e.Outcome is null or "default"))
                 throw Invalid("Agent edges require labeled outcomes without default.", nodeLocation);
@@ -319,14 +329,25 @@ public static partial class WorkflowCompiler
         }
         if (!Reach([entry], false).SetEquals(declared) || !Reach(definitions.Where(n => n.Kind == "end").Select(n => n.Id), true).SetEquals(declared))
             throw Invalid("All nodes must be reachable and have a path to an end.", loc);
-        return (edges.ToArray(), warnings.ToArray());
+        return (definitions.Select(node => node with { DisplayName = declarations[node.Id].Label }).ToArray(), edges.ToArray(), warnings.ToArray());
+    }
+
+    private static string? DisplayName(string text)
+    {
+        const int limit = 120;
+        var name = text.Trim();
+        if (name.Length == 0) return null;
+        if (name.Length <= limit) return name;
+        var end = char.IsHighSurrogate(name[limit - 2]) ? limit - 2 : limit - 1;
+        return name[..end] + "…";
     }
 
     private static MerstrideException Invalid(string message, SourceLocation location) => new("INVALID_DOCUMENT", message, 3, location);
+    [GeneratedRegex(@"^ {0,3}#(?:[ \t]|$)(.*)$", RegexOptions.CultureInvariant)] private static partial Regex DocumentHeading();
     [GeneratedRegex("\\A[a-z][a-z0-9_]{0,63}\\z", RegexOptions.CultureInvariant)] private static partial Regex Id();
     [GeneratedRegex("\\A(?:[-+]?[0-9]+|0o[0-7]+|0x[0-9a-fA-F]+)\\z", RegexOptions.CultureInvariant)] private static partial Regex IntegerPattern();
     [GeneratedRegex("\\Aflowchart\\s+(?:TD|LR)\\z", RegexOptions.CultureInvariant)] private static partial Regex Header();
     [GeneratedRegex("\\A(?:|null|Null|NULL|~|true|True|TRUE|false|False|FALSE|0o[0-7]+|0x[0-9a-fA-F]+|[-+]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][-+]?[0-9]+)?|[-+]?\\.(?:inf|Inf|INF)|\\.(?:nan|NaN|NAN))\\z", RegexOptions.CultureInvariant)] private static partial Regex NonString();
-    [GeneratedRegex("^([a-z][a-z0-9_]{0,63})\\[\"[^\"\\\\<>]*\"\\]$", RegexOptions.CultureInvariant)] private static partial Regex Node();
+    [GeneratedRegex("^([a-z][a-z0-9_]{0,63})\\[\"([^\"\\\\<>]*)\"\\]$", RegexOptions.CultureInvariant)] private static partial Regex Node();
     [GeneratedRegex("^([a-z][a-z0-9_]{0,63})\\s*-->\\s*(?:\\|([a-z][a-z0-9_]{0,63})\\|\\s*)?([a-z][a-z0-9_]{0,63})$", RegexOptions.CultureInvariant)] private static partial Regex EdgePattern();
 }

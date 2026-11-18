@@ -28,6 +28,10 @@ switch (args[0])
         Console.Write(JsonSerializer.Serialize(args[1..], FixtureJson.Default.StringArray));
         Console.Error.Write(Console.In.ReadToEnd());
         break;
+    case "retry_once":
+        if (File.Exists("first-attempt")) return 0;
+        File.WriteAllText("first-attempt", "recorded");
+        return 7;
     case "signal_host":
         Console.CancelKeyPress += (_, e) => e.Cancel = true;
         var signalStart = new System.Diagnostics.ProcessStartInfo(args[1])
@@ -40,7 +44,9 @@ switch (args[0])
             signalStart.ArgumentList[0] = "start";
             signalStart.ArgumentList.Add("--advance");
         }
-        if (args.Length <= 4 || args[4] != "text") signalStart.ArgumentList.Add("--json");
+        var mode = args.ElementAtOrDefault(4);
+        if (mode == "text") signalStart.ArgumentList.Add("--details");
+        else if (mode != "text-compact") signalStart.ArgumentList.Add("--json");
         using (var engine = System.Diagnostics.Process.Start(signalStart)!)
         {
             File.WriteAllText("engine.pid", engine.Id.ToString(System.Globalization.CultureInfo.InvariantCulture));

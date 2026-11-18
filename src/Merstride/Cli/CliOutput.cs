@@ -16,6 +16,11 @@ internal sealed class CliOutput(bool json)
     private ProcessConsoleStream? processStderr;
     private TextWriter Out => processStdout?.Unavailable == true ? TextWriter.Null : Console.Out;
     private TextWriter Error => processStderr?.Unavailable == true ? TextWriter.Null : Console.Error;
+    internal bool CompactExecution { get; private set; }
+    internal RunState? ExecutionResult { private get; set; }
+    internal bool ExplicitStateRoot { private get; set; }
+
+    internal void UseCompactExecution() => CompactExecution = !json;
 
     internal ProcessRunner ProcessRunner(string runDirectory, CancellationToken interruption) => json
         ? new(runDirectory, null, null, RecordProcessOutput, interruption)
@@ -38,7 +43,7 @@ internal sealed class CliOutput(bool json)
         try
         {
             processStderr?.FinishLine(Error);
-            Error.WriteLine(Readable($"[{run.RunId}] {message}"));
+            Error.WriteLine(Readable(CompactExecution ? message : $"[{run.RunId}] {message}"));
             Error.Flush();
         }
         // A closed progress pipe must not turn a saved transition into an execution failure.
@@ -66,7 +71,7 @@ internal sealed class CliOutput(bool json)
 
     private void WriteText(CliResponse response, string? logActivation)
     {
-        if (response.Start is { } start)
+        if (ExecutionResult is null && response.Start is { } start)
         {
             Line("Creation", start.Created ? "saved new run" : "not completed; no initial advance");
             Line("Phase", start.Phase);
@@ -104,6 +109,7 @@ internal sealed class CliOutput(bool json)
             Line("State root", response.StateRoot);
             Out.WriteLine("Removed this run's state, logs and receipts. Other runs were retained.");
         }
+        else if (ExecutionResult is { } execution) WriteExecution(execution);
         else if (response.RunId is not null) WriteRun(response);
         else if (response.WorkflowId is { } workflow) Line("Valid workflow", workflow);
 
@@ -112,7 +118,8 @@ internal sealed class CliOutput(bool json)
         if (response.Error is { } error && !(response.Diagnostics ?? []).Any(d =>
                 d.Code == error.Code && d.Message == error.Message && d.Location == error.Location))
         {
-            Error.WriteLine($"Error {Readable(error.Code)}{Location(error.Location)}: {Readable(error.Message)}");
+            var message = ExecutionResult is { } run ? ExecutionNarration.Failure(run, error) : error.Message;
+            Error.WriteLine($"Error {Readable(error.Code)}{Location(error.Location)}: {Readable(message)}");
             var next = error.Code switch
             {
                 "INVALID_OUTCOME" or "INVALID_REQUEST" => "Next: inspect status and use the original request ID and an allowed outcome; no new completion was accepted.",
@@ -124,6 +131,29 @@ internal sealed class CliOutput(bool json)
             };
             if (next is not null) Error.WriteLine(next);
         }
+    }
+
+    private void WriteExecution(RunState run)
+    {
+        var reference = $"run {run.RunId}";
+        if (run.Status == "completed")
+        {
+            var visits = run.Activations.Length;
+            Out.WriteLine($"Finished successfully ({visits} {(visits == 1 ? "step" : "steps")}, {reference}).");
+            return;
+        }
+        var step = ExecutionNarration.Step(run, run.Cursor);
+        if (run.Request is { } request && run.Status == "waiting_agent")
+        {
+            var visits = ExecutionNarration.Visits(run, run.Cursor);
+            var pause = visits > 1 ? $"visit {visits}, {reference}" : reference;
+            Out.WriteLine(Readable($"Paused at {step} ({pause})."));
+            WriteRequest(request, run.RunId);
+            return;
+        }
+        Out.WriteLine(Readable($"{(run.Status == "interrupted" ? "Interrupted" : "Failed")} at {step} ({reference})."));
+        Out.WriteLine(Readable($"Next: {ExecutionNarration.Next(run)}"));
+        if (run.Status == "interrupted" && ExplicitStateRoot) Out.WriteLine("Reuse your original --state-dir.");
     }
 
     private void WriteRun(CliResponse response)
@@ -167,13 +197,20 @@ internal sealed class CliOutput(bool json)
         Line("State root", response.StateRoot);
         if (response.LastActivation is { HasLogs: true } last)
             Line("Log activation", last.Id);
-        if (response.Request is not { } request) return;
+        if (response.Request is { } request) WriteRequest(request);
+    }
+
+    private void WriteRequest(AgentRequest request, string? runId = null)
+    {
         Out.WriteLine();
         Line("Request", request.Id);
-        Line("Node", request.NodeId);
+        if (runId is null) Line("Node", request.NodeId);
         Out.WriteLine("Prompt:"); Out.WriteLine(Readable(request.Prompt));
         Line("Allowed outcomes", string.Join(", ", request.AllowedOutcomes));
-        Out.WriteLine("Next: perform the prompt's task, then complete this request with an allowed outcome. Call advance separately afterward.");
+        Out.WriteLine(runId is null
+            ? "Next: perform the prompt's task, then complete this request with an allowed outcome. Call advance separately afterward."
+            : Readable($"Next: do the task, then run merstride complete {runId} --request {request.Id} --outcome <outcome>. Advance the run afterward."));
+        if (runId is not null && ExplicitStateRoot) Out.WriteLine("Reuse your original --state-dir.");
         Out.WriteLine("Context:");
         if (request.Context.Length == 0) Out.WriteLine("  (none)");
         foreach (var item in request.Context)

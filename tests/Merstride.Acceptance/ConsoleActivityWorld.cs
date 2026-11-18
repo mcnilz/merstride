@@ -18,7 +18,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
     private string runId = "";
     private bool verified;
 
-    private void Text(params string[] args) => cli.Raw([.. args, "--state-dir", cli.State]);
+    private void Text(params string[] args) => cli.Raw([.. args, .. args[0] == "advance" ? new[] { "--details" } : [], "--state-dir", cli.State]);
     private static string[] Lines(string text) => text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
     private string[] ActivityLines => Lines(cli.Stderr).Where(l => l.StartsWith("[" + runId + "] ", StringComparison.Ordinal)).ToArray();
 
@@ -332,7 +332,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
             Path.Combine(FeatureTests.Root, "artifacts/native", OperatingSystem.IsWindows() ? "merstride.exe" : "merstride"))
         {
             WorkingDirectory = cli.DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true,
-            ArgumentList = { "advance", runId, "--state-dir", cli.State }
+            ArgumentList = { "advance", runId, "--details", "--state-dir", cli.State }
         };
         if (UsabilityAuditWorld.Complementary) start.ArgumentList.Add("--json");
         var launched = Process.Start(start)!;

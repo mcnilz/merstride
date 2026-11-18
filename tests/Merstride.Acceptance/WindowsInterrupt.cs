@@ -9,13 +9,15 @@ namespace Merstride.Acceptance;
 // broadcasting CTRL_BREAK cannot reach the NUnit host or any unrelated console.
 internal static class WindowsInterrupt
 {
-    internal static Process Start(string helper, string binary, string runId, string state, string workspace, bool text = false, bool startAdvance = false)
+    internal static Process Start(string helper, string binary, string runId, string state, string workspace, bool text = false,
+        bool startAdvance = false, bool detailed = true)
     {
+        var mode = !text ? "json" : detailed ? "text" : "text-compact";
         if (!OperatingSystem.IsWindows())
             return Process.Start(new ProcessStartInfo(helper) { WorkingDirectory = workspace,
-                ArgumentList = { "signal_host", binary, runId, state, text ? "text" : "json", startAdvance ? "start-advance" : "advance" }, UseShellExecute = false })!;
+                ArgumentList = { "signal_host", binary, runId, state, mode, startAdvance ? "start-advance" : "advance" }, UseShellExecute = false })!;
         var startup = new Startup { Size = Marshal.SizeOf<Startup>(), Flags = 1, ShowWindow = 0 };
-        var command = new StringBuilder($"\"{helper}\" signal_host \"{binary}\" \"{runId}\" \"{state}\" " + (text ? "text" : "json") + (startAdvance ? " start-advance" : " advance"));
+        var command = new StringBuilder($"\"{helper}\" signal_host \"{binary}\" \"{runId}\" \"{state}\" {mode}" + (startAdvance ? " start-advance" : " advance"));
         if (!CreateProcessW(helper, command, IntPtr.Zero, IntPtr.Zero, false, 0x10, IntPtr.Zero, workspace, ref startup, out var info))
             throw new Win32Exception(Marshal.GetLastWin32Error());
         try { var process = Process.GetProcessById(info.ProcessId); _ = process.Handle; return process; }

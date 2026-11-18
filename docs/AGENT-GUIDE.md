@@ -7,20 +7,14 @@ To create a workflow, use `merstride creation-guide`: its embedded text
 contains authoring rules, a complete example and a validation checklist, without
 requiring this repository or running any process from the example.
 
-Text advance shows live activity on stderr and final summaries on stdout, even
-when redirected: activation (launch pending), saved outcome/routing, agent waiting
-and terminal/interrupted state. Completion acceptance follows its successful save;
-equivalent retries do not announce new work. Use `--json` for automation: it
-suppresses all activity and retains exactly one protocol-1 response. Activity is
-presentation, not a durable event history or a substitute for status/receipts.
+Text execution names the workflow and steps on stderr and summarizes the result
+on stdout. A pause shows the request ID, prompt, allowed outcomes and next action.
+Use `--details` for numbered routes, saved outcome keys and state paths. See
+[flow output](FLOW-OUTPUT.md) for execution examples.
 
-Human output separates saved process outcomes from numbered `Flow #...: old -> new`
-movements with route reasons, visit counts, and run-status/overall results. Waiting
-and no-route messages say the cursor stays; completion moves it without execution.
-Explicit resolution also executes nothing. Full activation IDs are secondary log
-selectors. See [flow output](FLOW-OUTPUT.md) for branch, loop and recovery transcripts.
-Agents must use explicit --json and opaque resource IDs for structured integration;
-human text is deliberately redesigned without changing protocol 1.
+Agents should use explicit `--json` and opaque resource IDs. Each command
+produces one protocol-1 object. Use status to inspect saved progress and completion
+receipts to reconcile a repeated completion.
 
 ## Operating loop
 

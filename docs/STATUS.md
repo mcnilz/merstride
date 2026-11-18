@@ -16,11 +16,11 @@ with workflow and process-node overrides. Inline scripts and pre-RTK runs stay d
 All commands now default to readable English text, including redirected output;
 agents/scripts explicitly request protocol-1 JSON with `--json`.
 Text errors/warnings use stderr; results, offline guides and bounded log tails use stdout.
-Text advance now also shows live activity on stderr after successful state writes;
-explicit JSON suppresses activity and keeps the existing protocol response.
-Human activity separates process results, numbered source/destination movements
-with route reasons and repeated visits, and run status/overall results. Summaries
-explain the next explicit action; full activation IDs are secondary log selectors.
+Text execution names the workflow and each process as it starts after a saved
+activation. It summarizes the result once and shows the next action on failure,
+pause or interruption. `--details` shows saved outcomes and numbered routes.
+Process bytes stream to the matching console channels by default. Explicit JSON
+keeps a single response frame with bounded process previews.
 Project commands now discover the nearest `.merstride`/`.git` boundary, default
 workspace/storage there and remember current and per-source/workflow runs.
 Ordinary start creates and selects a new ready run, retaining earlier state.
@@ -39,6 +39,15 @@ and publication fails closed.** No clean-target or token-saving claim follows
 from a local build.
 
 ## Verification
+
+On 2026-11-18, the Windows x64 development gate for P24 and P25 passed with
+**712 tests, 475 local feature cases and 460 independent native cases**. The ten
+new scenarios exercised both CLI output modes. The gate also passed repository
+privacy, architecture, dependency and distribution checks, native budgets and
+Mermaid rendering. The [Git walkthrough](FLOW-OUTPUT.md#the-git-process-chain)
+includes the actual before-and-after native runs. Native checks also confirmed
+legacy display-name fallback, terminal-control escaping and detailed output.
+Platform and clean-target release qualification remain separate.
 
 P24 streams process stdout and stderr during text execution. Retention is
 selected per stream, and protocol 1 execution responses carry bounded previews.

@@ -80,15 +80,19 @@ internal sealed class ProcessOutputWorld : IDisposable
         var count = ProcessObserver.TotalProcesses();
         using var writer = Process.Start(start)!;
         var seen = Streams.Select(_ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).ToArray();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var stdout = Read(writer.StandardOutput, Markers[0], seen[0]);
-        var stderr = Read(writer.StandardError, Markers[1], seen[1]);
+        var stderr = Read(writer.StandardError, Markers[1], seen[1], started);
         try
         {
             Assert.That(SpinWait.SpinUntil(() => File.Exists(Path.Combine(cli.DirectoryPath, "output.ready")), 5000), Is.True);
             if (!json)
+            {
+                Assert.That(started.Task.Wait(2000), Is.True, "Expected named progress before releasing the process.");
                 for (var i = 0; i < Streams.Length; i++)
                     if (!retained.Contains(Streams[i]))
                         Assert.That(seen[i].Task.Wait(2000), Is.True, $"Expected {Streams[i]} before releasing the process.");
+            }
             Assert.That(writer.HasExited, Is.False);
         }
         finally
@@ -179,7 +183,7 @@ internal sealed class ProcessOutputWorld : IDisposable
             Assert.That(preview.GetProperty("truncated").GetBoolean(), Is.True);
             Assert.That(preview.GetProperty("text").GetString(), Has.Length.EqualTo(4096));
         }
-        else Assert.That(stderr.Result, Does.Contain("timeout"));
+        else Assert.That(stderr.Result, Does.Contain("timed out"));
 
         cli.Raw("status", "--state-dir", cli.State);
         cli.Raw("status", "--state-dir", cli.State, "--json");
@@ -195,12 +199,13 @@ internal sealed class ProcessOutputWorld : IDisposable
         return new(binary) { WorkingDirectory = cli.DirectoryPath, RedirectStandardOutput = true, RedirectStandardError = true };
     }
 
-    private static async Task<string> Read(StreamReader reader, string marker, TaskCompletionSource seen)
+    private static async Task<string> Read(StreamReader reader, string marker, TaskCompletionSource seen, TaskCompletionSource? started = null)
     {
         var result = new System.Text.StringBuilder();
         while (await reader.ReadLineAsync() is { } line)
         {
             if (line == marker) seen.TrySetResult();
+            if (line == "Starting Emit output.") started?.TrySetResult();
             result.AppendLine(line);
         }
         return result.ToString();

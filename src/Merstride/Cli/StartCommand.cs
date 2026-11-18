@@ -31,7 +31,8 @@ internal static class StartCommand
             {
                 created = state;
                 phase = "selection";
-                output.Activity(state, "Created new ready run; no node has executed. Initial advance requested.");
+                if (!output.CompactExecution)
+                    output.Activity(state, "Created new ready run; no node has executed. Initial advance requested.");
             }, interruption.Token);
             phase = "advance";
             if (interruption.IsCancellationRequested)

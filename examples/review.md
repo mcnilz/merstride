@@ -3,9 +3,9 @@
 Requires Git in PATH and a Git repository as the workspace. This example captures status, delegates review to the existing agent, and supports rechecking after changes.
 Use `merstride advance --save-stdout` on each visit to retain the status output
 for the review request's context.
-Text output identifies repeated visits to `capture` and `review`, explains the
-accepted agent outcome and cursor movement, and requires a separate `advance`.
-An equivalent receipt retry adds no activity. See [flow output](../docs/FLOW-OUTPUT.md).
+The console names the paused review step and prints its prompt, allowed outcomes
+and request ID. After completing the request, call `advance` to resume. Use
+`--details` to inspect the execution route. See [flow output](../docs/FLOW-OUTPUT.md).
 
 ```yaml merstride
 schemaVersion: 1

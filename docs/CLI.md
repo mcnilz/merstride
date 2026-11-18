@@ -11,19 +11,13 @@ with severity, stable code and source location when available. Help hints accomp
 usage errors; stack traces are hidden. A failed run's `status` still exits 0 and
 shows its summary on stdout and failure reason on stderr.
 
-Text `advance` also writes flushed live activity lines to stderr, including when
-redirected. Each starts with the short run ID. Process lines identify the node and
-visit, explain activation (launch pending) and the saved outcome. Separate numbered
-`Flow #1: old -> new via ...` lines explain exact/default/unlabeled routing and
-revisited destinations. Run-status changes and overall results are separate from
-process exit codes. A saved completion announces acceptance and cursor movement once; retries show the
-receipt without new activity. Inspection and repeated waiting/terminal advances
-never replay transitions. Waiting/interrupted summaries explain the next action.
-No-route results say the flow stays at the cursor. Explicit resolution describes
-an unchanged cursor and no execution; retry requires a later advance and may repeat
-external effects. Final summaries explain the status and overall result before
-source/root details. Full activation IDs are secondary log selectors. See the
-[before/after walkthrough](FLOW-OUTPUT.md) for branches, loops and recovery.
+Text `advance` and `start --advance` name the workflow and each step as execution
+begins, even through redirection. A successful run ends with one summary and its
+run ID. Failures and pauses name the affected step and explain how to continue
+or recover. Progress identifies repeated visits and explains surprising routes
+such as fallbacks and handled failures. Add `--details` while executing to see
+the saved outcome tokens, numbered routes and state paths. Use `status --json`
+to inspect the latest activation afterward. See the [walkthrough](FLOW-OUTPUT.md).
 
 Use `merstride advance "$run_id" --state-dir "$state_root" >output.txt 2>activity.txt`
 in Bash to capture stdout with the final summary and stderr with activity and
@@ -64,8 +58,9 @@ Both commands support `-h` / `--help` and the global options described below.
 performs its first synchronous advance in one native invocation. All start options
 still apply. Ordinary start executes nothing; the flag may execute multiple nodes
 until waiting_agent, terminal state or error. It passes the exact created ID
-directly, independent of concurrent context changes. Text identifies creation and
-initial-advance outcome separately, with usual live activity and final status.
+directly, independent of concurrent context changes. Default text shows the
+named workflow, its steps and the result. `--details` shows creation, selection
+and initial advance information.
 JSON stays protocol 1 and adds `start: {created, phase, advance}`; other responses
 have null `start`. Update strict client response allowlists for the new field.
 One coherent response includes the created ID even on later failure, with fresh

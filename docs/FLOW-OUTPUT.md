@@ -1,6 +1,62 @@
 # Following a run in the console
 
-These representative native-CLI excerpts compare P17/P19 wording with P20.
+## The Git process chain
+
+```bash
+merstride start examples/process-chain.md --advance
+```
+
+The following transcripts were captured from the native Windows x64 CLI before
+and after P25. Both used the same Git workspace with one added line in a tracked
+`notes.txt`, and separate fresh state roots. Stdout and stderr were captured
+together. The before excerpt ends before its source and state paths.
+
+Before P25:
+
+```text
+[r_000001] Created new ready run; no node has executed. Initial advance requested.
+[r_000001] Process status (visit 1): activating (launch pending).
+ M notes.txt
+[r_000001] Process status (visit 1): saved exit code 0 (exit_0).
+[r_000001] Flow #1: status -> diff via exact outcome exit_0.
+[r_000001] Process diff (visit 1): activating (launch pending).
+ notes.txt | 1 +
+ 1 file changed, 1 insertion(+)
+[r_000001] Process diff (visit 1): saved exit code 0 (exit_0).
+[r_000001] Flow #2: diff -> done via exact outcome exit_0.
+[r_000001] Run ready -> completed at done: success end; overall result: success.
+Creation: saved new run
+Phase: advance
+Initial advance: finished; see the resulting run status below
+Run: r_000001
+Workflow: inspect
+Status: completed (finished successfully)
+Cursor: done
+Result: success
+Transitions: 2
+Last process: diff - exit code 0 (exit_0)
+Next: no further execution for this run. Start a new run to execute again.
+```
+
+After P25:
+
+```text
+Starting Inspect a Git workspace (run r_000001).
+Starting Inspect status.
+ M notes.txt
+Starting Inspect changes.
+ notes.txt | 1 +
+ 1 file changed, 1 insertion(+)
+Finished successfully (2 steps, run r_000001).
+```
+
+Use `--details` during execution for route keys and state paths. Use
+`merstride status r_000001 --json` to find the latest activation ID afterward.
+
+## Detailed output
+
+The historical native CLI excerpts below compare P17/P19 wording with P20.
+Use `--details` on execution commands to see P20's layout today.
 Run/request IDs are normalized; long activation IDs and source/root/log-selector
 details are omitted here. The branch uses the P20 native fixture; the loop and
 recovery use native helpers with observable effects and controlled interruption.
@@ -20,7 +76,7 @@ Activity [r_000001, node second, activation a_...]: Process outcome saved: exit_
 Activity [r_000001, node done]: Run completed.
 ```
 
-After `merstride advance branch.md >summary.txt 2>activity.txt`, activity.txt shows:
+After `merstride advance branch.md --details >summary.txt 2>activity.txt`, activity.txt shows:
 
 ```text
 [r_000001] Process first (visit 1): activating (launch pending).

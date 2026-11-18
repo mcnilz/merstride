@@ -27,8 +27,10 @@ selection while it executes. A start without `--advance` remains useful for
 preparing or inspecting a run before execution. Input/workflow/workspace/state
 options and frozen snapshots are shared by both alternatives.
 
-Representative combined text for a two-process workflow, with illustrative IDs
-and secondary source/root/log details omitted:
+Default combined text names the steps and summarizes the result. See the
+[recorded process-chain run](FLOW-OUTPUT.md#the-git-process-chain).
+`--details` shows the creation and advance phases. This detailed example omits
+secondary source, state root and log information.
 
 ```text
 stderr:

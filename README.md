@@ -89,9 +89,10 @@ merstride start workflow.md --advance
 ```
 
 This explicit option may run several process nodes before stopping at an agent,
-terminal result or error. Plain `start` remains nonexecuting. Creation and initial
-advance are reported separately; errors after creation retain that run and its
-saved progress. Recover using its displayed ID/root, rather than starting again.
+terminal result or error. Plain `start` remains nonexecuting. The console names
+the workflow and its steps. Errors after creation retain that run and its
+saved progress. Use its displayed ID and the original state root to recover.
+Inspect the state path with `status` if needed.
 See [phase and cancellation rules](docs/START-AND-ADVANCE.md). One invocation replaces
 two; no measured token saving is claimed.
 
@@ -101,7 +102,7 @@ multiple workflows and quote paths containing spaces. Bare `r_…` tokens select
 run IDs; for a filename that looks like an ID, use `./r_…` or `--file <path>`.
 Selection uses the frozen run even when the original file has changed or vanished.
 
-The output shows `Status: waiting_agent`, followed by `Request`, `Prompt`,
+The output names the step where execution paused, followed by `Request`, `Prompt`,
 `Allowed outcomes` and `Context`. Read them and perform the requested review.
 Once the review is complete
 and `approved` is the appropriate allowed outcome, return it directly:
@@ -115,8 +116,7 @@ merstride advance workflow.md
 Optional result data goes in one JSON argument, for example
 `--data '{"summary":"Review completed"}'`; omitted data defaults to `{}`. Complete
 saves a receipt and moves the cursor; the subsequent `advance` executes it.
-This example finishes with `Status: completed`. No output capture, JSON utility,
-completion file, workspace variable or repeated state argument is needed.
+This example ends with `Finished successfully` and the run ID.
 New run/request IDs have eight characters, including `r_` or `q_`. Completion
 finds the supplied request across this state root even if the current run has
 changed. Historical retries return their original receipt, preserving newer
@@ -168,27 +168,22 @@ and live stdout/stderr, or the [review loop](examples/review.md) for
 process/agent routing. Workflows execute with your privileges in the selected
 workspace; review their commands before running them.
 
-For example, advancing the process chain shows these messages as work proceeds
-(your run ID may differ):
+Starting and advancing the Git example shows each step and its output:
 
 ```text
-[r_000001] Process status (visit 1): activating (launch pending).
-[r_000001] Process status (visit 1): saved exit code 0 (exit_0).
-[r_000001] Flow #1: status -> diff via exact outcome exit_0.
-[r_000001] Process diff (visit 1): activating (launch pending).
-[r_000001] Process diff (visit 1): saved exit code 0 (exit_0).
-[r_000001] Flow #2: diff -> done via exact outcome exit_0.
-[r_000001] Run ready -> completed at done: success end; overall result: success.
+Starting Inspect a Git workspace (run r_000001).
+Starting Inspect status.
+ M notes.txt
+Starting Inspect changes.
+ notes.txt | 1 +
+ 1 file changed, 1 insertion(+)
+Finished successfully (2 steps, run r_000001).
 ```
 
-For the agent task, `advance` instead reports `waiting for agent; request q_...`
-and asks you to read the prompt and use `complete`. The stdout summary contains
-that prompt, context and allowed outcomes. A saved completion reports
-the agent's request/outcome, then the numbered flow movement and next explicit
-advance. Process exit codes and the overall `Result` are separate. Loops show
-visit numbers and revisited destinations; no-route/interruption output says the
-flow stays at its cursor. See [flow output](docs/FLOW-OUTPUT.md) for before/after
-branch, agent-loop and failure/recovery transcripts.
+When execution pauses at an agent step, `advance` prints the prompt, context,
+allowed outcomes and the request ID for `complete`. After completing the task,
+run `advance` again. Use `--details` to see numbered routes and saved outcome
+keys. See [flow output](docs/FLOW-OUTPUT.md) for the recorded Git workflow.
 Repeating the same completion returns its receipt without new activity.
 Activation is saved before launch, so its message does not claim launch succeeded.
 Process output streams to stdout and stderr as each command runs. Use

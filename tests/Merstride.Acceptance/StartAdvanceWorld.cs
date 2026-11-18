@@ -101,9 +101,9 @@ internal sealed class StartAdvanceWorld : IDisposable
         Assert.That(File.Exists(Effects), Is.False);
         Assert.That(cli.Response.GetProperty("start").ValueKind, Is.EqualTo(JsonValueKind.Null));
         var save = stop == "output-limit" ? new[] { "--save-stdout", "--save-stderr" } : [];
-        var combinedArgs = startArgs.Concat(["--advance"]).Concat(save);
+        var combinedArgs = startArgs.Concat(["--advance", "--details"]).Concat(save);
         cli.ExpectedChildren = Children;
-        cli.Call(["advance", separateId, .. save]); separate = cli.Response;
+        cli.Call(["advance", separateId, "--details", .. save]); separate = cli.Response;
         Assert.That(cli.ExitCode, Is.EqualTo(Exit), cli.Stdout + cli.Stderr);
         var structuredComplement = UsabilityAuditWorld.Complementary && format == "text";
         if (format == "json" || structuredComplement)

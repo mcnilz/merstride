@@ -29,8 +29,11 @@ internal sealed class CommandLine
         Add(root, "start", "Snapshot a workflow and persist a ready run. Execute nothing unless --advance is explicitly supplied.", "file", "merstride start 'workflow with spaces.md' --advance", ("--workspace", "Existing absolute workspace override; default: project boundary or cwd."), ("--workflow", "Select a workflow ID; default: the single pair."), ("--input-file", "JSON object input file; default: {}."), ("--advance", "Opt in: immediately advance exactly this new run until waiting_agent, terminal state or error. May execute multiple processes."));
         Add(root, "advance", "Execute sequentially until waiting_agent, terminal state, or error. Text activity is live on stderr; --json suppresses it.", "selection", "merstride advance workflow.md");
         foreach (var executor in root.Subcommands.Where(c => c.Name is "start" or "advance"))
+        {
+            executor.Options.Add(new Option<bool>("--details") { Description = "Show execution details including saved outcomes, route keys and state paths in text mode.", Arity = ArgumentArity.Zero });
             foreach (var stream in new[] { "stdout", "stderr" })
                 executor.Options.Add(new Option<bool>("--save-" + stream) { Description = $"Save process {stream} under the run's logs directory instead of forwarding it to the console. Requires execution.", Arity = ArgumentArity.Zero });
+        }
         Add(root, "status", "Inspect a run without executing; failed-run inspection exits 0.", "selection", "merstride status 'workflow with spaces.md'");
         Add(root, "complete", "Save an agent completion and move only the cursor; advance again explicitly.", "selection", "merstride complete workflow.md --request q_000002 --outcome approved", ("--request", "Required request ID from waiting_agent."), ("--outcome", "Preferred: allowed outcome from waiting_agent; mutually exclusive with --result-file."), ("--data", "Optional inline JSON object with --outcome; default: {}."), ("--result-file", "Alternative UTF-8 JSON completion file: outcome and optional object data."));
         Add(root, "resolve", "Resolve interrupted work explicitly; inspect external effects first. Exactly one of --retry or --fail is required.", "selection", "merstride resolve workflow.md --retry", ("--retry", "Return ready without execution; a later advance attempts again."), ("--fail", "Finish failed without execution; exits 5."));
@@ -163,7 +166,7 @@ internal sealed class CommandLine
         interruption uses ordinary resolve recovery. No rollback or automatic replay.
         --json returns one protocol-1 object with additive start {created, phase, advance};
         other responses have null start. finished includes workflow failure; inspect status/error.
-        Text separates creation, initial advance and resulting status. One call replaces two.
+        Default text names the workflow and its steps. Use --details for creation and advance phases.
         Run commands use start/use selection, or a positional workflow path:
           merstride status workflow.md
           merstride advance 'workflow with spaces.md' --workflow review
@@ -203,9 +206,9 @@ internal sealed class CommandLine
         Help is English text; with --json it is one protocol object with a guide string.
         All commands use readable English text by default, including redirected output.
         Scripts/agents must pass --json; text errors/warnings use stderr, text results use stdout.
-        Text advance reports process outcomes, numbered Flow #...: source -> destination
-        with exact/default/unlabeled route reasons, repeated visits and handoffs on stderr.
-        Run status and overall Result are separate from process exit codes.
+        Text advance names each step as it starts and summarizes the overall result.
+        Use --details with advance or start --advance for route keys and state paths.
+        Use status --json to inspect the latest activation ID and outcome.
         Waiting/no-route means staying at a node; completion moves only the cursor.
         Explicit resolution executes nothing; retry requires advance and may repeat effects.
         Activation is saved before launch; it does not claim a process has started.

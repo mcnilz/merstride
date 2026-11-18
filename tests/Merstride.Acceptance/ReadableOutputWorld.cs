@@ -28,7 +28,7 @@ internal sealed class ReadableOutputWorld : IDisposable
                 runId = cli.Response.GetProperty("runId").GetString()!;
                 Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("ready"));
                 Assert.That(cli.Response.GetProperty("lastActivation").ValueKind, Is.EqualTo(JsonValueKind.Null));
-                cli.ExpectedChildren = 1; cli.Call("advance", runId); cli.ExpectedChildren = 0;
+                cli.ExpectedChildren = 1; cli.Call("advance", runId, "--save-stdout", "--save-stderr"); cli.ExpectedChildren = 0;
                 Assert.That(cli.ExitCode, Is.Zero);
                 var request = cli.Response.GetProperty("request");
                 requestId = request.GetProperty("id").GetString()!;
@@ -36,7 +36,7 @@ internal sealed class ReadableOutputWorld : IDisposable
                 Assert.That(request.GetProperty("allowedOutcomes")[0].GetString(), Is.EqualTo("approved"));
                 Assert.That(request.GetProperty("context")[1].GetProperty("truncated").GetBoolean(), Is.True);
                 Assert.That(request.GetProperty("context")[2].GetProperty("available").GetBoolean(), Is.False);
-                Assert.That(cli.Stdout, Does.Not.Contain("SECRET"));
+                Assert.That(cli.Response.GetProperty("request").GetRawText(), Does.Not.Contain("SECRET"));
                 cli.Call("complete", runId, "--request", requestId, "--outcome", "approved");
                 Assert.That(cli.ExitCode, Is.Zero);
                 var accepted = cli.Response.GetProperty("receipt").GetRawText();
@@ -146,7 +146,7 @@ internal sealed class ReadableOutputWorld : IDisposable
                 cli.Call("status", runId);
                 Assert.That(cli.Response.GetProperty("lastActivation").ValueKind, Is.EqualTo(JsonValueKind.Null)); break;
             case "I advance to the agent as text":
-                cli.ExpectedChildren = 1; Text("advance", runId); cli.ExpectedChildren = 0; break;
+                cli.ExpectedChildren = 1; Text("advance", runId, "--save-stdout", "--save-stderr"); cli.ExpectedChildren = 0; break;
             case "the handoff displays literal instructions outcomes and selected context":
                 Assert.That(cli.ExitCode, Is.Zero, cli.Stderr);
                 Assert.That(cli.Stdout, Does.Contain("Status: waiting_agent").And.Contain("Node: review")
@@ -310,7 +310,7 @@ internal sealed class ReadableOutputWorld : IDisposable
     private void CompareLogs()
     {
         cli.Call("start", cli.FilePath, "--workspace", cli.DirectoryPath); runId = cli.Response.GetProperty("runId").GetString()!;
-        cli.ExpectedChildren = 1; cli.Call("advance", runId); cli.ExpectedChildren = 0;
+        cli.ExpectedChildren = 1; cli.Call("advance", runId, "--save-stdout", "--save-stderr"); cli.ExpectedChildren = 0;
         var activation = cli.Response.GetProperty("lastActivation");
         var id = activation.GetProperty("id").GetString()!;
         var logPath = Path.Combine(cli.State, runId, activation.GetProperty("stdoutPath").GetString()!);

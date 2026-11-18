@@ -164,7 +164,7 @@ and structured responses, see its [JSON integration example](docs/AGENT-GUIDE.md
 
 Try the [inline scripts](examples/inline-scripts.md) for shared scripts and platform
 variants, or the [process chain](examples/process-chain.md) for literal command arguments
-and separate stdout/stderr logs, or the [review loop](examples/review.md) for
+and live stdout/stderr, or the [review loop](examples/review.md) for
 process/agent routing. Workflows execute with your privileges in the selected
 workspace; review their commands before running them.
 
@@ -191,7 +191,9 @@ flow stays at its cursor. See [flow output](docs/FLOW-OUTPUT.md) for before/afte
 branch, agent-loop and failure/recovery transcripts.
 Repeating the same completion returns its receipt without new activity.
 Activation is saved before launch, so its message does not claim launch succeeded.
-Process output stays in separate raw logs; use `logs` to read a selected tail.
+Process output streams to stdout and stderr as each command runs. Use
+`--save-stdout` or `--save-stderr` on an advance to save a stream for `logs` or
+for agent handoff context.
 
 ## Using Merstride
 

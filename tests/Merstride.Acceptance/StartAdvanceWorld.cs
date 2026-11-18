@@ -100,14 +100,16 @@ internal sealed class StartAdvanceWorld : IDisposable
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("ready"));
         Assert.That(File.Exists(Effects), Is.False);
         Assert.That(cli.Response.GetProperty("start").ValueKind, Is.EqualTo(JsonValueKind.Null));
+        var save = stop == "output-limit" ? new[] { "--save-stdout", "--save-stderr" } : [];
+        var combinedArgs = startArgs.Concat(["--advance"]).Concat(save);
         cli.ExpectedChildren = Children;
-        cli.Call("advance", separateId); separate = cli.Response;
+        cli.Call(["advance", separateId, .. save]); separate = cli.Response;
         Assert.That(cli.ExitCode, Is.EqualTo(Exit), cli.Stdout + cli.Stderr);
         var structuredComplement = UsabilityAuditWorld.Complementary && format == "text";
         if (format == "json" || structuredComplement)
         {
-            if (structuredComplement) UsabilityAuditWorld.Structured(() => cli.Call(startArgs.Concat(["--advance"]).ToArray()));
-            else cli.Call(startArgs.Concat(["--advance"]).ToArray());
+            if (structuredComplement) UsabilityAuditWorld.Structured(() => cli.Call(combinedArgs.ToArray()));
+            else cli.Call(combinedArgs.ToArray());
             combined = cli.Response;
             Assert.That(cli.ExitCode, Is.EqualTo(Exit), cli.Stdout + cli.Stderr);
             combinedId = combined.GetProperty("runId").GetString()!;
@@ -124,7 +126,7 @@ internal sealed class StartAdvanceWorld : IDisposable
         }
         else
         {
-            cli.Raw(startArgs.Concat(["--advance", "--state-dir", cli.State]).ToArray());
+            cli.Raw(combinedArgs.Concat(["--state-dir", cli.State]).ToArray());
             Assert.That(cli.ExitCode, Is.EqualTo(Exit), cli.Stdout + cli.Stderr);
             combinedId = cli.Stdout.Split('\n').Single(line => line.StartsWith("Run: ", StringComparison.Ordinal))[5..].Trim();
             Assert.That(cli.Stdout, Does.Contain("Creation: saved new run").And.Contain("Initial advance: finished").And.Contain("Next:"));

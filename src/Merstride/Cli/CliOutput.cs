@@ -9,14 +9,37 @@ namespace Merstride.Cli;
 internal sealed class CliOutput(bool json)
 {
     private bool activityUnavailable;
+    private const int ProcessOutputLimit = 16;
+    private readonly Queue<ProcessOutput> processOutput = new();
+    private int processOutputOmitted;
+    private ProcessConsoleStream? processStdout;
+    private ProcessConsoleStream? processStderr;
+    private TextWriter Out => processStdout?.Unavailable == true ? TextWriter.Null : Console.Out;
+    private TextWriter Error => processStderr?.Unavailable == true ? TextWriter.Null : Console.Error;
+
+    internal ProcessRunner ProcessRunner(string runDirectory, CancellationToken interruption) => json
+        ? new(runDirectory, null, null, RecordProcessOutput, interruption)
+        : new(runDirectory, processStdout ??= new(Console.OpenStandardOutput()),
+            processStderr ??= new(Console.OpenStandardError()), null, interruption);
+
+    private void RecordProcessOutput(ProcessOutput output)
+    {
+        if (processOutput.Count == ProcessOutputLimit)
+        {
+            processOutput.Dequeue();
+            processOutputOmitted++;
+        }
+        processOutput.Enqueue(output);
+    }
 
     internal void Activity(RunState run, string message)
     {
         if (json || activityUnavailable) return;
         try
         {
-            Console.Error.WriteLine(Readable($"[{run.RunId}] {message}"));
-            Console.Error.Flush();
+            processStderr?.FinishLine(Error);
+            Error.WriteLine(Readable($"[{run.RunId}] {message}"));
+            Error.Flush();
         }
         // A closed progress pipe must not turn a saved transition into an execution failure.
         catch (Exception ex) when (ex is IOException or ObjectDisposedException) { activityUnavailable = true; }
@@ -26,12 +49,22 @@ internal sealed class CliOutput(bool json)
 
     internal int Write(CliResponse response, int code = 0, string? logActivation = null)
     {
-        if (json) Console.WriteLine(JsonSerializer.Serialize(response, JsonContext.Default.CliResponse));
-        else WriteText(response, logActivation);
+        if (json)
+        {
+            if (processOutput.Count > 0)
+                response = response with { ProcessOutput = processOutput.ToArray(), ProcessOutputOmitted = processOutputOmitted };
+            Console.WriteLine(JsonSerializer.Serialize(response, JsonContext.Default.CliResponse));
+        }
+        else
+        {
+            processStdout?.FinishLine(Out);
+            processStderr?.FinishLine(Error);
+            WriteText(response, logActivation);
+        }
         return code;
     }
 
-    private static void WriteText(CliResponse response, string? logActivation)
+    private void WriteText(CliResponse response, string? logActivation)
     {
         if (response.Start is { } start)
         {
@@ -45,23 +78,23 @@ internal sealed class CliOutput(bool json)
                 _ => "not started; no node executed by this invocation"
             });
         }
-        if (response.Guide is { } guide) Console.WriteLine(Readable(guide));
-        else if (response.Version is { } version) Console.WriteLine($"Merstride {Readable(version)} (protocol {response.ProtocolVersion})");
+        if (response.Guide is { } guide) Out.WriteLine(Readable(guide));
+        else if (response.Version is { } version) Out.WriteLine($"Merstride {Readable(version)} (protocol {response.ProtocolVersion})");
         else if (response.Log is { } log)
         {
             Line("Run", response.RunId);
             Line("Activation", logActivation);
             Line("Stream", response.Stream);
             Line("Tail truncated", response.Truncated == true ? "yes" : "no");
-            Console.WriteLine(); Console.WriteLine(Readable(log));
+            Out.WriteLine(); Out.WriteLine(Readable(log));
         }
         else if (response.Runs is { } runs)
         {
             Line("State root", response.StateRoot);
-            if (runs.Length == 0) Console.WriteLine("No retained runs match. Start a workflow to create one.");
+            if (runs.Length == 0) Out.WriteLine("No retained runs match. Start a workflow to create one.");
             foreach (var run in runs)
-                Console.WriteLine(Readable($"{run.RunId}  {run.Status}{(run.Current ? "  (current)" : "")}  {run.WorkflowId ?? "unknown workflow"}  {run.SourcePath ?? "source unavailable (legacy or unreadable state)"}"));
-            Console.WriteLine("Select: merstride use <run-id>. Remove one run deliberately: merstride discard <run-id>.");
+                Out.WriteLine(Readable($"{run.RunId}  {run.Status}{(run.Current ? "  (current)" : "")}  {run.WorkflowId ?? "unknown workflow"}  {run.SourcePath ?? "source unavailable (legacy or unreadable state)"}"));
+            Out.WriteLine("Select: merstride use <run-id>. Remove one run deliberately: merstride discard <run-id>.");
         }
         else if (response.Discarded == true)
         {
@@ -69,17 +102,17 @@ internal sealed class CliOutput(bool json)
             Line("Workflow", response.WorkflowId);
             Line("Source", response.SourcePath);
             Line("State root", response.StateRoot);
-            Console.WriteLine("Removed this run's state, logs and receipts. Other runs were retained.");
+            Out.WriteLine("Removed this run's state, logs and receipts. Other runs were retained.");
         }
         else if (response.RunId is not null) WriteRun(response);
         else if (response.WorkflowId is { } workflow) Line("Valid workflow", workflow);
 
         foreach (var diagnostic in response.Diagnostics ?? [])
-            Console.Error.WriteLine($"{(diagnostic.Severity == "warning" ? "Warning" : "Error")} {Readable(diagnostic.Code)}{Location(diagnostic.Location)}: {Readable(diagnostic.Message)}");
+            Error.WriteLine($"{(diagnostic.Severity == "warning" ? "Warning" : "Error")} {Readable(diagnostic.Code)}{Location(diagnostic.Location)}: {Readable(diagnostic.Message)}");
         if (response.Error is { } error && !(response.Diagnostics ?? []).Any(d =>
                 d.Code == error.Code && d.Message == error.Message && d.Location == error.Location))
         {
-            Console.Error.WriteLine($"Error {Readable(error.Code)}{Location(error.Location)}: {Readable(error.Message)}");
+            Error.WriteLine($"Error {Readable(error.Code)}{Location(error.Location)}: {Readable(error.Message)}");
             var next = error.Code switch
             {
                 "INVALID_OUTCOME" or "INVALID_REQUEST" => "Next: inspect status and use the original request ID and an allowed outcome; no new completion was accepted.",
@@ -89,11 +122,11 @@ internal sealed class CliOutput(bool json)
                 "IO_ERROR" => "Next: check the original workflow/state path and permissions, then inspect status before retrying; external effects may already have happened.",
                 _ => null
             };
-            if (next is not null) Console.Error.WriteLine(next);
+            if (next is not null) Error.WriteLine(next);
         }
     }
 
-    private static void WriteRun(CliResponse response)
+    private void WriteRun(CliResponse response)
     {
         Line("Run", response.RunId);
         Line("Workflow", response.WorkflowId);
@@ -115,52 +148,51 @@ internal sealed class CliOutput(bool json)
         });
         if (response.TransitionCount is { } transitions) Line("Transitions", transitions.ToString(CultureInfo.InvariantCulture));
         if (response.LastActivation is { } activation)
-            Line(activation.StdoutPath.Length == 0 ? "Last agent visit" : "Last process", $"{activation.NodeId} - {Outcome(activation)}");
+            Line(activation.IsProcess ? "Last process" : "Last agent visit", $"{activation.NodeId} - {Outcome(activation)}");
         if (response.Receipt is { } receipt) Line("Completion", $"{receipt.RequestId} - {receipt.Outcome} (saved receipt; retries do not move the flow)");
         if (response.Status == "interrupted")
-            Console.WriteLine("Next: inspect external effects, then explicitly resolve --retry or --fail. Advance never replays interrupted work.");
+            Out.WriteLine("Next: inspect external effects, then explicitly resolve --retry or --fail. Advance never replays interrupted work.");
         else if (response.Status == "ready")
-            Console.WriteLine($"Next: merstride advance {Readable(response.RunId!)}. Completion and retry resolution never execute the next node.");
+            Out.WriteLine($"Next: merstride advance {Readable(response.RunId!)}. Completion and retry resolution never execute the next node.");
         else if (response.Status == "completed")
-            Console.WriteLine("Next: no further execution for this run. Start a new run to execute again.");
+            Out.WriteLine("Next: no further execution for this run. Start a new run to execute again.");
         else if (response.Status == "failed")
-            Console.WriteLine("Next: inspect the failure reason and logs; correct the cause and start a new run. Only interrupted runs support resolve.");
+            Out.WriteLine("Next: inspect the failure reason and logs; correct the cause and start a new run. Only interrupted runs support resolve.");
         else if (response.Status == "executing")
-            Console.WriteLine("Next: wait for the current advance to finish; status can inspect it without executing work.");
+            Out.WriteLine("Next: wait for the current advance to finish; status can inspect it without executing work.");
         else if (response.Status is null)
-            Console.WriteLine("Next: inspect status/logs for this exact run and state root after restoring access; do not repeat start to recover it.");
-        Console.WriteLine();
+            Out.WriteLine("Next: inspect status/logs for this exact run and state root after restoring access; do not repeat start to recover it.");
+        Out.WriteLine();
         Line("Source", response.SourcePath);
         Line("State root", response.StateRoot);
-        if (response.LastActivation is { } last && last.StdoutPath.Length > 0)
+        if (response.LastActivation is { HasLogs: true } last)
             Line("Log activation", last.Id);
         if (response.Request is not { } request) return;
-        Console.WriteLine();
+        Out.WriteLine();
         Line("Request", request.Id);
         Line("Node", request.NodeId);
-        Console.WriteLine("Prompt:"); Console.WriteLine(Readable(request.Prompt));
+        Out.WriteLine("Prompt:"); Out.WriteLine(Readable(request.Prompt));
         Line("Allowed outcomes", string.Join(", ", request.AllowedOutcomes));
-        Console.WriteLine("Next: perform the prompt's task, then complete this request with an allowed outcome. Call advance separately afterward.");
-        Console.WriteLine("Context:");
-        if (request.Context.Length == 0) Console.WriteLine("  (none)");
+        Out.WriteLine("Next: perform the prompt's task, then complete this request with an allowed outcome. Call advance separately afterward.");
+        Out.WriteLine("Context:");
+        if (request.Context.Length == 0) Out.WriteLine("  (none)");
         foreach (var item in request.Context)
         {
-            if (!item.Available) { Console.WriteLine($"  {Readable(item.Selector)}: unavailable"); continue; }
+            if (!item.Available) { Out.WriteLine($"  {Readable(item.Selector)}: unavailable"); continue; }
             var details = new List<string>();
             if (item.SourceActivationId is { } source) details.Add("activation: " + source);
             if (item.Truncated is { } truncated) details.Add("truncated: " + (truncated ? "yes" : "no"));
             if (item.ObservedBytes is { } bytes) details.Add("observed bytes: " + bytes.ToString(CultureInfo.InvariantCulture));
-            Console.WriteLine($"  {Readable(item.Selector)}{(details.Count == 0 ? "" : " (" + Readable(string.Join(", ", details)) + ")")}:");
+            Out.WriteLine($"  {Readable(item.Selector)}{(details.Count == 0 ? "" : " (" + Readable(string.Join(", ", details)) + ")")}:");
             var value = item.Value.ValueKind == JsonValueKind.String ? item.Value.GetString()! : item.Value.GetRawText();
-            Console.WriteLine(Readable(value));
+            Out.WriteLine(Readable(value));
         }
     }
 
     internal static string Outcome(Activation activation)
     {
         // Agent outcomes may legally use process tokens such as timeout or exit_0.
-        // Process activations always own log paths; agent visits never do.
-        if (activation.StdoutPath.Length == 0)
+        if (!activation.IsProcess)
             return activation.Outcome is { } choice ? "agent outcome " + choice : "pending";
         return activation.Outcome switch
         {
@@ -175,9 +207,9 @@ internal sealed class CliOutput(bool json)
         };
     }
 
-    private static void Line(string label, string? value)
+    private void Line(string label, string? value)
     {
-        if (value is not null) Console.WriteLine($"{label}: {Readable(value)}");
+        if (value is not null) Out.WriteLine($"{label}: {Readable(value)}");
     }
 
     private static string Location(SourceLocation? location) => location is null ? "" :

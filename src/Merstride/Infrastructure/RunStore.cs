@@ -113,10 +113,13 @@ public sealed partial class RunStore(string root) : IRunPersistence, IContextLog
         finally { if (File.Exists(temp)) File.Delete(temp); }
     }
 
-    public string ReadLog(RunState run, string activationId, string stream, int tailBytes, out bool truncated)
+    public string? ReadLog(RunState run, string activationId, string stream, int tailBytes, out bool truncated)
     {
-        if (!ActivationId().IsMatch(activationId) || !run.Activations.Any(a => a.Id == activationId))
+        var activation = ActivationId().IsMatch(activationId) ? run.Activations.FirstOrDefault(a => a.Id == activationId) : null;
+        if (activation is null)
             throw new MerstrideException("INVALID_ACTIVATION", "Unknown activation identifier.", 4);
+        truncated = false;
+        if ((stream == "stdout" ? activation.StdoutPath : activation.StderrPath).Length == 0) return null;
         using var file = new FileStream(Path.Combine(RunDirectory(run.RunId), "logs", $"{activationId}.{stream}"),
             FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         truncated = file.Length > tailBytes;

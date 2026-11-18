@@ -223,7 +223,7 @@ internal sealed partial class ContextWorld
         {
             File.WriteAllText(cli.FilePath, ProcessWorkflow);
             current = Json("start", cli.FilePath).GetProperty("runId").GetString()!;
-            cli.ExpectedChildren = 1; Json("advance"); cli.ExpectedChildren = 0;
+            cli.ExpectedChildren = 1; Json("advance", "--save-stdout", "--save-stderr"); cli.ExpectedChildren = 0;
             Assert.That(Directory.GetFiles(Path.Combine(Root, current, "logs")).Length, Is.EqualTo(2));
             Json("discard", current);
             Assert.That(Directory.Exists(Path.Combine(Root, current)), Is.False);
@@ -400,7 +400,7 @@ internal sealed partial class ContextWorld
             File.WriteAllText(cli.FilePath, ProcessWorkflow);
             current = Json("start", cli.FilePath).GetProperty("runId").GetString()!;
             cli.ExpectedChildren = 1;
-            var advanced = Json("advance", cli.FilePath, "--workflow", "logs"); cli.ExpectedChildren = 0;
+            var advanced = Json("advance", cli.FilePath, "--workflow", "logs", "--save-stdout"); cli.ExpectedChildren = 0;
             var activation = advanced.GetProperty("lastActivation").GetProperty("id").GetString()!;
             Assert.That(Json("logs", cli.FilePath, "--workflow", "logs", "--activation", activation, "--stream", "stdout").GetProperty("log").GetString(), Does.Contain("real stdout"));
             var statePath = Path.Combine(Root, current, "state.json");

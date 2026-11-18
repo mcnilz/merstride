@@ -9,7 +9,7 @@ public interface IRunPersistence
 
 public interface IContextLogs
 {
-    string ReadLog(RunState run, string activationId, string stream, int tailBytes, out bool truncated);
+    string? ReadLog(RunState run, string activationId, string stream, int tailBytes, out bool truncated);
 }
 
 public interface IProcessRunner
@@ -21,6 +21,9 @@ public interface IRequestIds
 {
     string Request();
 }
+
+[Flags]
+public enum ProcessLogs { None = 0, Stdout = 1, Stderr = 2 }
 
 public static class WorkflowEngine
 {
@@ -41,7 +44,7 @@ public static class WorkflowEngine
     }
 
     public static RunState Advance(RunState run, IRunPersistence store, IProcessRunner processes, IContextLogs logs,
-        IRequestIds ids, CancellationToken interruption = default)
+        IRequestIds ids, ProcessLogs retained, CancellationToken interruption = default)
     {
         if (run.Status == "executing")
         {
@@ -83,7 +86,8 @@ public static class WorkflowEngine
             {
                 var id = "a_" + Guid.NewGuid().ToString("N");
                 var activation = new Activation(id, node.Id, DateTimeOffset.UtcNow, null, null, null,
-                    $"logs/{id}.stdout", $"logs/{id}.stderr");
+                    retained.HasFlag(ProcessLogs.Stdout) ? $"logs/{id}.stdout" : "",
+                    retained.HasFlag(ProcessLogs.Stderr) ? $"logs/{id}.stderr" : "", Process: true);
                 run = run with { Status = "executing", Activations = [.. run.Activations, activation] };
                 store.Write(run);
                 activation = processes.Execute(node, run.Workspace, activation);

@@ -144,8 +144,10 @@ internal sealed class AgentWorld : IDisposable
                 Assert.That(context[0].GetProperty("value").GetInt32(), Is.Zero);
                 Assert.That(context[0].GetProperty("sourceActivationId").GetString(), Does.StartWith("a_")); break;
             case "the response omits other prompts, full logs, and completion history":
-                Assert.That(cli.Stdout, Does.Not.Contain("SECRET").And.Not.Contain("loglog").And.Not.Contain("acceptedAt"));
-                Assert.That(cli.Stdout.Length, Is.LessThan(4096)); break;
+                var handoff = cli.Response.GetProperty("request").GetRawText();
+                Assert.That(handoff, Does.Not.Contain("SECRET").And.Not.Contain("loglog"));
+                Assert.That(handoff.Length, Is.LessThan(4096));
+                Assert.That(cli.Stdout, Does.Not.Contain("SECRET previous").And.Not.Contain("acceptedAt")); break;
             case "a loop whose agent selects data from a node not yet completed on its first visit":
                 AgentLoop(); Start(); cli.Call("advance", runId);
                 requestId = cli.Response.GetProperty("request").GetProperty("id").GetString()!;
@@ -294,7 +296,7 @@ internal sealed class AgentWorld : IDisposable
             .Replace("args: [check]", "args: [context_output]")
             .Replace("check -->|exit_0| done", "check -->|exit_0| repair")
             .Replace("context: [nodes.check.exitCode]", "context: [nodes.check.stdoutTail, nodes.check.stderrTail, nodes.check.exitCode]"));
-        Start(); cli.ExpectedChildren = 1; cli.Call("advance", runId);
+        Start(); cli.ExpectedChildren = 1; cli.Call("advance", runId, "--save-stdout", "--save-stderr");
         Assert.That(cli.ExitCode, Is.Zero);
         var items = cli.Response.GetProperty("request").GetProperty("context");
         Assert.That(items[0].GetProperty("value").GetString()!.Length, Is.EqualTo(4096));

@@ -121,7 +121,8 @@ internal static class Program
               Visits identify loops; no-route/waiting means staying at the cursor.
               Completion moves only the cursor. Resolution changes only run status.
               Full activation IDs are secondary log selectors, not repeated on live lines.
-              --json suppresses activity; no child output or periodic noise is streamed.
+              Child stdout and stderr stream to their matching text channels.
+              With --json, read bounded processOutput previews in the response instead.
 
             Agent handoffs
             - Read the request ID, literal prompt, selected context and allowed outcomes.
@@ -165,8 +166,11 @@ internal static class Program
               no matching route fails with NO_MATCHING_EDGE.
 
             Logs and limits
-            - Output stays in separate raw-byte logs, capped at 10 MiB combined per activation.
+            - Process output is capped at 10 MiB combined per activation.
               Time/output limits attempt process-tree termination and route timeout/output_limit.
+            - Use --save-stdout and/or --save-stderr on advance or start --advance to
+              retain selected streams in the run's logs directory and enable agent tails.
+              In text mode a saved stream goes only to its file. JSON includes both previews.
             - status returns lastActivation. Read a selected UTF-8 log tail with:
               merstride logs <run-id> --activation <id> --stream stdout --json
               Pass the saved --state-dir; choose stdout or stderr. Optional --tail-bytes
@@ -252,7 +256,8 @@ internal static class Program
             if (options.TryGetValue("--tail-bytes", out var count) && (!int.TryParse(count, out tail) || tail is < 1 or > 65536))
                 throw Usage("--tail-bytes must be from 1 to 65536.");
             id = ResourceSelection.Run(store, selector, source, workflowId);
-            var text = store.ReadLog(store.Read(id), activation, stream, tail, out var truncated);
+            var text = store.ReadLog(store.Read(id), activation, stream, tail, out var truncated)
+                ?? throw new MerstrideException("LOG_NOT_RETAINED", $"No {stream} log was retained for this activation. Use --save-{stream} on a future advance to retain that stream.", 4);
             return output.Write(new(RunId: id, Log: text, Stream: stream, Truncated: truncated), logActivation: activation);
         }
         id = command == "complete" && selector is null && source is null
@@ -286,7 +291,7 @@ internal static class Program
         Console.CancelKeyPress += cancel;
         try
         {
-            var result = RunExecution.Advance(run, store, output, interruption.Token);
+            var result = RunExecution.Advance(run, store, output, options, interruption.Token);
             return output.Write(result.Response, result.Code);
         }
         finally { Console.CancelKeyPress -= cancel; }

@@ -142,6 +142,8 @@ YAML schema
   optional context (array of unique selectors). Use prompt: | for multiline text.
   Selectors: input; nodes.<id>.exitCode, nodes.<id>.stdoutTail,
   nodes.<id>.stderrTail for process nodes; nodes.<id>.data for agent nodes.
+  Save the chosen stream with --save-stdout or --save-stderr on the advance
+  that executes the process; otherwise its handoff tail is unavailable.
   Referenced nodes and kinds must be valid. Context is data separate from the
   literal prompt, with no template evaluation. Each selector reads the latest
   completed activation, possibly a previous loop iteration; check availability

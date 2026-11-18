@@ -11,7 +11,11 @@ internal static class StartCommand
         RunStore store, string version, CliOutput output)
     {
         if (!options.ContainsKey("--advance"))
+        {
+            if (options.ContainsKey("--save-stdout") || options.ContainsKey("--save-stderr"))
+                throw new MerstrideException("USAGE", "Use --save-stdout and --save-stderr with start --advance or with advance.", 2);
             return output.Write(RunExecution.Response(Create(path, options, location, store, version), store.Root));
+        }
 
         RunState? created = null;
         var phase = "creation";
@@ -42,7 +46,7 @@ internal static class StartCommand
                 using var held = store.Lock(run.RunId);
                 run = store.Read(run.RunId);
                 advance = "error";
-                (response, code) = RunExecution.Advance(run, store, output, interruption.Token);
+                (response, code) = RunExecution.Advance(run, store, output, options, interruption.Token);
                 advance = code == 130 ? "interrupted" : "finished";
             }
         }

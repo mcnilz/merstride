@@ -87,7 +87,7 @@ internal sealed class ProcessWorld : IDisposable
     {
         if (runId.Length == 0) Start();
         cli.ExpectedChildren = children;
-        cli.Call("advance", runId);
+        cli.Call("advance", runId, "--save-stdout", "--save-stderr");
     }
 
     public void Execute(string step)
@@ -146,8 +146,14 @@ internal sealed class ProcessWorld : IDisposable
                 Assert.That(cli.ExitCode, Is.Zero);
                 Assert.That(cli.Stderr, Is.Empty);
                 Assert.That(cli.Stdout.Trim().Split('\n'), Has.Length.EqualTo(1));
-                Assert.That(cli.Stdout, Does.Not.Contain("real stdout").And.Not.Contain("real stderr")); break;
-            case "both child streams are available only through their logs or selected context":
+                if (!UsabilityAuditWorld.ConvertJson)
+                {
+                    var preview = cli.Response.GetProperty("processOutput")[0];
+                    Assert.That(preview.GetProperty("stdout").GetProperty("text").GetString(), Is.EqualTo("real stdout\nGrüße"));
+                    Assert.That(preview.GetProperty("stderr").GetProperty("text").GetString(), Is.EqualTo("real stderr\n"));
+                }
+                break;
+            case "both raw child streams are retained in their respective logs":
                 Assert.That(Log("stdout"), Is.EqualTo("real stdout\nGrüße"));
                 Assert.That(Log("stderr"), Is.EqualTo("real stderr\n")); break;
             case "both process effects occur once in graph order":

@@ -7,12 +7,15 @@ namespace Merstride.Cli;
 internal static class RunExecution
 {
     // The caller holds this exact run's writer lock throughout the synchronous chain.
-    internal static (CliResponse Response, int Code) Advance(RunState run, RunStore store, CliOutput output, CancellationToken interruption)
+    internal static (CliResponse Response, int Code) Advance(RunState run, RunStore store, CliOutput output,
+        Dictionary<string, string> options, CancellationToken interruption)
     {
         try
         {
+            var retained = (options.ContainsKey("--save-stdout") ? ProcessLogs.Stdout : ProcessLogs.None) |
+                (options.ContainsKey("--save-stderr") ? ProcessLogs.Stderr : ProcessLogs.None);
             run = WorkflowEngine.Advance(run, new ConsoleActivity(store, output, run),
-                new ProcessRunner(store.RunDirectory(run.RunId), interruption), store, new IdentityAllocator(store), interruption);
+                output.ProcessRunner(store.RunDirectory(run.RunId), interruption), store, new IdentityAllocator(store), retained, interruption);
             return (Response(run, store.Root), interruption.IsCancellationRequested ? 130 : run.Status is "failed" or "interrupted" ? 5 : 0);
         }
         catch (Exception ex) when (interruption.IsCancellationRequested && ex is IOException or UnauthorizedAccessException)

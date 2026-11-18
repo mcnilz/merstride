@@ -29,6 +29,7 @@ public static class AgentContext
         }
         var stdout = parts[2] == "stdoutTail";
         var text = logs.ReadLog(run, source.Id, stdout ? "stdout" : "stderr", 4096, out var truncated);
+        if (text is null) return new(selector, false, JsonValues.Null, source.Id);
         // Replacement characters can expand invalid bytes. Bound the decoded UTF-8 value too.
         while (Encoding.UTF8.GetByteCount(text) > 4096)
         {

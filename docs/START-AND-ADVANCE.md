@@ -13,12 +13,12 @@ its task before completing it. Human walkthroughs need no JSON utility.
 ```bash
 # Separate preparation and execution: two native invocations.
 merstride start examples/review.md
-merstride advance examples/review.md
+merstride advance examples/review.md --save-stdout
 ```
 
 ```bash
 # Explicit immediate execution: one native invocation.
-merstride start examples/review.md --advance
+merstride start examples/review.md --advance --save-stdout
 ```
 
 Both alternatives retain earlier runs. The second creates/selects a distinct run

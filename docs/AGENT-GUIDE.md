@@ -83,7 +83,7 @@ contents, and never undoes external effects. No automatic retention policy runs.
 
 The current request contains `id`, `activationId`, `nodeId`, literal `prompt`, ordinally
 sorted `allowedOutcomes`, and `context`. Each context item contains `selector`,
-`available`, `value`, and `sourceActivationId` (null for input or unavailable values).
+`available`, `value`, and `sourceActivationId` (null for input or when there is no source activation).
 Stream items also contain `truncated` and `observedBytes`; values are UTF-8 tails of
 at most 4096 bytes. A selector reads the latest completed activation, including a
 previous loop iteration; it never reads the unfinished current activation.
@@ -108,11 +108,14 @@ at 32768 UTF-8 bytes; excess fails advance with `CONTEXT_LIMIT` before requestin
 Exact boundaries apply: equality is allowed for data size/depth and
 assembled context. A cursor change uses one transition; an end reached on the last
 allowed transition may finish, while another process or agent fails before activation.
-Combined process logs retain at most 10 MiB; exceeding that cap routes `output_limit`.
+Combined process output is capped at 10 MiB; exceeding that cap routes `output_limit`.
 Timeout routes `timeout` after best-effort attached-tree termination. Context tails
 remain within 4096 decoded UTF-8 bytes even when invalid bytes require replacement.
-Use `logs <run-id> --activation <id> --stream stderr --tail-bytes 100` for a targeted,
-read-only tail; keep the original state root on every call.
+Read bounded stdout and stderr previews directly from `processOutput` in the JSON
+execution response. Use `--save-stdout` or `--save-stderr` on the advance that
+executes a step when the corresponding handoff tail or a later `logs` read is
+needed. For a retained stream, `logs <run-id> --activation <id> --stream stderr
+--tail-bytes 100` reads a targeted tail. Keep the original state root on every call.
 
 ## State handling
 
@@ -177,7 +180,7 @@ call_cli() {
 run=$(call_cli start examples/review.md --workspace "$workspace" --state-dir "$state")
 run_id=$(jq -er '.runId' <<< "$run")
 state_root=$(jq -er '.stateRoot' <<< "$run")
-current=$(call_cli advance "$run_id" --state-dir "$state_root")
+current=$(call_cli advance "$run_id" --state-dir "$state_root" --save-stdout)
 case $(jq -er '.status' <<< "$current") in
     waiting_agent) jq '.request' <<< "$current" ;;
     completed) printf 'Run completed.\n' ;;
@@ -204,7 +207,7 @@ summary='Review completed'
 data=$(jq -cn --arg summary "$summary" '{summary: $summary}')
 current=$(call_cli complete "$run_id" --request "$request_id" --outcome approved --data "$data" --state-dir "$state_root")
 jq '.status, .receipt' <<< "$current"
-current=$(call_cli advance "$run_id" --state-dir "$state_root")
+current=$(call_cli advance "$run_id" --state-dir "$state_root" --save-stdout)
 jq '.status, .request' <<< "$current"
 ```
 

@@ -293,7 +293,7 @@ internal sealed class InlineScriptWorld : IDisposable
     internal void Advance(int children = 1)
     {
         cli.ExpectedChildren = children;
-        cli.Call("advance", runId);
+        cli.Call("advance", runId, "--save-stdout", "--save-stderr");
     }
 
     internal void Completed(string outcome)

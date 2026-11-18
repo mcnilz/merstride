@@ -65,4 +65,4 @@ Feature: Execute deterministic process nodes
     Given a process that writes to both stdout and stderr
     When I advance with JSON output
     Then stdout is exactly one parseable protocol response
-    And both child streams are available only through their logs or selected context
+    And both raw child streams are retained in their respective logs

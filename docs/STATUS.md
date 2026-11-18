@@ -40,6 +40,14 @@ from a local build.
 
 ## Verification
 
+P24 streams process stdout and stderr during text execution. Retention is
+selected per stream, and protocol 1 execution responses carry bounded previews.
+The six P24 scenarios ran against the Windows x64 native CLI in both modes,
+covering live redirection, failure output, retention combinations and routing a
+timeout with an unread stdout pipe. The Git process-chain example also ran
+against the native CLI in a controlled workspace. Other platforms and release
+environments still require their own verification.
+
 On 2026-11-18, P23 passed the Windows x64 development gate with **702 tests,
 465 local feature cases and 450 independent native cases**, with zero failures
 or skips. The usability inventory accounts for 468 rows, including the three

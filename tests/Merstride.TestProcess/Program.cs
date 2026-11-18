@@ -76,11 +76,18 @@ switch (args[0])
         File.WriteAllText("child.pid", Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         File.WriteAllText("child.ready", "ready");
         Thread.Sleep(Timeout.Infinite); break;
+    case "output_barrier":
+        Console.WriteLine("tool standard output");
+        Console.Error.WriteLine("tool standard error");
+        Console.Out.Flush();
+        Console.Error.Flush();
+        goto case "barrier";
     case "barrier":
         File.WriteAllText(args[1] + ".pid", Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         File.AppendAllText("effects.txt", args[1] + "\n");
         File.WriteAllText(args[1] + ".ready", "ready");
         while (!File.Exists(args[1] + ".release")) Thread.Sleep(5);
+        if (args.Length > 2) return int.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture);
         break;
     case "labelled_streams": Console.Write(new string(args[1][0], 200)); Console.Error.Write(new string(args[2][0], 200)); break;
     case "unicode_output": Console.Write(string.Concat(Enumerable.Repeat("界🌍", 1000))); break;

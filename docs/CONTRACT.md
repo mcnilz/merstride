@@ -92,7 +92,7 @@ Reject overlapping variants during validate/start, including duplicate/equivalen
 conditions and any unconditional/specific overlap. Absence is not fallback.
 All variants are validated without launching/probing anything. Missing coverage
 is valid: advance chooses only the current platform's variant; no match produces
-`spawn_error`, with `NO_PLATFORM_VARIANT` in the activation's stderr log. There is
+`spawn_error`, with `NO_PLATFORM_VARIANT` on the activation's selected stderr destination. There is
 no new process outcome. Existing exact/default/unlabeled routing and CLI exit
 semantics apply (including exit 5 / `NO_MATCHING_EDGE` without a matching route).
 
@@ -163,9 +163,11 @@ output can set `TERM=dumb` when invoking advance; the engine does not change tha
 environment variable or remove bytes from raw logs. Freeze script body, shebang
 arguments and every variant in the run definition; workspace script files remain live.
 
-Drain stdout and stderr concurrently into separate raw-byte log files. Combined retained output is capped at 10 MiB per activation. Exceeding the cap triggers best-effort process-tree termination and `output_limit`. Timeout similarly triggers termination and routes `timeout`. A timeout or output-limit cause takes precedence over the exit code caused by termination; the first observed limiting cause wins. Detached processes are not guaranteed to be terminated. Test process-tree handling on each released platform.
+Drain stdout and stderr concurrently. Text execution forwards raw bytes as they arrive to the caller's matching streams, including through redirection and on failure. By default it creates no per-activation stream files. `advance` and `start --advance` accept independent `--save-stdout` and `--save-stderr` flags for that invocation. A selected stream goes exclusively to `<state-root>/<run-id>/logs/<activation-id>.<stream>` in text mode. A closed console output stream is discarded while execution continues. Standard pipe backpressure applies.
 
-Default responses omit full logs. Context tails contain at most 4096 UTF-8 bytes per stream, decoded with replacement for invalid byte sequences and cut at character boundaries. Include truncation flags and observed byte counts. Do not buffer unbounded output. Workspace scripts are not copied or frozen at start.
+Combined process output is capped at 10 MiB per activation in every mode. Exceeding the cap triggers best-effort process-tree termination and `output_limit`. Timeout similarly triggers termination and routes `timeout`. A timeout or output-limit cause takes precedence over the exit code caused by termination; the first observed limiting cause wins. Detached processes are not guaranteed to be terminated. Test process-tree handling on each released platform.
+
+JSON execution embeds `processOutput` in its single protocol response when it observes a process activation. The array holds up to the last 16 activations in execution order, independent of save flags. Each has `activationId`, `nodeId`, and `stdout` and `stderr` objects with `text`, `observedBytes` and `truncated`. Text is a UTF-8 preview of the first 4096 available bytes per stream, with replacement for invalid sequences. `processOutputOmitted`, when present, counts earlier entries dropped by the 16-activation bound. Inspection does not replay previews. `logs` reads a saved stream by activation or returns `LOG_NOT_RETAINED` (4) for an unsaved stream; existing retained streams remain readable. A stored activation's unsaved paths are empty strings.
 
 ## 5. Agent nodes and completion
 
@@ -176,6 +178,8 @@ Required fields: `kind: agent`, nonempty `prompt` (at most 16 KiB UTF-8). Option
 - `nodes.<id>.data` for agent nodes.
 
 Referenced nodes and selector/kind combinations MUST be valid. Each selector reads the most recently completed activation of that node. If none exists, return `available: false`. In a loop, “latest completed” can mean an earlier iteration; include the activation ID so the consumer can tell. A process result without a normal exit code exposes null for `exitCode`.
+
+Stream context tails use retained logs, including legacy logs. An unsaved stream returns `available: false` with its source activation ID. Retained tails contain at most 4096 decoded UTF-8 bytes per stream, with replacement for invalid byte sequences, cut at character boundaries, and carry observed byte counts and truncation flags.
 
 Return selector, availability, value, source activation ID where applicable, and truncation information where applicable. Keep context separate from instructions. Prompts are literal strings with no template evaluation. Prompt plus serialized context MUST fit 32 KiB UTF-8; otherwise fail with `CONTEXT_LIMIT`. Input and agent data are JSON objects, each at most 16 KiB and depth 16. The root object has depth 1; each nested object or array adds 1. No per-node custom JSON Schema in the MVP. Size checks use compact UTF-8 JSON serialization of parsed values.
 
@@ -240,7 +244,7 @@ output, and has no periodic polling noise, colors or full history. There are at
 most three lines per process-result write (result, movement or staying, optional run
 failure/interruption), one per activation/waiting/end/resolution write and two per
 accepted completion, bounded by the existing transition limit. Final summaries remain on stdout.
-Redirect stdout and stderr separately to separate results from activity/errors;
+Redirect stdout and stderr separately to capture the respective process streams alongside results and activity/errors;
 ordering is guaranteed within the activity stream, not across two redirected
 streams. Closed activity pipes disable further activity without changing execution.
 There is no persisted event format, log subsystem, automatic advance or retry.
@@ -259,10 +263,10 @@ includes the saved request/outcome receipt summary and makes retry semantics exp
 full activation history or full logs in ordinary status. Unavailable context and
 available empty/null values remain distinct.
 
-Text preserves Unicode, LF newlines and tabs; CRLF becomes LF. Other control and
+Merstride-rendered text preserves Unicode, LF newlines and tabs. CRLF becomes LF. Other control and
 Unicode format characters (including ESC and lone CR) become visible `\uXXXX`
 escapes, so embedded terminal controls cannot execute. This applies to prompts,
-context, diagnostics, paths and logs, without changing stored raw data. `logs`
+context, diagnostics, paths and displayed log tails. Live child streams carry raw bytes. `logs`
 includes run, activation, stream and a tail-truncation flag, followed by the selected
 decoded content, with the same 65536-byte maximum input tail as JSON. Escaping can
 expand each UTF-16 code unit to at most six visible characters. These presentation
@@ -285,7 +289,7 @@ is literal and does not select output format.
 | `complete [run-id|file] --request <id> --outcome <outcome> [--data <json-object>]` | Preferred file-free completion; save receipt and transition only. Alternative: `--result-file <file>`. |
 | `resolve [run-id|file] --retry` | Only interrupted: explicitly allow a new attempt, return ready. |
 | `resolve [run-id|file] --fail` | Only interrupted: finish failed without actions. |
-| `logs [run-id|file] --activation <id> --stream stdout\|stderr [--tail-bytes <n>]` | Read selected log; default/maximum 65536 bytes; n is positive. |
+| `logs [run-id|file] --activation <id> --stream stdout\|stderr [--tail-bytes <n>]` | Read a retained log; default/maximum 65536 bytes; n is positive. |
 | `runs [file] [--workflow <id>]` | List retained runs with source, workflow, status and current/discarding markers; unreadable entries stay visible. |
 | `use <run-id>` | Deliberately select this run as current and for its source/workflow association. |
 | `discard <run-id>` | Permanently remove only this explicitly selected run, its logs and receipts. No implicit selector or bulk deletion. |

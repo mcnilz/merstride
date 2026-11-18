@@ -182,7 +182,7 @@ internal sealed class RtkWorld : IDisposable
             File.WriteAllText(file, state.ToJsonString());
         }
         cli.ExpectedChildren = execution == "wrapped" ? 2 : 1;
-        cli.Call("advance", runId);
+        cli.Call("advance", runId, "--save-stdout", "--save-stderr");
         Assert.That(cli.ExitCode, Is.Zero);
         Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo("completed"));
         Assert.That(cli.Response.GetProperty("lastActivation").GetProperty("outcome").GetString(),

@@ -143,7 +143,7 @@ internal sealed class ProjectWorld : IDisposable
         Directory.CreateDirectory(child); cli.WorkingDirectory = child;
         Json("start", cli.FilePath);
         Assert.That(File.Exists(Path.Combine(cli.DirectoryPath, "effects.txt")), Is.False);
-        cli.ExpectedChildren = 1; var result = Json("advance"); cli.ExpectedChildren = 0;
+        cli.ExpectedChildren = 1; var result = Json("advance", "--save-stdout"); cli.ExpectedChildren = 0;
         Assert.That(result.GetProperty("status").GetString(), Is.EqualTo("completed"));
         Assert.That(File.ReadAllText(Path.Combine(cli.DirectoryPath, "effects.txt")), Is.EqualTo("project\n"));
         Assert.That(File.Exists(Path.Combine(child, "effects.txt")), Is.False);

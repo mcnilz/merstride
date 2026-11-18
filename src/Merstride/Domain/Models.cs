@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Merstride.Domain;
 
@@ -14,7 +15,15 @@ public sealed record CompletionReceipt(string RequestId, string ActivationId, st
 public sealed record Edge(string Source, string Target, string? Outcome);
 public sealed record Activation(string Id, string NodeId, DateTimeOffset StartedAt, DateTimeOffset? FinishedAt,
     string? Outcome, int? ExitCode, string StdoutPath, string StderrPath,
-    long StdoutBytes = 0, long StderrBytes = 0, bool StdoutTruncated = false, bool StderrTruncated = false);
+    long StdoutBytes = 0, long StderrBytes = 0, bool StdoutTruncated = false, bool StderrTruncated = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool Process = false)
+{
+    [JsonIgnore]
+    public bool HasLogs => StdoutPath.Length != 0 || StderrPath.Length != 0;
+
+    [JsonIgnore]
+    public bool IsProcess => Process || HasLogs;
+}
 public sealed record SourceLocation(int Line, int Column);
 public sealed record Problem(string Code, string Message, SourceLocation? Location = null);
 public sealed record Diagnostic(string Severity, string Code, string Message, SourceLocation? Location);

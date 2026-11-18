@@ -16,6 +16,8 @@ public sealed record CliResponse(
     string? Guide = null, string? Version = null, string? WorkflowId = null, Diagnostic[]? Diagnostics = null,
     Activation? LastActivation = null, string? Log = null, string? Stream = null, bool? Truncated = null,
     AgentRequest? Request = null, CompletionReceipt? Receipt = null, string? SourcePath = null,
-    RunSummary[]? Runs = null, bool? Discarded = null, StartProgress? Start = null);
+    RunSummary[]? Runs = null, bool? Discarded = null, StartProgress? Start = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ProcessOutput[]? ProcessOutput = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int ProcessOutputOmitted = 0);
 
 public sealed record StartProgress(bool Created, string Phase, string Advance);

@@ -464,13 +464,20 @@
     "features/23-rtk-process-commands.feature:55 Reject RTK settings outside the supported YAML schema [node-number]",
     "features/23-rtk-process-commands.feature:56 Reject RTK settings outside the supported YAML schema [node-null]",
     "features/23-rtk-process-commands.feature:57 Reject RTK settings outside the supported YAML schema [end-setting]",
-    "features/23-rtk-process-commands.feature:58 Reject RTK settings outside the supported YAML schema [variant-flag]"
+    "features/23-rtk-process-commands.feature:58 Reject RTK settings outside the supported YAML schema [variant-flag]",
+    "features/24-console-first-process-output.feature:21 Retain only the requested streams [stdout]",
+    "features/24-console-first-process-output.feature:22 Retain only the requested streams [stderr]",
+    "features/24-console-first-process-output.feature:23 Retain only the requested streams [stdout and stderr]",
+    "features/24-console-first-process-output.feature:25 Route a timeout when the caller stops reading stdout",
+    "features/24-console-first-process-output.feature:4 Receive both streams while the process is still running",
+    "features/24-console-first-process-output.feature:9 Keep both streams when the process fails"
   ],
   "schemaVersion": 1,
   "featureHashes": {
+    "features/24-console-first-process-output.feature": "afa0577d264159efee24a66974f1b783ecfadfb72874e6475bc0100f048e1f87",
     "features/00-bootstrap.feature": "78c7648c59786cd1c25526eb12d011afcc1a52c52dd7e5cc0160379d1eb87942",
     "features/01-authoring.feature": "3e98c261532e432aa40a9b4f294a8f72da5c96ee5fe3e3a0415c0f854126a3d0",
-    "features/02-processes.feature": "d1eedfdaf1ed2cbf281c4d5cdd1858c6ed9ff969d210b6b0b6f0c5b9d869cb44",
+    "features/02-processes.feature": "676a74c163746b14442e917b2f26626f9076cbb7e2f32693f4dac242abfc93c8",
     "features/03-agents.feature": "d34f2fbd75e689508a494bc525d5633dac853644472a0a8e2834709782e711fc",
     "features/04-limits.feature": "7fbbdf8efe20e2b6b9d6752da8d3e98c9c332d8c6ef1fc8ea54289e7d86cd2c4",
     "features/05-recovery.feature": "5f2486070b15fbb64d55537f640c1e23dc5630b9e388d312e04371d0ae5893f1",
@@ -942,6 +949,12 @@
     "features/23-rtk-process-commands.feature:55 Reject RTK settings outside the supported YAML schema [node-number]",
     "features/23-rtk-process-commands.feature:56 Reject RTK settings outside the supported YAML schema [node-null]",
     "features/23-rtk-process-commands.feature:57 Reject RTK settings outside the supported YAML schema [end-setting]",
-    "features/23-rtk-process-commands.feature:58 Reject RTK settings outside the supported YAML schema [variant-flag]"
+    "features/23-rtk-process-commands.feature:58 Reject RTK settings outside the supported YAML schema [variant-flag]",
+    "features/24-console-first-process-output.feature:21 Retain only the requested streams [stdout]",
+    "features/24-console-first-process-output.feature:22 Retain only the requested streams [stderr]",
+    "features/24-console-first-process-output.feature:23 Retain only the requested streams [stdout and stderr]",
+    "features/24-console-first-process-output.feature:25 Route a timeout when the caller stops reading stdout",
+    "features/24-console-first-process-output.feature:4 Receive both streams while the process is still running",
+    "features/24-console-first-process-output.feature:9 Keep both streams when the process fails"
   ]
 }

@@ -41,7 +41,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
         UsabilityAuditWorld.Structured(() =>
         {
             cli.ExpectedChildren = outcome == "spawn_error" ? 0 : 1;
-            cli.Call("advance", runId); cli.ExpectedChildren = 0;
+            cli.Call("advance", runId, "--save-stdout", "--save-stderr"); cli.ExpectedChildren = 0;
             var failed = outcome is "exit_7" or "exit_0" or "loop";
             Assert.That(cli.ExitCode, Is.EqualTo(failed ? 5 : 0));
             Assert.That(cli.Response.GetProperty("status").GetString(), Is.EqualTo(failed ? "failed" : "completed"));
@@ -186,7 +186,7 @@ internal sealed class ConsoleActivityWorld : IDisposable
             case "a console activity workflow containing terminal controls": ProcessFixture("raw"); break;
             case "I advance the process as text":
                 cli.ExpectedChildren = File.ReadAllText(cli.FilePath).Contains("unavailable-p17", StringComparison.Ordinal) ? 0 : 1;
-                Text("advance", runId); cli.ExpectedChildren = 0; break;
+                Text("advance", runId, "--save-stdout", "--save-stderr"); cli.ExpectedChildren = 0; break;
             case "text feedback is escaped and bounded while raw logs remain unchanged":
                 Assert.That(cli.ExitCode, Is.Zero);
                 Assert.That(cli.Stderr.Length, Is.LessThan(2000));

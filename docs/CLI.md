@@ -25,12 +25,11 @@ external effects. Final summaries explain the status and overall result before
 source/root details. Full activation IDs are secondary log selectors. See the
 [before/after walkthrough](FLOW-OUTPUT.md) for branches, loops and recovery.
 
-Use `merstride advance "$run_id" --state-dir "$state_root" >summary.txt 2>activity.txt`
-in Bash to separate the final summary from activity/errors. Ordering is preserved
-within activity.txt; separate streams have no cross-stream ordering guarantee.
-There are no periodic messages or streamed child logs. Activity is bounded by the
-transition limit and uses the same escaping as summaries. A closed activity pipe
-disables further activity without changing execution. See the
+Use `merstride advance "$run_id" --state-dir "$state_root" >output.txt 2>activity.txt`
+in Bash to capture stdout with the final summary and stderr with activity and
+errors. Process bytes stream to the matching channel, including on failure.
+Separate streams have no cross-stream ordering guarantee. Activity is bounded by
+the transition limit and uses the same escaping as summaries. See the
 [README transcript](../README.md#quick-start) for a process chain and handoff.
 
 **Existing scripts must add `--json` explicitly.** It returns exactly one
@@ -38,6 +37,19 @@ protocol-version-1 JSON object on stdout, including for help, version and errors
 Help/guides use `guide`; version/root `--version` use `version`. JSON errors remain
 inside the response, with no duplicate text on stderr. No colors, ANSI sequences,
 banners or progress messages are added. Protocol version 1 is unchanged.
+
+Process previews appear in the execution response's `processOutput` array. Each
+entry identifies the activation and node and contains stdout and stderr objects
+with `text`, `observedBytes` and `truncated`. The array covers the last 16 process
+activations in order and decodes up to the first 4096 bytes per stream. When older
+entries are omitted, `processOutputOmitted` gives their count.
+
+Add `--save-stdout`, `--save-stderr`, or both to `advance` or `start --advance` to
+retain the selected streams in the run's `logs/` directory. Merstride names each
+file `<activation-id>.<stream>`. In text mode the selected stream goes only to its
+file and the other stream still goes to the console. JSON previews cover both
+streams regardless of file selection. Choose the relevant save flag on every
+advance whose output a later `logs` call or agent handoff needs.
 
 Use `merstride creation-guide` for self-contained authoring instructions,
 a complete Markdown workflow and a validation checklist. The text is embedded in
@@ -72,11 +84,12 @@ command for command-form discovery.
 Run summaries show run ID, state root, status, cursor, transitions and the latest
 activation. Waiting-agent output adds request ID, node, literal prompt, allowed
 outcomes and selected context, including unavailable/truncated distinctions.
-Full history and full process logs stay out of ordinary status. Use `logs` to read
-a selected tail (at most 65536 input bytes), with activation, stream and tail
+Use `logs` to read a saved stream's tail (at most 65536 input bytes), with activation, stream and tail
 truncation labels. Text preserves Unicode, newlines and tabs, normalizes CRLF to
 LF, and renders other control/Unicode format characters as visible `\uXXXX`
-escapes. Raw logs are unchanged; terminal control sequences do not execute.
+escapes. Live process streams and retained files carry the original bytes. Saved
+logs from older runs remain available. `LOG_NOT_RETAINED` means that the selected
+stream was not saved; agent context reports that tail as unavailable.
 Errors with `--json` before `--`, including duplicate/malformed JSON options,
 remain JSON; `--json` after `--` is literal positional text.
 

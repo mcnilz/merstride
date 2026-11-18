@@ -151,10 +151,9 @@ outside world even when its result save failed.
 
 ## Capturing output and structured integration
 
-Redirect stdout for summaries/prompts and stderr for progress/errors. Only activity
-is ordered; stdout remains useful alone as a current result plus next action.
-Output has no color/spinner or periodic noise. Process log bytes stay separate;
-controls in human text are escaped visibly. Visit numbers count actual saved
+Redirect stdout for tool output and summaries/prompts, and stderr for tool errors
+and Merstride progress/errors. Each stream retains its own ordering. Merstride's
+messages escape controls visibly, and tool streams preserve raw bytes. Visit numbers count actual saved
 activations, including interrupted attempts. Movement numbers count saved routing
 transitions, across invocations; neither is a complete event-history API.
 

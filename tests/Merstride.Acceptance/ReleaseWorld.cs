@@ -52,7 +52,7 @@ internal sealed class ReleaseWorld : IDisposable
         if (logs || failure)
         {
             cli.ExpectedChildren = logs ? 1 : 0;
-            cli.Call("advance", runId); cli.ExpectedChildren = 0;
+            cli.Call("advance", runId, "--save-stdout"); cli.ExpectedChildren = 0;
             Assert.That(cli.ExitCode, Is.EqualTo(failure ? 5 : 0));
             if (logs) activation = cli.Response.GetProperty("lastActivation").GetProperty("id").GetString()!;
         }

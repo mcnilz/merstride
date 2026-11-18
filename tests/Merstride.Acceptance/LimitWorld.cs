@@ -44,7 +44,7 @@ internal sealed class LimitWorld : IDisposable
         Start();
         cli.ExpectedChildren = 2;
         elapsed.Start();
-        var advance = Task.Run(() => cli.Call("advance", runId));
+        var advance = Task.Run(() => cli.Call("advance", runId, "--save-stdout", "--save-stderr"));
         try
         {
             var ready = Path.Combine(cli.DirectoryPath, "parent.ready");
@@ -341,7 +341,7 @@ internal sealed class LimitWorld : IDisposable
     {
         if (runId.Length == 0) Start();
         cli.ExpectedChildren = children;
-        elapsed.Restart(); cli.Call("advance", runId); elapsed.Stop();
+        elapsed.Restart(); cli.Call("advance", runId, "--save-stdout", "--save-stderr"); elapsed.Stop();
     }
 
     private void OutputWorkflow(int bytes) => Workflow(ProcessNode("first", ["concurrent_output", bytes.ToString(System.Globalization.CultureInfo.InvariantCulture)]) + EndNode,
